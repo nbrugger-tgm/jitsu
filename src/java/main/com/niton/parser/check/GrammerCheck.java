@@ -3,34 +3,22 @@ package com.niton.parser.check;
 import java.util.ArrayList;
 
 import com.niton.parser.GrammarObject;
-import com.niton.parser.IgnoredGrammerObject;
 import com.niton.parser.ParsingException;
 import com.niton.parser.Tokenizer.AssignedToken;
 
 /**
- * This Grammar ignores the given grammar
- * 
- * @author Nils
- * @version 2019-05-29
+ * This is the GrammerCheck Class
+ * @author Nils Brugger
+ * @version 2019-06-05
  */
-public class IgnoreGrammer extends Grammar {
-	private Grammar grammar;
-
-	public IgnoreGrammer(Grammar name2) {
-		this.grammar = name2;
-	}
+public abstract class GrammerCheck extends Grammar {
 
 	/**
 	 * @see com.niton.parser.check.Grammar#process(java.util.ArrayList)
 	 */
 	@Override
 	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
-		try {
-			grammar.check(tokens, index());
-			index(grammar.index());
-		} catch (ParsingException e) {
-		}
-		return new IgnoredGrammerObject();
+		return null;
 	}
 
 	/**
@@ -38,6 +26,7 @@ public class IgnoreGrammer extends Grammar {
 	 */
 	@Override
 	public Class<? extends GrammarObject> getGrammarObjectType() {
-		return IgnoredGrammerObject.class;
+		return GrammarObject.class;
 	}
 }
+

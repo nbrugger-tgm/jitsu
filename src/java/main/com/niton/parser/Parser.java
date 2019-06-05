@@ -1,6 +1,6 @@
 package com.niton.parser;
 
-import com.niton.parser.check.Grammer;
+import com.niton.parser.check.Grammar;
 
 /**
  * This is the Parser Class
@@ -9,14 +9,14 @@ import com.niton.parser.check.Grammer;
  */
 public class Parser {
     private Tokenizer t = new Tokenizer();
-    private Grammer g;
+    private Grammar g;
     /**
      * Creates an Instance of Parser.java
      * @author Nils
      * @version 2019-05-29
      * @param csv
      */
-    public Parser(Grammer csv) {
+    public Parser(Grammar csv) {
 	setG(csv);
     }
     /**
@@ -34,13 +34,13 @@ public class Parser {
     /**
      * @return the g
      */
-    public Grammer getG() {
+    public Grammar getG() {
         return g;
     }
     /**
      * @param g the g to set
      */
-    public void setG(Grammer g) {
+    public void setG(Grammar g) {
         this.g = g;
     }
     /**
@@ -50,7 +50,7 @@ public class Parser {
      * @param string
      * @throws ParsingException 
      */
-    public GrammerObject parse(String string) throws ParsingException {
+    public GrammarObject parse(String string) throws ParsingException {
 	return g.check(t.parse(string));
     }
 }

@@ -5,7 +5,7 @@ package com.niton.parser;
  * @author Nils
  * @version 2019-05-29
  */
-public class IgnoredGrammerObject extends GrammerObject{
+public class IgnoredGrammerObject extends GrammarObject{
     /**
      * @see java.lang.Object#toString()
      */

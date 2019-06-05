@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import com.niton.parser.GrammarObject;
 import com.niton.parser.IgnoredGrammerObject;
 import com.niton.parser.ParsingException;
+import com.niton.parser.TokenGrammerObject;
 import com.niton.parser.Tokenizer.AssignedToken;
 
 /**
@@ -14,11 +15,11 @@ import com.niton.parser.Tokenizer.AssignedToken;
  * @author Nils
  * @version 2019-05-29
  */
-public class OptinalGrammer extends Grammar {
-	private Grammar check;
+public class OptinalTokenGrammer extends Grammar {
+	private String token;
 
-	public OptinalGrammer(Grammar value, String name) {
-		this.check = value;
+	public OptinalTokenGrammer(String token, String name) {
+		this.token = token;
 		setName(name);
 	}
 
@@ -27,31 +28,30 @@ public class OptinalGrammer extends Grammar {
 	 */
 	@Override
 	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
-		try {
-			GrammarObject obj = check.check(tokens, index());
-			if (obj == null)
-				throw new ParsingException("");
-			obj.setName(getName());
-			index(check.index());
-			return obj;
-		} catch (Exception e) {
+
+		TokenGrammerObject tgo = new TokenGrammerObject();
+		tgo.setName(getName());
+		if (tokens.get(index()).name.equals(token)) {
+			tgo.tokens.add(tokens.get(index()));
+			increase();
+			return tgo;
+		} else {
 			return new IgnoredGrammerObject();
 		}
 	}
-	
 
 	/**
-	 * @return the check
+	 * @return the token
 	 */
-	public Grammar getCheck() {
-		return check;
+	public String getToken() {
+		return token;
 	}
 
 	/**
-	 * @param check the check to set
+	 * @param token the token to set
 	 */
-	public void setCheck(Grammar check) {
-		this.check = check;
+	public void setToken(String token) {
+		this.token = token;
 	}
 
 	/**
@@ -59,6 +59,6 @@ public class OptinalGrammer extends Grammar {
 	 */
 	@Override
 	public Class<? extends GrammarObject> getGrammarObjectType() {
-		return GrammarObject.class;
+		return TokenGrammerObject.class;
 	}
 }
