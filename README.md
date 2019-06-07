@@ -1,10 +1,5 @@
 
-## Grammar Files
-Grammar Files are used to define a Grammar in a File reather than just cerate them with code.
-### Example
-
-    Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
-Installation
+## Installation
 Very Easy! Use `Maven` and add this as dependency
 ```xml
 <dependency>
@@ -16,5 +11,6 @@ Very Easy! Use `Maven` and add this as dependency
 
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTc4NjMxOTQ5NCwtMTI1MDAzMzA2Ml19
+eyJoaXN0b3J5IjpbLTM0MzMxODUxNiwtNzg2MzE5NDk0LC0xMj
+UwMDMzMDYyXX0=
 -->
