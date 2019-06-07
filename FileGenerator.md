@@ -13,9 +13,9 @@ Very Easy! Use `Maven` and add this as dependency
 As you have a valid Grammar; for example:
 ```java
 Grammar string = Grammar.build("StringGrammar")
-.matchToken(Tokens.STRING_DELIMITTER)
-.anyExcept(Tokens.STRING_DELIMITTER)
-.matchToken(Tokens.STRING_DELIMITTER);
+.matchToken(Tokens.STRING_DELIMITTER) // No name as we dont care about the delmitters
+.anyExcept(Tokens.STRING_DELIMITTER,"value") //Named property to get it later on
+.matchToken(Tokens.STRING_DELIMITTER); // No name as we dont care here to
 ```
 Then you simply pass it into the Generator
 ```java
@@ -26,5 +26,5 @@ gen.generate(string);
 ```
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTY1NjI0OTQ5OV19
+eyJoaXN0b3J5IjpbMTI3MzAzNzU3XX0=
 -->
