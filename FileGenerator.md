@@ -37,7 +37,11 @@ public class StringGrammar /*The name of the grammar*/ {
 	}
 }
 ```
+So you can simply parse and use like this
+```java
+
+```
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTk2NjU5OTQyNV19
+eyJoaXN0b3J5IjpbMTgwOTM2MzIzMl19
 -->
