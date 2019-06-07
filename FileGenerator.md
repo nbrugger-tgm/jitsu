@@ -26,11 +26,18 @@ gen.generate(string);
 ```
 ### Result
 ```java
+//removed imports as they are not neccesary here
 public class StringGrammar /*The name of the grammar*/ {
-	private Sub
+	private SubGrammarObject obj;
+	public StringGrammar(SubGrammarObject obj){
+		this.obj = obj;
+	}
+	public String getValue(){
+		//some code you do not need to know
+	}
 }
 ```
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE2NDY1OTcxNjBdfQ==
+eyJoaXN0b3J5IjpbLTk2NjU5OTQyNV19
 -->
