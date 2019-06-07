@@ -1,14 +1,7 @@
 # JainParse Code Generator
 This generator generates the Source files to easy read a parsed Grammar.
-## Installation
-Very Easy! Use `Maven` and add this as dependency
-```xml
-<dependency>
-    <groupId>com.niton</groupId>
-    <artifactId>jainparse</artifactId>
-    <version>1.0.4</version>
-</dependency>
-```
+
+
 ## Usage
 As you have a valid Grammar; for example:
 ```java
@@ -55,5 +48,5 @@ System.out.println(parsed.getValue()); //output: Ich bin ein String
 ```
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTEwMDE2MDY4MzldfQ==
+eyJoaXN0b3J5IjpbLTEzNjE0ODU1NjVdfQ==
 -->
