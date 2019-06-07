@@ -47,9 +47,12 @@ Grammar string = Grammar.build("StringGrammar")
 
 //Parse into object
 Parser p = new Parser(string);
-p.parse("\"Ich bin ein String\"");
+SubGrammarObject obj = p.parse("\"Ich bin ein String\"");
+
+//Read with generated Code (obviusly you need to generate it first)
+StringGrammar parsed = new StringGrammar(
 ```
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTYxMjQ1NDUwXX0=
+eyJoaXN0b3J5IjpbLTIyNDQwMDg2Nl19
 -->
