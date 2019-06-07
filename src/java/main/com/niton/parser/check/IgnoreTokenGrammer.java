@@ -6,7 +6,7 @@ import java.util.Iterator;
 import com.niton.parser.GrammarObject;
 import com.niton.parser.IgnoredGrammerObject;
 import com.niton.parser.ParsingException;
-import com.niton.parser.TokenGrammerObject;
+import com.niton.parser.TokenGrammarObject;
 import com.niton.parser.Tokenizer.AssignedToken;
 
 /**

@@ -5,7 +5,7 @@ import java.util.Arrays;
 
 import com.niton.parser.GrammarObject;
 import com.niton.parser.ParsingException;
-import com.niton.parser.TokenGrammerObject;
+import com.niton.parser.TokenGrammarObject;
 import com.niton.parser.Tokenizer.AssignedToken;
 
 /**

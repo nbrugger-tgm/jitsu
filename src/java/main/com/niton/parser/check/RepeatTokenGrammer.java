@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import com.niton.parser.GrammarObject;
 import com.niton.parser.ParsingException;
 import com.niton.parser.SubGrammerObject;
-import com.niton.parser.TokenGrammerObject;
+import com.niton.parser.TokenGrammarObject;
 import com.niton.parser.Tokenizer.AssignedToken;
 
 /**
@@ -27,7 +27,7 @@ public class RepeatTokenGrammer extends Grammar {
 	 */
 	@Override
 	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
-		TokenGrammerObject object = new TokenGrammerObject();
+		TokenGrammarObject object = new TokenGrammarObject();
 		object.setName(getName());
 		for (int i = index(); i < tokens.size(); i++) {
 			AssignedToken aToken = tokens.get(i);
@@ -59,6 +59,6 @@ public class RepeatTokenGrammer extends Grammar {
 	 */
 	@Override
 	public Class<? extends GrammarObject> getGrammarObjectType() {
-		return TokenGrammerObject.class;
+		return TokenGrammarObject.class;
 	}
 }

@@ -10,7 +10,7 @@ import com.niton.parser.Tokenizer.AssignedToken;
  * @author Nils
  * @version 2019-05-29
  */
-public class TokenGrammerObject extends GrammarObject {
+public class TokenGrammarObject extends GrammarObject {
 	public ArrayList<AssignedToken> tokens = new ArrayList<>();
 
 	public String joinTokens() {

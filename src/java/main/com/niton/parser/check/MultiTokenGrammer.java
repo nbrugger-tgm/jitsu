@@ -5,7 +5,7 @@ import java.util.Arrays;
 
 import com.niton.parser.GrammarObject;
 import com.niton.parser.ParsingException;
-import com.niton.parser.TokenGrammerObject;
+import com.niton.parser.TokenGrammarObject;
 import com.niton.parser.Tokenizer.AssignedToken;
 
 /**
@@ -30,7 +30,7 @@ public class MultiTokenGrammer extends Grammar {
 		AssignedToken token = tokens.get(index());
 		for (int i = 0; i < this.tokens.length; i++) {
 			if (token.name.equals(this.tokens[i])) {
-				TokenGrammerObject obj = new TokenGrammerObject();
+				TokenGrammarObject obj = new TokenGrammarObject();
 				obj.setName(getName());
 				obj.tokens.add(token);
 				increase();
@@ -60,7 +60,7 @@ public class MultiTokenGrammer extends Grammar {
 	 */
 	@Override
 	public Class<? extends GrammarObject> getGrammarObjectType() {
-		return TokenGrammerObject.class;
+		return TokenGrammarObject.class;
 	}
 	
 }

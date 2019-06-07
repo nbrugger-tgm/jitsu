@@ -18,8 +18,8 @@ public class SubGrammerObject extends GrammarObject {
 		for (GrammarObject object : objects) {
 			if (object instanceof SubGrammerObject)
 				token.addAll(((SubGrammerObject) object).join());
-			else if (object instanceof TokenGrammerObject)
-				token.addAll(((TokenGrammerObject) object).tokens);
+			else if (object instanceof TokenGrammarObject)
+				token.addAll(((TokenGrammarObject) object).tokens);
 		}
 		return token;
 	}
@@ -100,8 +100,8 @@ public class SubGrammerObject extends GrammarObject {
 
 			if (grammerObject instanceof SubGrammerObject) {
 				builder.append(((SubGrammerObject) grammerObject).toClearString().replaceAll("\n", "\n   "));
-			} else if (grammerObject instanceof TokenGrammerObject) {
-				builder.append(((TokenGrammerObject) grammerObject).joinTokens());
+			} else if (grammerObject instanceof TokenGrammarObject) {
+				builder.append(((TokenGrammarObject) grammerObject).joinTokens());
 			}
 		}
 		builder.append("\n]");
