@@ -39,9 +39,17 @@ public class StringGrammar /*The name of the grammar*/ {
 ```
 So you can simply parse and use like this
 ```java
+//Building grammar
+Grammar string = Grammar.build("StringGrammar")
+.matchToken(Tokens.STRING_DELIMITTER)
+.anyExcept(Tokens.STRING_DELIMITTER,"value")
+.matchToken(Tokens.STRING_DELIMITTER);
 
+//Parse into object
+Parser p = new Parser(string);
+p.parse("\"Ich bin ein String\"");
 ```
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTgwOTM2MzIzMl19
+eyJoaXN0b3J5IjpbMTYxMjQ1NDUwXX0=
 -->
