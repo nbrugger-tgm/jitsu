@@ -6,7 +6,7 @@ Very Easy! Use `Maven` and add this as dependency
 <dependency>
     <groupId>com.niton</groupId>
     <artifactId>jainparse</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.4</version>
 </dependency>
 ```
 ## Usage
@@ -26,5 +26,5 @@ gen.generate(string);
 ```
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTU0NDk1NjMxOV19
+eyJoaXN0b3J5IjpbLTY1NjI0OTQ5OV19
 -->
