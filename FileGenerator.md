@@ -24,7 +24,13 @@ gen.setOutputDirecory("C:\\Users\\Example\\Workspace\\Project\\src");
 gen.setPackage("com.niton.generated");
 gen.generate(string);
 ```
+### Result
+```java
+public class StringGrammar /*The name of the grammar*/ {
+	private Sub
+}
+```
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTI3MzAzNzU3XX0=
+eyJoaXN0b3J5IjpbLTE2NDY1OTcxNjBdfQ==
 -->
