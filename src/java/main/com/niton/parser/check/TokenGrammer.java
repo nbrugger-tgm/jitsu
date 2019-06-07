@@ -44,7 +44,7 @@ public class TokenGrammer extends Grammar {
 			increase();
 			return obj;
 		}
-		throw new ParsingException("Expected Token : " + tokenName + " but actual value was : " + token.name);
+		throw new ParsingException("Expected Token \"" + tokenName + "\" but actual value was  \"" + token.name+"\" (index : "+index()+") -> "+"["+(index() > 0 ? tokens.get(index()-1).value : "")+tokens.get(index()).value+(tokens.size()-index() > 1 ? tokens.get(index()+1).value : "")+"]");
 	}
 
 	/**

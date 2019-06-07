@@ -28,14 +28,12 @@ public class ChainGrammer extends Grammar {
 	 */
 	@Override
 	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
-		int pos = index();
 		SubGrammerObject gObject = new SubGrammerObject();
 		gObject.setName(getName());
 		for (Grammar grammer : chain) {
-			gObject.objects.add(grammer.check(tokens, pos));
-			pos = grammer.index();
+			gObject.objects.add(grammer.check(tokens, index()));
+			index(grammer.index());
 		}
-		index(pos);
 		return gObject;
 	}
 

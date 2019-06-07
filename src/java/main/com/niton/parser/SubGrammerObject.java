@@ -34,6 +34,8 @@ public class SubGrammerObject extends GrammarObject {
 
 	public GrammarObject getObject(String name) {
 		for (GrammarObject grammerObject : objects) {
+			if(grammerObject.getName() == null)
+				continue;
 			if (grammerObject.getName().equals(name))
 				return grammerObject;
 		}

@@ -44,6 +44,7 @@ public class GrammarMatchGrammer extends Grammar {
 	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
 		GrammarObject o = grammar.check(tokens,index());
 		o.setName(getName());
+		index(grammar.index());
 		return o;
 	}
 
