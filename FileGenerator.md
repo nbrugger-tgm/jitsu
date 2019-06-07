@@ -1,0 +1,30 @@
+# JainParse Code Generator
+This generator generates the Source files to easy read a parsed Grammar.
+## Installation
+Very Easy! Use `Maven` and add this as dependency
+```xml
+<dependency>
+    <groupId>com.niton</groupId>
+    <artifactId>jainparse</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+## Usage
+As you have a valid Grammar; for example:
+```java
+Grammar string = Grammar.build("StringGrammar")
+.matchToken(Tokens.STRING_DELIMITTER)
+.anyExcept(Tokens.STRING_DELIMITTER)
+.matchToken(Tokens.STRING_DELIMITTER);
+```
+Then you simply pass it into the Generator
+```java
+JPGenerator gen = new JPGenerator();
+gen.setOutputDirecory("C:\\Users\\Example\\Workspace\\Project\\src");
+gen.setPackage("com.niton.generated");
+gen.generate(string);
+```
+> Written with [StackEdit](https://stackedit.io/).
+<!--stackedit_data:
+eyJoaXN0b3J5IjpbLTU0NDk1NjMxOV19
+-->
