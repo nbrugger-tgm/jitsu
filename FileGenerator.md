@@ -50,9 +50,10 @@ Parser p = new Parser(string);
 SubGrammarObject obj = p.parse("\"Ich bin ein String\"");
 
 //Read with generated Code (obviusly you need to generate it first)
-StringGrammar parsed = new StringGrammar(
+StringGrammar parsed = new StringGrammar(obj);
+System.out.println(parsed.getValue()); //output: Ich bin ein String
 ```
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTIyNDQwMDg2Nl19
+eyJoaXN0b3J5IjpbLTEwMDE2MDY4MzldfQ==
 -->
