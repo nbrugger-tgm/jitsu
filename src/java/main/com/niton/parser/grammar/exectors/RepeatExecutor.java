@@ -1,8 +1,9 @@
-package com.niton.parser.check;
+package com.niton.parser.grammar.exectors;
 
 import java.util.ArrayList;
 
 import com.niton.parser.GrammarObject;
+import com.niton.parser.GrammarReference;
 import com.niton.parser.ParsingException;
 import com.niton.parser.SubGrammerObject;
 import com.niton.parser.Tokenizer.AssignedToken;
@@ -13,29 +14,31 @@ import com.niton.parser.Tokenizer.AssignedToken;
  * @author Nils
  * @version 2019-05-29
  */
-public class RepeatGrammer extends Grammar {
-	private Grammar check;
+public class RepeatExecutor extends GrammarExecutor {
+	
+	private String check;
 
-	public RepeatGrammer(Grammar expression, String name) {
+	public RepeatExecutor(String expression, String name) {
 		this.check = expression;
 		setName(name);
 	}
 
 	/**
-	 * @see com.niton.parser.check.Grammar#process(java.util.ArrayList)
+	 * @see com.niton.parser.grammar.Grammar#process(java.util.ArrayList)
 	 */
 	@Override
-	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
+	public GrammarObject process(ArrayList<AssignedToken> tokens,GrammarReference ref) throws ParsingException {
 		boolean keep = true;
 		SubGrammerObject obj = new SubGrammerObject();
 		obj.setName(getName());
 		while (keep) {
 			try {
-				GrammarObject gr = check.check(tokens, index());
+				GrammarExecutor g = ref.get(check).getExecutor();
+				GrammarObject gr = g.check(tokens,index(),ref);
 				if (gr == null)
 					throw new ParsingException("");
 				obj.objects.add(gr);
-				index(check.index());
+				index(g.index());
 			} catch (ParsingException e) {
 				return obj;
 			}
@@ -46,23 +49,16 @@ public class RepeatGrammer extends Grammar {
 	/**
 	 * @return the check
 	 */
-	public Grammar getCheck() {
+	public String getCheck() {
 		return check;
 	}
 
 	/**
 	 * @param check the check to set
 	 */
-	public void setCheck(Grammar check) {
+	public void setCheck(String check) {
 		this.check = check;
 	}
 
-	/**
-	 * @see com.niton.parser.check.Grammar#getGrammarObjectType()
-	 */
-	@Override
-	public Class<? extends GrammarObject> getGrammarObjectType() {
-		return SubGrammerObject.class;
-	}
 	
 }

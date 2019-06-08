@@ -1,4 +1,4 @@
-package com.niton.parser.check;
+package com.niton.parser.grammar;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -6,11 +6,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.niton.parser.GrammarObject;
+import com.niton.parser.GrammarReference;
 import com.niton.parser.ParsingException;
 import com.niton.parser.SubGrammerObject;
 import com.niton.parser.TokenGrammarObject;
 import com.niton.parser.Tokenizer.AssignedToken;
 import com.niton.parser.Tokens;
+import com.niton.parser.grammar.exectors.ChainExecutor;
+import com.niton.parser.grammar.exectors.GrammarExecutor;
 
 /**
  * Used to build a grammar<br>
@@ -23,22 +26,7 @@ public class ChainGrammer extends Grammar {
 	ArrayList<Grammar> chain = new ArrayList<>();
 
 	/**
-	 * @throws ParsingException
-	 * @see com.niton.parser.check.Grammar#check(java.util.ArrayList)
-	 */
-	@Override
-	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
-		SubGrammerObject gObject = new SubGrammerObject();
-		gObject.setName(getName());
-		for (Grammar grammer : chain) {
-			gObject.objects.add(grammer.check(tokens, index()));
-			index(grammer.index());
-		}
-		return gObject;
-	}
-
-	/**
-	 * @see com.niton.parser.check.Grammar#getGrammarObjectType()
+	 * @see com.niton.parser.grammar.Grammar#getGrammarObjectType()
 	 */
 	@Override
 	public Class<? extends GrammarObject> getGrammarObjectType() {
@@ -76,7 +64,7 @@ public class ChainGrammer extends Grammar {
 	}
 
 	public ChainGrammer match(Grammar g, String name) {
-		chain.add(new GrammarMatchGrammer(g, name));
+		chain.add(new GrammarMatchGrammer(g.getName(), name));
 		return this;
 	}
 
@@ -106,7 +94,7 @@ public class ChainGrammer extends Grammar {
 	}
 
 	public ChainGrammer ignore(Grammar g) {
-		chain.add(new IgnoreGrammer(g));
+		chain.add(new IgnoreGrammer(g.getName()));
 		return this;
 	}
 
@@ -137,12 +125,12 @@ public class ChainGrammer extends Grammar {
 	}
 
 	public ChainGrammer matchAny(String name, Grammar... tokens) {
-		chain.add(new MultiGrammer(tokens, name));
+		chain.add(new MultiGrammer(Arrays.stream(tokens).map((a)->a.getName()).collect(Collectors.toList()).toArray(new String[tokens.length]), name));
 		return this;
 	}
 
 	public ChainGrammer repeatMatch(Grammar expression, String name) {
-		chain.add(new RepeatGrammer(expression, name));
+		chain.add(new RepeatGrammer(expression.getName(), name));
 		return this;
 	}
 
@@ -198,7 +186,7 @@ public class ChainGrammer extends Grammar {
 	 * @return
 	 */
 	public ChainGrammer matchOptional(Grammar value, String name) {
-		chain.add(new OptinalGrammer(value, name));
+		chain.add(new OptinalGrammer(value.getName(), name));
 		return this;
 	}
 
@@ -210,23 +198,17 @@ public class ChainGrammer extends Grammar {
 	 * @param token
 	 * @return
 	 */
-	public ChainGrammer matchOptional(Tokens token, String name) {
-		return matchOptional(token.name(), name);
+	public ChainGrammer matchTokenOptional(Tokens token, String name) {
+		return matchTokenOptional(token.name(), name);
 	}
 
-	/**
-	 * Description :
-	 * 
-	 * @author Nils
-	 * @version 2019-05-29
-	 * @param value
-	 * @return
+	/*
+	 * +---------------+
+	 * | WITHOUT NAMES |
+	 * +---------------+
 	 */
-	public ChainGrammer matchOptional(String token, String name) {
-		chain.add(new OptinalTokenGrammer(token, name));
-		return this;
-	}
-
+	
+	
 	/**
 	 * Description :
 	 * 
@@ -252,10 +234,6 @@ public class ChainGrammer extends Grammar {
 		return this;
 	}
 
-	public ChainGrammer match(Grammar g) {
-		chain.add(new GrammarMatchGrammer(g, null));
-		return this;
-	}
 
 	/**
 	 * Description :
@@ -284,7 +262,7 @@ public class ChainGrammer extends Grammar {
 	}
 
 	public ChainGrammer matchAny(Grammar... tokens) {
-		chain.add(new MultiGrammer(tokens, null));
+		chain.add(new MultiGrammer(Arrays.stream(tokens).map((a)->a.getName()).collect(Collectors.toList()).toArray(new String[tokens.length]), null));
 		return this;
 	}
 
@@ -352,7 +330,7 @@ public class ChainGrammer extends Grammar {
 	 * @return
 	 */
 	public ChainGrammer matchOptional(Grammar value) {
-		chain.add(new OptinalGrammer(value, null));
+		chain.add(new OptinalGrammer(value.getName(), null));
 		return this;
 	}
 
@@ -364,8 +342,8 @@ public class ChainGrammer extends Grammar {
 	 * @param token
 	 * @return
 	 */
-	public ChainGrammer matchOptional(Tokens token) {
-		return matchOptional(token.name(), null);
+	public ChainGrammer matchTokenOptional(Tokens token) {
+		return matchTokenOptional(token.name(), null);
 	}
 
 	/**
@@ -376,15 +354,100 @@ public class ChainGrammer extends Grammar {
 	 * @param value
 	 * @return
 	 */
-	public ChainGrammer matchOptional(String token) {
+	public ChainGrammer matchTokenOptional(String token) {
 		chain.add(new OptinalTokenGrammer(token, null));
 		return this;
 	}
+	
+	
+	
 
 	/**
 	 * @return the chain
 	 */
 	public ArrayList<Grammar> getChain() {
 		return chain;
+	}
+	
+	/*
+	 * +-----<Title>-----+
+	 * | USING REFERENCE |
+	 * +-----------------+
+	 */
+
+	public ChainGrammer match(String g, String name) {
+		chain.add(new GrammarMatchGrammer(g, name));
+		return this;
+	}
+
+	public ChainGrammer ignore(String g) {
+		chain.add(new IgnoreGrammer(g));
+		return this;
+	}
+
+	public ChainGrammer matchAny(String name, String... tokens) {
+		chain.add(new MultiGrammer(tokens, name));
+		return this;
+	}
+
+	public ChainGrammer repeatMatch(String expression, String name) {
+		chain.add(new RepeatGrammer(expression, name));
+		return this;
+	}
+
+	/**
+	 * Description :
+	 * 
+	 * @author Nils
+	 * @version 2019-05-29
+	 * @param value
+	 * @return
+	 */
+	public ChainGrammer matchTokenOptional(String value, String name) {
+		chain.add(new OptinalGrammer(value, name));
+		return this;
+	}
+
+	public ChainGrammer match(String g) {
+		chain.add(new GrammarMatchGrammer(g, null));
+		return this;
+	}
+
+	public ChainGrammer matchAny(String... tokens) {
+		chain.add(new MultiGrammer(tokens, null));
+		return this;
+	}
+
+	/**
+	 * Description :
+	 * 
+	 * @author Nils
+	 * @version 2019-05-29
+	 * @param expression
+	 * @return
+	 */
+	public ChainGrammer repeatMatch(String expression) {
+		return repeatMatch(expression, null);
+	}
+
+	/**
+	 * Description :
+	 * 
+	 * @author Nils
+	 * @version 2019-05-29
+	 * @param value
+	 * @return
+	 */
+	public ChainGrammer matchOptional(String value) {
+		chain.add(new OptinalGrammer(value, null));
+		return this;
+	}
+
+	/**
+	 * @see com.niton.parser.grammar.Grammar#getExecutor()
+	 */
+	@Override
+	public GrammarExecutor getExecutor() {
+		return new ChainExecutor(chain);
 	}
 }

@@ -1,4 +1,4 @@
-package com.niton.parser.check;
+package com.niton.parser.grammar;
 
 import java.util.ArrayList;
 
@@ -7,6 +7,8 @@ import com.niton.parser.ParsingException;
 import com.niton.parser.SubGrammerObject;
 import com.niton.parser.TokenGrammarObject;
 import com.niton.parser.Tokenizer.AssignedToken;
+import com.niton.parser.grammar.exectors.GrammarExecutor;
+import com.niton.parser.grammar.exectors.RepeatTokenExecutor;
 
 /**
  * This is the RepeatGrammer Class
@@ -22,23 +24,6 @@ public class RepeatTokenGrammer extends Grammar {
 		this.setName(name);
 	}
 
-	/**
-	 * @see com.niton.parser.check.Grammar#process(java.util.ArrayList)
-	 */
-	@Override
-	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
-		TokenGrammarObject object = new TokenGrammarObject();
-		object.setName(getName());
-		for (int i = index(); i < tokens.size(); i++) {
-			AssignedToken aToken = tokens.get(i);
-			if(aToken.name.equals(token))
-				object.tokens.add(aToken);
-			else
-				return object;
-			increase();
-		}
-		return object;
-	}
 
 	/**
 	 * @return the token
@@ -55,10 +40,19 @@ public class RepeatTokenGrammer extends Grammar {
 	}
 
 	/**
-	 * @see com.niton.parser.check.Grammar#getGrammarObjectType()
+	 * @see com.niton.parser.grammar.Grammar#getGrammarObjectType()
 	 */
 	@Override
 	public Class<? extends GrammarObject> getGrammarObjectType() {
 		return TokenGrammarObject.class;
+	}
+
+
+	/**
+	 * @see com.niton.parser.grammar.Grammar#getExecutor()
+	 */
+	@Override
+	public GrammarExecutor getExecutor() {
+		return new RepeatTokenExecutor(token, getName());
 	}
 }

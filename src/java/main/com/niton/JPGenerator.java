@@ -8,16 +8,17 @@ import java.util.LinkedList;
 import javax.lang.model.element.Modifier;
 
 import com.niton.parser.GrammarObject;
+import com.niton.parser.GrammarReference;
 import com.niton.parser.SubGrammerObject;
 import com.niton.parser.TokenGrammarObject;
-import com.niton.parser.check.ChainGrammer;
-import com.niton.parser.check.Grammar;
-import com.niton.parser.check.GrammarMatchGrammer;
-import com.niton.parser.check.IgnoreGrammer;
-import com.niton.parser.check.IgnoreTokenGrammer;
-import com.niton.parser.check.MultiGrammer;
-import com.niton.parser.check.OptinalGrammer;
-import com.niton.parser.check.RepeatGrammer;
+import com.niton.parser.grammar.ChainGrammer;
+import com.niton.parser.grammar.Grammar;
+import com.niton.parser.grammar.GrammarMatchGrammer;
+import com.niton.parser.grammar.IgnoreGrammer;
+import com.niton.parser.grammar.IgnoreTokenGrammer;
+import com.niton.parser.grammar.MultiGrammer;
+import com.niton.parser.grammar.OptinalGrammer;
+import com.niton.parser.grammar.RepeatGrammer;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
@@ -73,12 +74,12 @@ public class JPGenerator {
 		this.pack = pack;
 	}
 
-	public void generate(ChainGrammer g) throws IOException {
+	public void generate(String g,GrammarReference reference) throws IOException {
 		FieldSpec bjectField = FieldSpec.builder(SubGrammerObject.class, "obj").addModifiers(Modifier.PRIVATE).build();
 		MethodSpec constructor = MethodSpec.constructorBuilder().addStatement("this.obj = obj")
 				.addParameter(SubGrammerObject.class, "obj").addModifiers(Modifier.PUBLIC).build();
 		LinkedList<MethodSpec> getter = new LinkedList<>();
-		for (Grammar gr : g.getChain()) {
+		for (Grammar gr : ((ChainGrammer) reference.get(g)).getChain()) {
 			if (gr instanceof IgnoreGrammer || gr instanceof IgnoreTokenGrammer)
 				continue;
 			if (gr.getName() == null)
@@ -93,13 +94,14 @@ public class JPGenerator {
 				}
 				// singe object return + type known
 				else if (gr instanceof OptinalGrammer || gr instanceof GrammarMatchGrammer) {
-					ChainGrammer cgr = null;
+					String cgrKey = null;
 					if (gr instanceof OptinalGrammer)
-						cgr = (ChainGrammer) ((OptinalGrammer) gr).getCheck();
+						cgrKey = ((OptinalGrammer) gr).getCheck();
 					if (gr instanceof GrammarMatchGrammer)
-						cgr = (ChainGrammer) ((GrammarMatchGrammer) gr).getGrammar();
+						cgrKey = ((GrammarMatchGrammer) gr).getGrammar();
+					ChainGrammer cgr = (ChainGrammer) reference.get(cgrKey);
 
-					generate(cgr);
+					generate(cgrKey,reference);
 					getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
 							.returns(ClassName.get(pack, camelCase(cgr.getName()))).addModifiers(Modifier.PUBLIC)
 							.addStatement("return new " + camelCase(cgr.getName()) + "(($T)obj.getObject($S))",
@@ -109,8 +111,8 @@ public class JPGenerator {
 				} else {
 					ChainGrammer cgr = null;
 					if (gr instanceof RepeatGrammer)
-						cgr = (ChainGrammer) ((RepeatGrammer) gr).getCheck();
-					generate(cgr);
+						cgr = (ChainGrammer) reference.get(((RepeatGrammer) gr).getCheck());
+					generate(((RepeatGrammer) gr).getCheck(),reference);
 					
 					ParameterizedTypeName listType = ParameterizedTypeName.get(ClassName.get(ArrayList.class),ClassName.get(pack, camelCase(cgr.getName())));
 					
@@ -144,7 +146,7 @@ public class JPGenerator {
 			}
 		}
 
-		Builder build = TypeSpec.classBuilder(camelCase(g.getName())).addModifiers(Modifier.PUBLIC).addField(bjectField)
+		Builder build = TypeSpec.classBuilder(camelCase(reference.get(g).getName())).addModifiers(Modifier.PUBLIC).addField(bjectField)
 				.addMethod(constructor);
 
 		for (MethodSpec methodSpec : getter) {

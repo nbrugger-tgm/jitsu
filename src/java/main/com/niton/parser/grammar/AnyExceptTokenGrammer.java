@@ -1,4 +1,4 @@
-package com.niton.parser.check;
+package com.niton.parser.grammar;
 
 import java.util.ArrayList;
 
@@ -6,6 +6,8 @@ import com.niton.parser.GrammarObject;
 import com.niton.parser.ParsingException;
 import com.niton.parser.TokenGrammarObject;
 import com.niton.parser.Tokenizer.AssignedToken;
+import com.niton.parser.grammar.exectors.AnyExceptTokenExecutor;
+import com.niton.parser.grammar.exectors.GrammarExecutor;
 
 /**
  * This grammer accepts any token except the one given in the Constructor<br>
@@ -37,27 +39,21 @@ public class AnyExceptTokenGrammer extends Grammar {
 		this.setName(name);
 	}
 
-	/**
-	 * @see com.niton.parser.check.Grammar#process(java.util.ArrayList)
-	 */
-	@Override
-	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
-		TokenGrammarObject obj = new TokenGrammarObject();
-		obj.setName(getName());
-		for (; index() < tokens.size(); increase()) {
-			AssignedToken token = tokens.get(index());
-			if (token.name.equals(dunnoaccept))
-				return obj;
-			obj.tokens.add(token);
-		}
-		return null;
-	}
+	
 
 	/**
-	 * @see com.niton.parser.check.Grammar#getGrammarObjectType()
+	 * @see com.niton.parser.grammar.Grammar#getGrammarObjectType()
 	 */
 	@Override
 	public Class<? extends GrammarObject> getGrammarObjectType() {
 		return TokenGrammarObject.class;
+	}
+
+	/**
+	 * @see com.niton.parser.grammar.Grammar#getExecutor()
+	 */
+	@Override
+	public GrammarExecutor getExecutor() {
+		return new AnyExceptTokenExecutor(dunnoaccept, getName());
 	}
 }

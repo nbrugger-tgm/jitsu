@@ -1,4 +1,4 @@
-package com.niton.parser.check;
+package com.niton.parser.grammar;
 
 import java.util.ArrayList;
 
@@ -6,6 +6,8 @@ import com.niton.parser.GrammarObject;
 import com.niton.parser.IgnoredGrammerObject;
 import com.niton.parser.ParsingException;
 import com.niton.parser.Tokenizer.AssignedToken;
+import com.niton.parser.grammar.exectors.GrammarExecutor;
+import com.niton.parser.grammar.exectors.OptionalExecutor;
 
 /**
  * Cheks if the grammer is right if yes it adds the element to the output if not
@@ -15,50 +17,41 @@ import com.niton.parser.Tokenizer.AssignedToken;
  * @version 2019-05-29
  */
 public class OptinalGrammer extends Grammar {
-	private Grammar check;
+	private String check;
 
-	public OptinalGrammer(Grammar value, String name) {
+	public OptinalGrammer(String value, String name) {
 		this.check = value;
 		setName(name);
-	}
-
-	/**
-	 * @see com.niton.parser.check.Grammar#process(java.util.ArrayList)
-	 */
-	@Override
-	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
-		try {
-			GrammarObject obj = check.check(tokens, index());
-			if (obj == null)
-				throw new ParsingException("");
-			obj.setName(getName());
-			index(check.index());
-			return obj;
-		} catch (Exception e) {
-			return new IgnoredGrammerObject();
-		}
 	}
 	
 
 	/**
 	 * @return the check
 	 */
-	public Grammar getCheck() {
+	public String getCheck() {
 		return check;
 	}
 
 	/**
 	 * @param check the check to set
 	 */
-	public void setCheck(Grammar check) {
+	public void setCheck(String check) {
 		this.check = check;
 	}
 
 	/**
-	 * @see com.niton.parser.check.Grammar#getGrammarObjectType()
+	 * @see com.niton.parser.grammar.Grammar#getGrammarObjectType()
 	 */
 	@Override
 	public Class<? extends GrammarObject> getGrammarObjectType() {
 		return GrammarObject.class;
+	}
+
+	/**
+	 * @see com.niton.parser.grammar.Grammar#getExecutor()
+	 */
+	@Override
+	public GrammarExecutor getExecutor() {
+		return new OptionalExecutor(check, getName());
 	}
 }

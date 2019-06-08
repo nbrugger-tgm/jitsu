@@ -1,9 +1,10 @@
-package com.niton.parser.check;
+package com.niton.parser.grammar.exectors;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 
 import com.niton.parser.GrammarObject;
+import com.niton.parser.GrammarReference;
 import com.niton.parser.ParsingException;
 import com.niton.parser.TokenGrammarObject;
 import com.niton.parser.Tokenizer.AssignedToken;
@@ -14,22 +15,24 @@ import com.niton.parser.Tokenizer.AssignedToken;
  * @author Nils
  * @version 2019-05-29
  */
-public class MultiGrammer extends Grammar {
-	private Grammar[] tokens;
+public class MultiExecutor extends GrammarExecutor {
+	
+	private String[] tokens;
 
-	public MultiGrammer(Grammar[] tokens, String name) {
+	public MultiExecutor(String[] tokens, String name) {
 		this.tokens = tokens;
 		setName(name);
 	}
 
 	/**
-	 * @see com.niton.parser.check.Grammar#process(java.util.ArrayList)
+	 * @see com.niton.parser.grammar.Grammar#process(java.util.ArrayList)
 	 */
 	@Override
-	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
-		for (Grammar g : this.tokens) {
+	public GrammarObject process(ArrayList<AssignedToken> tokens,GrammarReference ref) throws ParsingException {
+		for (String grammar : this.tokens) {
 			try {
-				GrammarObject obj = g.check(tokens, index());
+				GrammarExecutor g = ref.get(grammar).getExecutor();
+				GrammarObject obj = g.check(tokens,index(),ref);
 				if (obj == null)
 					throw new ParsingException("");
 				index(g.index());
@@ -45,22 +48,16 @@ public class MultiGrammer extends Grammar {
 	/**
 	 * @return the tokens
 	 */
-	public Grammar[] getTokens() {
+	public String[] getTokens() {
 		return tokens;
 	}
 
 	/**
 	 * @param tokens the tokens to set
 	 */
-	public void setTokens(Grammar[] tokens) {
+	public void setTokens(String[] tokens) {
 		this.tokens = tokens;
 	}
 
-	/**
-	 * @see com.niton.parser.check.Grammar#getGrammarObjectType()
-	 */
-	@Override
-	public Class<? extends GrammarObject> getGrammarObjectType() {
-		return GrammarObject.class;
-	}
+
 }
