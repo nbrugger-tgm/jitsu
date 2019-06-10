@@ -47,16 +47,17 @@ OR
 	 - multi
 	 - name_assign
  - #### specification
-	 - `~` Ignore: Ignores `item` completely it it exists
+	 - `~` Ignore: Ignores `item` completely
 	 - `?` Optional: The `item` is optional, it is used if it exists but ignored if not
-	 - `*` AnyExcept: Anything except `item` is used
+	 - `*` AnyExcept: Anything except `item` is used (multiple Time
 	 - `~` Ignore: Ignores `item` completely it it exists
+	 - 
 
 ## Example
 
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTk4OTE2Nzc4NCw3MzA5MTIzNjgsLTEyNT
-AwMzMwNjJdfQ==
+eyJoaXN0b3J5IjpbNjU4ODM2OTEyLDczMDkxMjM2OCwtMTI1MD
+AzMzA2Ml19
 -->
