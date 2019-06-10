@@ -39,7 +39,7 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
 
 OR
 
-<array>
+<array><name_assign>
 ```
 
  - Optionals:
@@ -57,6 +57,6 @@ OR
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE3MTMyNTE1MTksNzMwOTEyMzY4LC0xMj
-UwMDMzMDYyXX0=
+eyJoaXN0b3J5IjpbLTk4OTE2Nzc4NCw3MzA5MTIzNjgsLTEyNT
+AwMzMwNjJdfQ==
 -->
