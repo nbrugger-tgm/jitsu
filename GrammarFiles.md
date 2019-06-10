@@ -86,6 +86,7 @@ Some of the tokens used are pseudocode
 	    .matchToken(Tokens.SEMICOLON);
 The same as GRM file
 
+    //
     STRING_DELMITTER = '"'
     IDENTIFYER = '[A-Za-z_]+'
     WHITESPACE = '[ \t]+'
@@ -98,10 +99,12 @@ The same as GRM file
 	    #STRING_DELMITTER
     
     VariableAssignment:
+	    #IDENTIFYER > name
+	    ~#WHITESPACE
 	    
 	    
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMzQ2NDAxNDM3LDczMDkxMjM2OCwtMTI1MD
-AzMzA2Ml19
+eyJoaXN0b3J5IjpbLTQzNjg2MDQ3Miw3MzA5MTIzNjgsLTEyNT
+AwMzMwNjJdfQ==
 -->
