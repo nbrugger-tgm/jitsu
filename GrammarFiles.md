@@ -34,11 +34,8 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
  - `grammar_name` may contain letters and underscores
 
 ### Rule
-
- 1. Ignore
-
 ```
-~>item
+<specification><item>[multi]
 ```
 
 
@@ -47,6 +44,6 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTgxODEyOTY0Myw3MzA5MTIzNjgsLTEyNT
+eyJoaXN0b3J5IjpbMTgxNDkxNTYxMCw3MzA5MTIzNjgsLTEyNT
 AwMzMwNjJdfQ==
 -->
