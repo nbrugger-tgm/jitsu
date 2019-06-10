@@ -23,13 +23,19 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
 	```
 ### Grammars
 
-    <grammar>
+    <grammar_name> :
+	    rule
+	    rule2
+	    ...
+
+ - Spaces and Tabs do not matter at any point between items
+ - So the intendati
 
 ## Example
 
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTIxODE1NTI1OSw3MzA5MTIzNjgsLTEyNT
-AwMzMwNjJdfQ==
+eyJoaXN0b3J5IjpbLTE2MDU4MTA5OTIsNzMwOTEyMzY4LC0xMj
+UwMDMzMDYyXX0=
 -->
