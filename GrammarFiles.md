@@ -64,13 +64,15 @@ OR
 	 - Indicates that `item` is captured more or less than (or exactly) one time
  - #### name_assign
 	 - Assigns a name to the rule
-	 - > <nam>
+	 - `> <name_to_assign>`
+	 - `name_to_assign` needs to be a valid identifyer
+	 - Whitespace between the arrow and the name is allowed also bevore the arrow
 
 ## Example
 
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMjA0ODQzMDk0NSw3MzA5MTIzNjgsLTEyNT
+eyJoaXN0b3J5IjpbLTM0NDIxMDc2NCw3MzA5MTIzNjgsLTEyNT
 AwMzMwNjJdfQ==
 -->
