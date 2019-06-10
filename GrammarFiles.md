@@ -9,10 +9,16 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
 ```
 ### Token Definitions
 ```
-<token_name> = '<regex>
+<token_name> = '<regex>'
 ```
 
  - Spaces do not matter
+ - only one token definition per line
+#### Example
+```
+LINE_END='\r\n'
+IDENTIFYER='[A-Za-z_]+'
+```
 
 	 
 
@@ -21,6 +27,6 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTU3MTM5MDI0Miw3MzA5MTIzNjgsLTEyNT
-AwMzMwNjJdfQ==
+eyJoaXN0b3J5IjpbNDE2NDA5OTUyLDczMDkxMjM2OCwtMTI1MD
+AzMzA2Ml19
 -->
