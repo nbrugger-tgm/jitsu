@@ -35,7 +35,7 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
 
 ### Rule
 ```
-<specification><item>[multi]
+<specification><item><multi><name_ass>
 ```
 
 
@@ -44,6 +44,6 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTgxNDkxNTYxMCw3MzA5MTIzNjgsLTEyNT
+eyJoaXN0b3J5IjpbLTE1MTYxMzA4NSw3MzA5MTIzNjgsLTEyNT
 AwMzMwNjJdfQ==
 -->
