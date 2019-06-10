@@ -71,19 +71,21 @@ OR
 ## Example
 Some of the tokens used are pseudocode
 
-    Grammer
-	    .build("String")
-	    .matchToken(Tokens.STRING_DELIMITER)
-	    .anyExcept(Tokens.STRING_DELIMITER,"content")
-	    .matchToken(Tokens.STRING_DELIMITER);
+```java
+Grammer
+	.build("String")
+	.matchToken(Tokens.STRING_DELIMITER)
+	.anyExcept(Tokens.STRING_DELIMITER,"content")
+	.matchToken(Tokens.STRING_DELIMITER);
 
-    Grammer
-	    .build("VariableAssignment")
-	    .matchToken(Tokens.IDENTIFYER,"name")
-	    .ignoreToken(Tokens.WHITESPACE)
-	    .matchToken(Tokens.EQUAL)// EQUAL is =
-	    .match("String","value")
-	    .matchToken(Tokens.SEMICOLON);
+Grammer
+	.build("VariableAssignment")
+	.matchToken(Tokens.IDENTIFYER,"name")
+	.ignoreToken(Tokens.WHITESPACE)
+	.matchToken(Tokens.EQUAL)// EQUAL is =
+	.match("String","value")
+	.matchToken(Tokens.SEMICOLON);
+```
 The same as GRM file
 
     STRING_DELMITTER = '"'
@@ -107,6 +109,6 @@ The same as GRM file
 	    
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNTAyODk0OTY5LDczMDkxMjM2OCwtMTI1MD
-AzMzA2Ml19
+eyJoaXN0b3J5IjpbLTEzODI3MjE1MjEsNzMwOTEyMzY4LC0xMj
+UwMDMzMDYyXX0=
 -->
