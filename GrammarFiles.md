@@ -70,9 +70,18 @@ OR
 
 ## Example
 
-    Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
+    Grammer
+	    .build("String")
+	    .matchToken(Tokens.STRING_DELIMITER)
+	    .anyExcept(Tokens.STRING_DELIMITER,"content")
+	    .matchToken(Tokens.STRING_DELIMITER);
 
+    Grammer
+	    .build("VariableAssignment")
+	    .matchToken(Tokens.IDENTIFYER)
+	    .anyExcept(Tokens.STRING_DELIMITER,"content")
+	    .matchToken(Tokens.STRING_DELIMITER);
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTM0NDIxMDc2NCw3MzA5MTIzNjgsLTEyNT
-AwMzMwNjJdfQ==
+eyJoaXN0b3J5IjpbNDkyMzY4MzI5LDczMDkxMjM2OCwtMTI1MD
+AzMzA2Ml19
 -->
