@@ -22,12 +22,12 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
 	IDENTIFYER='[A-Za-z_]+'
 	```
 ### Grammars
-	```
-    <grammar_name> :
-	    rule
-	    rule2
-	    ...
-	```
+```
+<grammar_name> :
+	rule
+	rule2
+	...
+```
  - Spaces and Tabs do not matter at any point between items
  - So the intendation is not neccessary
  - A grammar might have as many rules as you like
@@ -35,12 +35,18 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
 
 ### Rule
 
+ 1. Ignore
+
+```
+~>item
+```
+
 
 ## Example
 
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTExOTAwMDk0NjcsNzMwOTEyMzY4LC0xMj
-UwMDMzMDYyXX0=
+eyJoaXN0b3J5IjpbMTgxODEyOTY0Myw3MzA5MTIzNjgsLTEyNT
+AwMzMwNjJdfQ==
 -->
