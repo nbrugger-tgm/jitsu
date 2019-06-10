@@ -15,7 +15,8 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
  - Spaces do not matter
  - only one token definition per line
  - The `regex` Delimitter is `'` to use it within a regex use `\'`
-	#### Example
+ - `token_name` may contain letters and underscores
+ - Example
 	```
 	LINE_END='\r\n'
 	IDENTIFYER='[A-Za-z_]+'
@@ -28,6 +29,6 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTg2MjA1MDg0MSw3MzA5MTIzNjgsLTEyNT
-AwMzMwNjJdfQ==
+eyJoaXN0b3J5IjpbLTExMjc4NzM5MzQsNzMwOTEyMzY4LC0xMj
+UwMDMzMDYyXX0=
 -->
