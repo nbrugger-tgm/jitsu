@@ -59,12 +59,15 @@ OR
 	 - Syntax: `[#]reference`
 	 - The # is used when reference is an token
 	 - If there is no # it is an grammar
+ - #### multi
+	 - Simply a `*`
+	 - Indicates that `item` is captured more, less or equal one time and put into 
 
 ## Example
 
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMzI2OTI2MDYzLDczMDkxMjM2OCwtMTI1MD
+eyJoaXN0b3J5IjpbNzE0MDMzMzQ4LDczMDkxMjM2OCwtMTI1MD
 AzMzA2Ml19
 -->
