@@ -2,9 +2,11 @@
 Grammar Files are used to define a Grammar in a File reather than just cerate them with code.
 
 ## Syntax
-Declare Grammar 
-### Rules
-
+### File Over All
+```
+[Token Definitions]
+[Grammar]
+```
 	 
 
 ## Example
@@ -12,5 +14,6 @@ Declare Grammar
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNzMwOTEyMzY4LC0xMjUwMDMzMDYyXX0=
+eyJoaXN0b3J5IjpbMTMwNjU1MTk1Myw3MzA5MTIzNjgsLTEyNT
+AwMzMwNjJdfQ==
 -->
