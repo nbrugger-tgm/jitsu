@@ -61,13 +61,16 @@ OR
 	 - If there is no # it is an grammar
  - #### multi
 	 - Simply a `*`
-	 - Indicates that `item` is captured more, less or equal one time and put into 
+	 - Indicates that `item` is captured more or less than (or exactly) one time
+ - #### name_assign
+	 - Assigns a name to the rule
+	 - > <nam>
 
 ## Example
 
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNzE0MDMzMzQ4LDczMDkxMjM2OCwtMTI1MD
-AzMzA2Ml19
+eyJoaXN0b3J5IjpbMjA0ODQzMDk0NSw3MzA5MTIzNjgsLTEyNT
+AwMzMwNjJdfQ==
 -->
