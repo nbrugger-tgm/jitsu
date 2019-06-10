@@ -69,6 +69,7 @@ OR
 	 - Whitespace between the arrow and the name is allowed also bevore the arrow
 
 ## Example
+Some of the tokens used are pseudocode
 
     Grammer
 	    .build("String")
@@ -79,9 +80,11 @@ OR
     Grammer
 	    .build("VariableAssignment")
 	    .matchToken(Tokens.IDENTIFYER)
-	    .anyExcept(Tokens.STRING_DELIMITER,"content")
+	    .ignoreToken(Tokens.WHITESPACE)
+	    .matchToken(Tokens.EQUAL)// EQUAL is =
+	    .match("String","content")
 	    .matchToken(Tokens.STRING_DELIMITER);
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNDkyMzY4MzI5LDczMDkxMjM2OCwtMTI1MD
-AzMzA2Ml19
+eyJoaXN0b3J5IjpbLTE3NTkyNTQ2NzIsNzMwOTEyMzY4LC0xMj
+UwMDMzMDYyXX0=
 -->
