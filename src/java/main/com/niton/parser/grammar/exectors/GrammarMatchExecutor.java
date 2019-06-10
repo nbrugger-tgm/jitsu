@@ -44,7 +44,8 @@ public class GrammarMatchExecutor extends GrammarExecutor {
 	 */
 	@Override
 	public GrammarObject process(ArrayList<AssignedToken> tokens,GrammarReference ref) throws ParsingException {
-
+		if(ref.get(grammar) == null)
+			throw new ParsingException("Unknown reference! The Grammar \""+grammar+"\" needed in "+getName()+" was not found in reference");
 		GrammarExecutor g = ref.get(grammar).getExecutor();
 		GrammarObject o = g.check(tokens,index(),ref);
 		o.setName(getName());
