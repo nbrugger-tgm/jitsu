@@ -36,6 +36,10 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
 ### Rule
 ```
 <specification><item><multi><name_assign>
+
+OR
+
+<array>
 ```
 
  - Optionals:
@@ -45,7 +49,7 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
  - #### specification
 	 - `~` Ignore: Ignores `item` completely it it exists
 	 - `?` Optional: The `item` is optional, it is used if it exists but ignored if not
-	 - `*` Ignore: The `item` is recognized many times
+	 - `*` AnyExcept: Anything except `item` is used
 	 - `~` Ignore: Ignores `item` completely it it exists
 
 ## Example
@@ -53,6 +57,6 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTg0NzMzMTcxOCw3MzA5MTIzNjgsLTEyNT
-AwMzMwNjJdfQ==
+eyJoaXN0b3J5IjpbLTE3MTMyNTE1MTksNzMwOTEyMzY4LC0xMj
+UwMDMzMDYyXX0=
 -->
