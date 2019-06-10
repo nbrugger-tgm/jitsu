@@ -49,7 +49,10 @@ OR
  - #### specification
 	 - `~` Ignore: Ignores `item` completely
 	 - `?` Optional: The `item` is optional, it is used if it exists but ignored if not
-	 - `*` AnyExcept: Anything except `item` is used (multiple Time
+	 - `*` AnyExcept: Anything except `item` is used (multiple Times)
+		 - Example
+			 - `*END_OF_LINE` 
+			 - will coll
 	 - `~` Ignore: Ignores `item` completely it it exists
 	 - 
 
@@ -58,6 +61,6 @@ OR
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNjU4ODM2OTEyLDczMDkxMjM2OCwtMTI1MD
+eyJoaXN0b3J5IjpbMzA4NjE5NTQxLDczMDkxMjM2OCwtMTI1MD
 AzMzA2Ml19
 -->
