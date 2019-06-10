@@ -35,15 +35,21 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
 
 ### Rule
 ```
-<specification><item><multi><name_ass>
+<specification><item><multi><name_assign>
 ```
 
+ - Optionals:
+	 - specification
+	 - multi
+	 - name_assign
+ 
+ 
 
 ## Example
 
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE1MTYxMzA4NSw3MzA5MTIzNjgsLTEyNT
-AwMzMwNjJdfQ==
+eyJoaXN0b3J5IjpbMjUwNzcwNTU1LDczMDkxMjM2OCwtMTI1MD
+AzMzA2Ml19
 -->
