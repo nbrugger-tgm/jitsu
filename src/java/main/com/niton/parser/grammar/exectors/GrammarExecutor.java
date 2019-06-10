@@ -49,9 +49,9 @@ public abstract class GrammarExecutor {
 	 * @throws ParsingException
 	 */
 	public final GrammarObject check(ArrayList<AssignedToken> tokens, int pos,GrammarReference reference) throws ParsingException {
+		index = pos;
 		if (index >= tokens.size())
 			throw new ParsingException("No More Tokens!");
-		index = pos;
 		return process(tokens, reference);
 	}
 
