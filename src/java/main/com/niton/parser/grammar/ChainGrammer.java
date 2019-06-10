@@ -14,6 +14,7 @@ import com.niton.parser.Tokenizer.AssignedToken;
 import com.niton.parser.Tokens;
 import com.niton.parser.grammar.exectors.ChainExecutor;
 import com.niton.parser.grammar.exectors.GrammarExecutor;
+import com.niton.parser.grammar.exectors.OptionalTokenExecutor;
 
 /**
  * Used to build a grammar<br>
@@ -46,7 +47,7 @@ public class ChainGrammer extends Grammar {
 	 * @param number
 	 * @return
 	 */
-	public ChainGrammer matchToken(Tokens number, String name) {
+	public ChainGrammer matchToken(Tokenable number, String name) {
 		return matchToken(number.name(), name);
 	}
 
@@ -76,7 +77,7 @@ public class ChainGrammer extends Grammar {
 	 * @param whitespace
 	 * @return
 	 */
-	public ChainGrammer ignoreToken(Tokens whitespace) {
+	public ChainGrammer ignoreToken(Tokenable whitespace) {
 		return ignoreToken(whitespace.name());
 	}
 
@@ -109,11 +110,11 @@ public class ChainGrammer extends Grammar {
 	 * @param slash
 	 * @return
 	 */
-	public ChainGrammer matchAnyToken(String name, Tokens... tokens) {
-		return matchAnyToken(name, Arrays.stream(tokens).map(new Function<Tokens, String>() {
+	public ChainGrammer matchAnyToken(String name, Tokenable... tokens) {
+		return matchAnyToken(name, Arrays.stream(tokens).map(new Function<Tokenable, String>() {
 
 			@Override
-			public String apply(Tokens t) {
+			public String apply(Tokenable t) {
 				return t.name();
 			}
 		}).collect(Collectors.toList()).toArray(new String[tokens.length]));
@@ -142,7 +143,7 @@ public class ChainGrammer extends Grammar {
 	 * @param bracketOpen
 	 * @return
 	 */
-	public ChainGrammer repeatMatchToken(Tokens bracketOpen, String name) {
+	public ChainGrammer repeatMatchToken(Tokenable bracketOpen, String name) {
 		return repeatMatchToken(bracketOpen.name(), name);
 	}
 
@@ -173,7 +174,7 @@ public class ChainGrammer extends Grammar {
 		return this;
 	}
 
-	public ChainGrammer anyExcept(Tokens token, String name) {
+	public ChainGrammer anyExcept(Tokenable token, String name) {
 		return anyExcept(token.name(), name);
 	}
 
@@ -198,10 +199,14 @@ public class ChainGrammer extends Grammar {
 	 * @param token
 	 * @return
 	 */
-	public ChainGrammer matchTokenOptional(Tokens token, String name) {
+	public ChainGrammer matchTokenOptional(Tokenable token, String name) {
 		return matchTokenOptional(token.name(), name);
 	}
 
+	public ChainGrammer matchTokenOptional(String token, String name) {
+		chain.add(new OptionalTokenGrammer(token, name));
+		return this;
+	}
 	/*
 	 * +---------------+
 	 * | WITHOUT NAMES |
@@ -217,7 +222,7 @@ public class ChainGrammer extends Grammar {
 	 * @param number
 	 * @return
 	 */
-	public ChainGrammer matchToken(Tokens number) {
+	public ChainGrammer matchToken(Tokenable number) {
 		return matchToken(number.name(), null);
 	}
 
@@ -246,11 +251,11 @@ public class ChainGrammer extends Grammar {
 	 * @param slash
 	 * @return
 	 */
-	public ChainGrammer matchAnyToken(Tokens... tokens) {
-		return matchAnyToken(null, Arrays.stream(tokens).map(new Function<Tokens, String>() {
+	public ChainGrammer matchAnyToken(Tokenable... tokens) {
+		return matchAnyToken(null, Arrays.stream(tokens).map(new Function<Tokenable, String>() {
 
 			@Override
-			public String apply(Tokens t) {
+			public String apply(Tokenable t) {
 				return t.name();
 			}
 		}).collect(Collectors.toList()).toArray(new String[tokens.length]));
@@ -286,7 +291,7 @@ public class ChainGrammer extends Grammar {
 	 * @param bracketOpen
 	 * @return
 	 */
-	public ChainGrammer repeatMatchToken(Tokens bracketOpen) {
+	public ChainGrammer repeatMatchToken(Tokenable bracketOpen) {
 		return repeatMatchToken(bracketOpen.name(), null);
 	}
 
@@ -317,7 +322,7 @@ public class ChainGrammer extends Grammar {
 		return this;
 	}
 
-	public ChainGrammer anyExcept(Tokens token) {
+	public ChainGrammer anyExcept(Tokenable token) {
 		return anyExcept(token.name(), null);
 	}
 
@@ -342,8 +347,8 @@ public class ChainGrammer extends Grammar {
 	 * @param token
 	 * @return
 	 */
-	public ChainGrammer matchTokenOptional(Tokens token) {
-		return matchTokenOptional(token.name(), null);
+	public ChainGrammer matchTokenOptional(Tokenable token) {
+		return matchTokenOptional(token.name());
 	}
 
 	/**
@@ -355,7 +360,7 @@ public class ChainGrammer extends Grammar {
 	 * @return
 	 */
 	public ChainGrammer matchTokenOptional(String token) {
-		chain.add(new OptinalTokenGrammer(token, null));
+		chain.add(new OptionalTokenGrammer(token, null));
 		return this;
 	}
 	
@@ -403,7 +408,7 @@ public class ChainGrammer extends Grammar {
 	 * @param value
 	 * @return
 	 */
-	public ChainGrammer matchTokenOptional(String value, String name) {
+	public ChainGrammer matchOptional(String value, String name) {
 		chain.add(new OptinalGrammer(value, name));
 		return this;
 	}
