@@ -6,9 +6,11 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 
 import javax.lang.model.element.Modifier;
+import javax.xml.parsers.ParserConfigurationException;
 
 import com.niton.parser.GrammarObject;
 import com.niton.parser.GrammarReference;
+import com.niton.parser.ParsingException;
 import com.niton.parser.SubGrammerObject;
 import com.niton.parser.TokenGrammarObject;
 import com.niton.parser.grammar.ChainGrammer;
@@ -74,87 +76,96 @@ public class JPGenerator {
 		this.pack = pack;
 	}
 
-	public void generate(String g,GrammarReference reference) throws IOException {
-		FieldSpec bjectField = FieldSpec.builder(SubGrammerObject.class, "obj").addModifiers(Modifier.PRIVATE).build();
-		MethodSpec constructor = MethodSpec.constructorBuilder().addStatement("this.obj = obj")
-				.addParameter(SubGrammerObject.class, "obj").addModifiers(Modifier.PUBLIC).build();
-		LinkedList<MethodSpec> getter = new LinkedList<>();
-		for (Grammar gr : ((ChainGrammer) reference.get(g)).getChain()) {
-			if (gr instanceof IgnoreGrammer || gr instanceof IgnoreTokenGrammer)
-				continue;
-			if (gr.getName() == null)
-				continue;
-			if (gr.getGrammarObjectType().equals(GrammarObject.class) || gr instanceof RepeatGrammer) {
-				// Single object return + type unkown
-				if (gr instanceof MultiGrammer) {
-					getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
-							.returns(gr.getGrammarObjectType()).addModifiers(Modifier.PUBLIC)
-							.addStatement("return ($T) obj.getObject($S)", gr.getGrammarObjectType(), gr.getName())
-							.build());
-				}
-				// singe object return + type known
-				else if (gr instanceof OptinalGrammer || gr instanceof GrammarMatchGrammer) {
-					String cgrKey = null;
-					if (gr instanceof OptinalGrammer)
-						cgrKey = ((OptinalGrammer) gr).getCheck();
-					if (gr instanceof GrammarMatchGrammer)
-						cgrKey = ((GrammarMatchGrammer) gr).getGrammar();
-					ChainGrammer cgr = (ChainGrammer) reference.get(cgrKey);
+	public void generate(GrammarReference reference) throws IOException, ParsingException {
+		for (String g : reference.grammarNames()) {
+			FieldSpec bjectField = FieldSpec.builder(SubGrammerObject.class, "obj").addModifiers(Modifier.PRIVATE).build();
+			MethodSpec constructor = MethodSpec.constructorBuilder().addStatement("this.obj = obj")
+					.addParameter(SubGrammerObject.class, "obj").addModifiers(Modifier.PUBLIC).build();
+			LinkedList<MethodSpec> getter = new LinkedList<>();
+			for (Grammar gr : ((ChainGrammer) reference.get(g)).getChain()) {
+				if (gr instanceof IgnoreGrammer || gr instanceof IgnoreTokenGrammer)
+					continue;
+				if (gr.getName() == null)
+					continue;
+				try {
+					if (gr.getGrammarObjectType().equals(GrammarObject.class) || gr instanceof RepeatGrammer) {
+						// Single object return + type unkown
+						if (gr instanceof MultiGrammer) {
+							getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
+									.returns(gr.getGrammarObjectType()).addModifiers(Modifier.PUBLIC)
+									.addStatement("return ($T) obj.getObject($S)", gr.getGrammarObjectType(), gr.getName())
+									.build());
+						}
+						// singe object return + type known
+						else if (gr instanceof OptinalGrammer || gr instanceof GrammarMatchGrammer) {
+							String cgrKey = null;
+							if (gr instanceof OptinalGrammer)
+								cgrKey = ((OptinalGrammer) gr).getCheck();
+							if (gr instanceof GrammarMatchGrammer)
+								cgrKey = ((GrammarMatchGrammer) gr).getGrammar();
+							ChainGrammer cgr = (ChainGrammer) reference.get(cgrKey);
 
-					generate(cgrKey,reference);
-					getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
-							.returns(ClassName.get(pack, camelCase(cgr.getName()))).addModifiers(Modifier.PUBLIC)
-							.addStatement("return new " + camelCase(cgr.getName()) + "(($T)obj.getObject($S))",
+							System.out.println("GR  "+gr);
+							System.out.println("CGR "+cgr+" ("+cgrKey+")");
+							
+							getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
+									.returns(ClassName.get(pack, camelCase(cgr.getName()))).addModifiers(Modifier.PUBLIC)
+									.addStatement("return new " + camelCase(cgr.getName()) + "(($T)obj.getObject($S))",
+											SubGrammerObject.class, gr.getName())
+									.build());
+							// object array return + type known
+						} else {
+							ChainGrammer cgr = null;
+							if (gr instanceof RepeatGrammer)
+								cgr = (ChainGrammer) reference.get(((RepeatGrammer) gr).getCheck());
+							
+							ParameterizedTypeName listType = ParameterizedTypeName.get(ClassName.get(ArrayList.class),ClassName.get(pack, camelCase(cgr.getName())));
+							
+							CodeBlock methodContent = CodeBlock.builder().addStatement("$T collection =  ($T)obj.getObject($S)", SubGrammerObject.class,
 									SubGrammerObject.class, gr.getName())
-							.build());
-					// object array return + type known
-				} else {
-					ChainGrammer cgr = null;
-					if (gr instanceof RepeatGrammer)
-						cgr = (ChainGrammer) reference.get(((RepeatGrammer) gr).getCheck());
-					generate(((RepeatGrammer) gr).getCheck(),reference);
-					
-					ParameterizedTypeName listType = ParameterizedTypeName.get(ClassName.get(ArrayList.class),ClassName.get(pack, camelCase(cgr.getName())));
-					
-					CodeBlock methodContent = CodeBlock.builder().addStatement("$T collection =  ($T)obj.getObject($S)", SubGrammerObject.class,
-							SubGrammerObject.class, gr.getName())
-					.addStatement("$T out = new ArrayList<>()",listType)
-					.beginControlFlow("for ($T iter : collection.objects)", GrammarObject.class)
-					.addStatement("out.add(new $T(($T) iter))", ClassName.get(pack, camelCase(cgr.getName())),SubGrammerObject.class)
-					.endControlFlow()
-					.addStatement("return out").build();
-					
-					getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
-							.returns(listType)
-							.addModifiers(Modifier.PUBLIC)
-							.addCode(methodContent)
-							.build());
+							.addStatement("$T out = new ArrayList<>()",listType)
+							.beginControlFlow("for ($T iter : collection.objects)", GrammarObject.class)
+							.addStatement("out.add(new $T(($T) iter))", ClassName.get(pack, camelCase(cgr.getName())),SubGrammerObject.class)
+							.endControlFlow()
+							.addStatement("return out").build();
+							
+							getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
+									.returns(listType)
+									.addModifiers(Modifier.PUBLIC)
+									.addCode(methodContent)
+									.build());
+						}
+					} 
+					else if((gr.getGrammarObjectType().equals(TokenGrammarObject.class))&& !returnTokens){
+						getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
+								.returns(String.class)
+								.addModifiers(Modifier.PUBLIC)
+								.addStatement("return (($T)obj.getObject($S)).joinTokens()", gr.getGrammarObjectType(), gr.getName())
+								.build());
+					} else {
+						getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
+								.returns(gr.getGrammarObjectType())
+								.addModifiers(Modifier.PUBLIC)
+								.addStatement("return ($T) obj.getObject($S)", gr.getGrammarObjectType(), gr.getName())
+								.build());
+					}
+				} catch (Exception e) {
+					ParsingException ex = new ParsingException("Error when cerating Method for : "+gr);
+					ex.addSuppressed(e);
+					throw ex;
 				}
-			} 
-			else if((gr.getGrammarObjectType().equals(TokenGrammarObject.class))&& !returnTokens){
-				getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
-						.returns(String.class)
-						.addModifiers(Modifier.PUBLIC)
-						.addStatement("return (($T)obj.getObject($S)).joinTokens()", gr.getGrammarObjectType(), gr.getName())
-						.build());
-			} else {
-				getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
-						.returns(gr.getGrammarObjectType())
-						.addModifiers(Modifier.PUBLIC)
-						.addStatement("return ($T) obj.getObject($S)", gr.getGrammarObjectType(), gr.getName())
-						.build());
 			}
-		}
 
-		Builder build = TypeSpec.classBuilder(camelCase(reference.get(g).getName())).addModifiers(Modifier.PUBLIC).addField(bjectField)
-				.addMethod(constructor);
+			Builder build = TypeSpec.classBuilder(camelCase(reference.get(g).getName())).addModifiers(Modifier.PUBLIC).addField(bjectField)
+					.addMethod(constructor);
 
-		for (MethodSpec methodSpec : getter) {
-			build.addMethod(methodSpec);
+			for (MethodSpec methodSpec : getter) {
+				build.addMethod(methodSpec);
+			}
+			TypeSpec type = build.build();
+			JavaFile javaFile = JavaFile.builder(pack, type).indent("\t").build();
+			javaFile.writeTo(new File(path));
 		}
-		TypeSpec type = build.build();
-		JavaFile javaFile = JavaFile.builder(pack, type).indent("\t").build();
-		javaFile.writeTo(new File(path));
 	}
 
 	public String camelCase(String s) {

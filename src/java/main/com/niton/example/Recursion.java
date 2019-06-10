@@ -33,10 +33,10 @@ public class Recursion {
 				.map(Grammar.build("calc_expression").matchToken(Tokens.BRACKET_OPEN).match("expression","firstExpression").matchAnyToken("calculationType",Tokens.MULTIPLICATOR,Tokens.PLUS,Tokens.MINUS,Tokens.SLASH).match("expression","secondExpression").matchToken(Tokens.BRACKET_CLOSED))
 				.map(Grammar.build("expression").matchAny("matched", new String[]{"Number","calc_expression"}));
 		String s = "((((1+4)/5)*22)-99)";
-//		JPGenerator gen = new JPGenerator("com.niton.generated", "D:\\Users\\Nils\\Desktop\\Workspaces\\API\\JainParse\\src\\java\\main");
-//		gen.generate("expression", ref);
-		Parser p = new Parser(ref, "expression");
-		System.out.println(p.parse(s));
+		JPGenerator gen = new JPGenerator("com.niton.generated", "D:\\Users\\Nils\\Desktop\\Workspaces\\API\\JainParse\\src\\java\\main");
+		gen.generate(ref);
+//		Parser p = new Parser(ref, "expression");
+//		System.out.println(p.parse(s));
 	}
 }
 
