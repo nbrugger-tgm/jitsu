@@ -9,10 +9,10 @@ Very Easy! Use `Maven` and add this as dependency
 </dependency>
 ```
 [File Generator](https://github.com/nbrugger-tgm/JainParse/blob/master/FileGenerator.md)
-G
+[Grammar Files](https://github.com/nbrugger-tgm/JainParse/blob/master/GrammarFiles.md)
 
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE1NDAyOTgxODQsLTc4NjMxOTQ5NCwtMT
-I1MDAzMzA2Ml19
+eyJoaXN0b3J5IjpbMTE3MTQ0ODkyOCwtNzg2MzE5NDk0LC0xMj
+UwMDMzMDYyXX0=
 -->
