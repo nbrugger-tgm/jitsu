@@ -55,6 +55,6 @@ public class TokenGrammer extends Grammar {
 	 */
 	@Override
 	public GrammarExecutor getExecutor() {
-		return new TokenExecutor(tokenName, tokenName);
+		return new TokenExecutor(tokenName, getName());
 	}
 }
