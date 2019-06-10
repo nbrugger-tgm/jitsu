@@ -52,8 +52,10 @@ OR
 	 - `*` AnyExcept: Anything except `item` is used (multiple Times)
 		 - Example
 			 - `*END_OF_LINE` 
-			 - will coll
+			 - will collect all Tokens bevore the `END OF LINE` Token
 	 - `~` Ignore: Ignores `item` completely it it exists
+ - #### item
+	 - is a refence to a Token or grammar
 	 - 
 
 ## Example
@@ -61,6 +63,6 @@ OR
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMzA4NjE5NTQxLDczMDkxMjM2OCwtMTI1MD
-AzMzA2Ml19
+eyJoaXN0b3J5IjpbLTE4NjA1MTMyNCw3MzA5MTIzNjgsLTEyNT
+AwMzMwNjJdfQ==
 -->
