@@ -1,5 +1,8 @@
 package com.niton.parser;
 
+import java.util.Collection;
+import java.util.Set;
+
 import com.niton.parser.grammar.Grammar;
 
 /**
@@ -9,5 +12,6 @@ import com.niton.parser.grammar.Grammar;
  */
 public interface GrammarReference {
 	public Grammar get(String key);
+	public Set<String> grammarNames();
 }
 

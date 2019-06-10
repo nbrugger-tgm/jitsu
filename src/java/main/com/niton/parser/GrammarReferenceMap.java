@@ -3,6 +3,7 @@ package com.niton.parser;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import com.niton.parser.grammar.Grammar;
 
@@ -41,6 +42,13 @@ public class GrammarReferenceMap extends HashMap<String, Grammar> implements Ite
 	@Override
 	public Iterator<Entry<String, Grammar>> iterator() {
 		return this.entrySet().iterator();
+	}
+	/**
+	 * @see com.niton.parser.GrammarReference#grammarNames()
+	 */
+	@Override
+	public Set<String> grammarNames() {
+		return keySet();
 	}
 }
 
