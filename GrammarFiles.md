@@ -91,8 +91,17 @@ The same as GRM file
     WHITESPACE = '[ \t]+'
     EQUAL = '='
     SEMICOLON = ';'
+    
+    String:
+	    #STRING_DELMITTER
+	    *#STRING_DELMITTER >content
+	    #STRING_DELMITTER
+    
+    VariableAssignment:
+	    
+	    
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTg3MzAzMDYzMSw3MzA5MTIzNjgsLTEyNT
-AwMzMwNjJdfQ==
+eyJoaXN0b3J5IjpbMzQ2NDAxNDM3LDczMDkxMjM2OCwtMTI1MD
+AzMzA2Ml19
 -->
