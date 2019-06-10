@@ -79,12 +79,12 @@ Some of the tokens used are pseudocode
 
     Grammer
 	    .build("VariableAssignment")
-	    .matchToken(Tokens.IDENTIFYER)
+	    .matchToken(Tokens.IDENTIFYER,"name")
 	    .ignoreToken(Tokens.WHITESPACE)
 	    .matchToken(Tokens.EQUAL)// EQUAL is =
-	    .match("String","content")
-	    .matchToken(Tokens.STRING_DELIMITER);
+	    .match("String","value")
+	    .matchToken(Tokens.SEMICOLON);
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE3NTkyNTQ2NzIsNzMwOTEyMzY4LC0xMj
+eyJoaXN0b3J5IjpbLTE4NDUxMzY5MTksNzMwOTEyMzY4LC0xMj
 UwMDMzMDYyXX0=
 -->
