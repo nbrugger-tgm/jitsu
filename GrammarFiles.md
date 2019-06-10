@@ -84,7 +84,14 @@ Some of the tokens used are pseudocode
 	    .matchToken(Tokens.EQUAL)// EQUAL is =
 	    .match("String","value")
 	    .matchToken(Tokens.SEMICOLON);
+The same as GRM file
+
+    STRING_DELMITTER = '='
+    IDENTIFYER = '[A-Za-z_]+'
+    WHITESPACE = '[ \t]+'
+    EQUAL
+
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE4NDUxMzY5MTksNzMwOTEyMzY4LC0xMj
-UwMDMzMDYyXX0=
+eyJoaXN0b3J5IjpbLTI2NzQxOTA4Nyw3MzA5MTIzNjgsLTEyNT
+AwMzMwNjJdfQ==
 -->
