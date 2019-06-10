@@ -56,13 +56,15 @@ OR
 	 - `~` Ignore: Ignores `item` completely it it exists
  - #### item
 	 - is a refence to a Token or grammar
-	 - 
+	 - Syntax: `[#]reference`
+	 - The # is used when reference is an token
+	 - If there is no # it is an grammar
 
 ## Example
 
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE4NjA1MTMyNCw3MzA5MTIzNjgsLTEyNT
-AwMzMwNjJdfQ==
+eyJoaXN0b3J5IjpbMzI2OTI2MDYzLDczMDkxMjM2OCwtMTI1MD
+AzMzA2Ml19
 -->
