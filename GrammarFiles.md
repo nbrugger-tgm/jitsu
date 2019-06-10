@@ -42,14 +42,17 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
 	 - specification
 	 - multi
 	 - name_assign
- 
- 
+ - #### specification
+	 - `~` Ignore: Ignores item completely it it exists
+	 - `?` Option: Ignores item completely it it exists
+	 - `~` Ignore: Ignores item completely it it exists
+	 - `~` Ignore: Ignores item completely it it exists
 
 ## Example
 
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMjUwNzcwNTU1LDczMDkxMjM2OCwtMTI1MD
-AzMzA2Ml19
+eyJoaXN0b3J5IjpbMTE0NDg4NTk1MSw3MzA5MTIzNjgsLTEyNT
+AwMzMwNjJdfQ==
 -->
