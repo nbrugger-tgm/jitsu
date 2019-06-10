@@ -17,10 +17,10 @@ import com.niton.parser.grammar.exectors.OptionalTokenExecutor;
  * @author Nils
  * @version 2019-05-29
  */
-public class OptinalTokenGrammer extends Grammar {
+public class OptionalTokenGrammer extends Grammar {
 	private String token;
 
-	public OptinalTokenGrammer(String token, String name) {
+	public OptionalTokenGrammer(String token, String name) {
 		this.token = token;
 		setName(name);
 	}
