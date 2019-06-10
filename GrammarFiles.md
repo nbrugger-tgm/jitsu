@@ -14,11 +14,12 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
 
  - Spaces do not matter
  - only one token definition per line
-#### Example
-```
-LINE_END='\r\n'
-IDENTIFYER='[A-Za-z_]+'
-```
+ - The `regex` Delimitter is `'` to use it within a regex use `\'`
+	#### Example
+	```
+	LINE_END='\r\n'
+	IDENTIFYER='[A-Za-z_]+'
+	```
 
 	 
 
@@ -27,6 +28,6 @@ IDENTIFYER='[A-Za-z_]+'
     Grammer.build("String").matchToken(Tokens.STRING_DELIMITER).anyExcept()
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNDE2NDA5OTUyLDczMDkxMjM2OCwtMTI1MD
-AzMzA2Ml19
+eyJoaXN0b3J5IjpbLTg2MjA1MDg0MSw3MzA5MTIzNjgsLTEyNT
+AwMzMwNjJdfQ==
 -->
