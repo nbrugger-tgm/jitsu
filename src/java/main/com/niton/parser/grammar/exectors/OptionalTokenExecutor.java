@@ -29,7 +29,6 @@ public class OptionalTokenExecutor extends GrammarExecutor {
 	 */
 	@Override
 	public GrammarObject process(ArrayList<AssignedToken> tokens,GrammarReference ref) throws ParsingException {
-
 		TokenGrammarObject tgo = new TokenGrammarObject();
 		tgo.setName(getName());
 		if (tokens.get(index()).name.equals(token)) {
@@ -39,6 +38,13 @@ public class OptionalTokenExecutor extends GrammarExecutor {
 		} else {
 			return new IgnoredGrammerObject();
 		}
+	}
+	
+	public final GrammarObject check(ArrayList<AssignedToken> tokens, int pos,GrammarReference reference) throws ParsingException {
+		index(pos);
+		if (index() >= tokens.size())
+			return new IgnoredGrammerObject();
+		return process(tokens, reference);
 	}
 
 	/**
