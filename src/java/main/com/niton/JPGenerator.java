@@ -91,10 +91,12 @@ public class JPGenerator {
 					if (gr.getGrammarObjectType().equals(GrammarObject.class) || gr instanceof RepeatGrammer) {
 						// Single object return + type unkown
 						if (gr instanceof MultiGrammer) {
-							getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
+							getter.add(
+								MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
 									.returns(gr.getGrammarObjectType()).addModifiers(Modifier.PUBLIC)
 									.addStatement("return ($T) obj.getObject($S)", gr.getGrammarObjectType(), gr.getName())
-									.build());
+									.build()
+							);
 						}
 						// singe object return + type known
 						else if (gr instanceof OptinalGrammer || gr instanceof GrammarMatchGrammer) {
@@ -108,11 +110,13 @@ public class JPGenerator {
 							System.out.println("GR  "+gr);
 							System.out.println("CGR "+cgr+" ("+cgrKey+")");
 							
-							getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
-									.returns(ClassName.get(pack, camelCase(cgr.getName()))).addModifiers(Modifier.PUBLIC)
-									.addStatement("return new " + camelCase(cgr.getName()) + "(($T)obj.getObject($S))",
-											SubGrammerObject.class, gr.getName())
-									.build());
+							getter.add(
+								MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
+									.returns(ClassName.get(pack, camelCase(cgr.getName())))
+									.addModifiers(Modifier.PUBLIC)
+									.addStatement("return new " + camelCase(cgr.getName()) + "(($T)obj.getObject($S))",SubGrammerObject.class, gr.getName())
+									.build()
+							);
 							// object array return + type known
 						} else {
 							ChainGrammer cgr = null;
@@ -121,13 +125,17 @@ public class JPGenerator {
 							
 							ParameterizedTypeName listType = ParameterizedTypeName.get(ClassName.get(ArrayList.class),ClassName.get(pack, camelCase(cgr.getName())));
 							
-							CodeBlock methodContent = CodeBlock.builder().addStatement("$T collection =  ($T)obj.getObject($S)", SubGrammerObject.class,
-									SubGrammerObject.class, gr.getName())
-							.addStatement("$T out = new ArrayList<>()",listType)
-							.beginControlFlow("for ($T iter : collection.objects)", GrammarObject.class)
-							.addStatement("out.add(new $T(($T) iter))", ClassName.get(pack, camelCase(cgr.getName())),SubGrammerObject.class)
-							.endControlFlow()
-							.addStatement("return out").build();
+							CodeBlock methodContent = CodeBlock.builder()
+									.addStatement("$T collection =  ($T)obj.getObject($S)", SubGrammerObject.class,SubGrammerObject.class, gr.getName())
+									.beginControlFlow("if(collection == null)")
+									.addStatement("return null")
+									.endControlFlow()
+									.addStatement("$T out = new ArrayList<>()",listType)
+									.beginControlFlow("for ($T iter : collection.objects)", GrammarObject.class)
+									.addStatement("out.add(new $T(($T) iter))", ClassName.get(pack, camelCase(cgr.getName())),SubGrammerObject.class)
+									.endControlFlow()
+									.addStatement("return out")
+									.build();
 							
 							getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
 									.returns(listType)
