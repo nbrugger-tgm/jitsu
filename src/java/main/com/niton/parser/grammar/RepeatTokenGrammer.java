@@ -38,6 +38,7 @@ public class RepeatTokenGrammer extends Grammar {
 	public void setToken(String token) {
 		this.token = token;
 	}
+	
 
 	/**
 	 * @see com.niton.parser.grammar.Grammar#getGrammarObjectType()

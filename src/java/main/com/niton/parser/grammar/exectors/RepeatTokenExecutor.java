@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import com.niton.parser.GrammarObject;
 import com.niton.parser.GrammarReference;
+import com.niton.parser.IgnoredGrammerObject;
 import com.niton.parser.ParsingException;
 import com.niton.parser.SubGrammerObject;
 import com.niton.parser.TokenGrammarObject;
@@ -54,5 +55,11 @@ public class RepeatTokenExecutor extends GrammarExecutor {
 	 */
 	public void setToken(String token) {
 		this.token = token;
+	}
+	public GrammarObject check(ArrayList<AssignedToken> tokens, int pos,GrammarReference reference) throws ParsingException {
+		index(pos);
+		if (index() >= tokens.size())
+			return new IgnoredGrammerObject();
+		return process(tokens, reference);
 	}
 }
