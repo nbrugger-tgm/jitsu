@@ -40,7 +40,7 @@ public class OptionalTokenExecutor extends GrammarExecutor {
 		}
 	}
 	
-	public final GrammarObject check(ArrayList<AssignedToken> tokens, int pos,GrammarReference reference) throws ParsingException {
+	public GrammarObject check(ArrayList<AssignedToken> tokens, int pos,GrammarReference reference) throws ParsingException {
 		index(pos);
 		if (index() >= tokens.size())
 			return new IgnoredGrammerObject();
