@@ -40,7 +40,9 @@ There are a few basic tokens nearly every parser will need.
     enter code here
 > Do **NOT**, use the `$` and `^` regex as they do not capture th \r or \n which is very neccesarry for my Parser to work!
 
+> Also do not create Tokens which are overlapping (eg. TOK1='[A-Za-züöäß]+' TOK2= and define them as simple as possible 
+
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTY4NTc3MzM0NSwxNjk4MDE2MzM4XX0=
+eyJoaXN0b3J5IjpbLTQ3MjA1MzgzMCwxNjk4MDE2MzM4XX0=
 -->
