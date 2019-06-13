@@ -39,7 +39,7 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
 
 OR
 
-<array><name_assign>
+<any_except><array><name_assign>
 ```
 
  - Optionals:
@@ -49,7 +49,7 @@ OR
  - #### specification
 	 - `~` Ignore: Ignores `item` completely
 	 - `?` Optional: The `item` is optional, it is used if it exists but ignored if not
-	 - `*` AnyExcept: Anything except `item` is used (multiple Times)
+	 - `!` AnyExcept: Anything except `item` is used (multiple Times)
 		 - Example
 			 - `*END_OF_LINE` 
 			 - will collect all Tokens bevore the `END OF LINE` Token
@@ -69,7 +69,9 @@ OR
 	 - Whitespace between the arrow and the name is allowed also bevore the arrow
  - #### array
 	 - `{item1 item2, item3...}`
-	 - Indicates that 
+	 - Indicates that any of the items in the array has to match
+	 - you can ***not*** mix grammars and tokens
+	 - #### any
 
 ## Example
 A full example (building a JSON parser) can be found here, a short one is bellow.
@@ -113,6 +115,6 @@ The same as GRM file
 	    
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMjAxNDM4NjQ4NSwtOTU0NjY2ODE1LC0xMz
-gyNzIxNTIxLDczMDkxMjM2OCwtMTI1MDAzMzA2Ml19
+eyJoaXN0b3J5IjpbLTE4MjU4NTgyNzYsLTk1NDY2NjgxNSwtMT
+M4MjcyMTUyMSw3MzA5MTIzNjgsLTEyNTAwMzMwNjJdfQ==
 -->
