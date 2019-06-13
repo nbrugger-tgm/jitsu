@@ -36,8 +36,20 @@ We won't do it in here for time reasons but normaly you would make this extra st
 Now we create the main part of the Parser, the [Grammar File](https://github.com/nbrugger-tgm/JainParse/blob/master/GrammarFiles.md)
 ### Adding Tokens
 There are a few basic tokens nearly every parser will need.
-
-    enter code here
+```js
+    LINE_END_WIN='\r\n'
+	LINE_END_UNIX='\n'
+	LINE_END_OSX='\r'
+	CHRACTERS='[A-Za-z]+'
+	UNDERSCORE='_'
+	EQUAL='[=]'
+	WHITESPACE='[ \t]+'
+	SLASH='\/'
+	COMMA=','
+	COLON=':'
+	POINT='\.'
+	EOF='\Z'
+```
 > Do **NOT**, use the `$` and `^` regex as they do not capture th \r or \n which is very neccesarry for my Parser to work!
 
 > Also do not create Tokens which are overlapping (eg. TOK1='[A-Za-züöäß]+' NAME='[A-Z][a-z]+') and define them as simple as possible 
@@ -46,5 +58,5 @@ There are a few basic tokens nearly every parser will need.
 
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTM4NjA0NjIzOCwxNjk4MDE2MzM4XX0=
+eyJoaXN0b3J5IjpbMTIxNDk1NzczMSwxNjk4MDE2MzM4XX0=
 -->
