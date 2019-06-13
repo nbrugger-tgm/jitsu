@@ -12,9 +12,7 @@ In this approach we create Classes like JsonArray JsonObject JsonValue and so on
 
 Now we need to find the information how the model works.
  I will not explain this detailed as this are very trivial steps. Simply create Classes that represent all the elements which may ocour in a JSON.
- This is the Structure i will use
-
-
+ This is the Structure i will use:
  - Json (Top level container)
  -  String (sub of Value)
  - Number (sub of Value)
@@ -34,5 +32,5 @@ depending on how you design your Parser you may also create
 
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE1NTg3Mjk5MjAsMTY5ODAxNjMzOF19
+eyJoaXN0b3J5IjpbMTMwMDI0MDcwNiwxNjk4MDE2MzM4XX0=
 -->
