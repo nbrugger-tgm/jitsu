@@ -10,8 +10,10 @@ Means that we have POJOs and we are shure the JSON follows the structure of the 
 In this approach we create Classes like JsonArray JsonObject JsonValue and so on which are filled with flexible structures like HashMaps or Lists, means that we can fill this lists and maps up with everything we like to. This causes much of Casting and instanceof later on but is simple to realize at the parsing stage
 > So we would clearly use the **Flexible Model**
 
-
+Now we need to find the information how the model works.
+ I will not explain this detailed as this are very trivial steps. Simply create Classes that represent
+![enter image description here](http://prntscr.com/o14sfs)
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTU1OTQ3NTYzMF19
+eyJoaXN0b3J5IjpbMTY5ODAxNjMzOF19
 -->
