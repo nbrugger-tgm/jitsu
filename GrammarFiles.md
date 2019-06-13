@@ -71,7 +71,9 @@ OR
 	 - `{item1 item2, item3...}`
 	 - Indicates that any of the items in the array has to match
 	 - you can ***not*** mix grammars and tokens
-	 - #### any
+	 - #### any_except
+		 - is indicated by a `!`
+		 - negates the statment that any token except the ones from the
 
 ## Example
 A full example (building a JSON parser) can be found here, a short one is bellow.
@@ -115,6 +117,6 @@ The same as GRM file
 	    
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE4MjU4NTgyNzYsLTk1NDY2NjgxNSwtMT
-M4MjcyMTUyMSw3MzA5MTIzNjgsLTEyNTAwMzMwNjJdfQ==
+eyJoaXN0b3J5IjpbMTY5MjUxNTA5NiwtOTU0NjY2ODE1LC0xMz
+gyNzIxNTIxLDczMDkxMjM2OCwtMTI1MDAzMzA2Ml19
 -->
