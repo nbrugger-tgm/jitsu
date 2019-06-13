@@ -21,9 +21,15 @@ Now we need to find the information how the model works.
  - Array
  - Object
 
-depending on how you design your Parser you may also cre
+depending on how you design your Parser you may also create
+
+ - True
+ - False
+ - Null
+ - Members
+ - Elements
 
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTExOTcwNDUxMiwxNjk4MDE2MzM4XX0=
+eyJoaXN0b3J5IjpbLTE4Njc1MjQzNTcsMTY5ODAxNjMzOF19
 -->
