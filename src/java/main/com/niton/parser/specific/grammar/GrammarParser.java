@@ -3,19 +3,29 @@ package com.niton.parser.specific.grammar;
 import java.io.IOException;
 
 import com.niton.JPGenerator;
+import com.niton.parser.GrammarObject;
 import com.niton.parser.GrammarReference;
 import com.niton.parser.GrammarReferenceMap;
 import com.niton.parser.Parser;
 import com.niton.parser.ParsingException;
+import com.niton.parser.SubGrammerObject;
 import com.niton.parser.Token;
+import com.niton.parser.grammar.ChainGrammer;
 import com.niton.parser.grammar.Grammar;
+import com.niton.parser.specific.grammar.gen.GrammarFile;
+import com.niton.parser.specific.grammar.gen.GrammarLiteral;
+import com.niton.parser.specific.grammar.gen.IgnoringTokenDefiner;
+import com.niton.parser.specific.grammar.gen.MatchOperation;
+import com.niton.parser.specific.grammar.gen.Rule;
+import com.niton.parser.specific.grammar.gen.TokenSubst;
 
 /**
  * This is the GrammarParser Class
  * @author Nils Brugger
  * @version 2019-06-09
  */
-public class GrammarParser extends Parser {
+public class GrammarParser extends Parser<GrammarResult> {
+	
 	public static GrammarReference gram = new GrammarReferenceMap()
 		.map(
 			Grammar.build("whiteignore")
@@ -45,17 +55,17 @@ public class GrammarParser extends Parser {
 			.matchTokenOptional(GrammarTokens.LINE_END)
 		)
 		.map(
-				Grammar.build("ignoringTokenDefiner")
-				.ignore("allignore")
-				.match("tokenDefiner", "definer")
+			Grammar.build("ignoringTokenDefiner")
+			.ignore("allignore")
+			.match("tokenDefiner", "definer")
 		)
 		.map(
-				Grammar.build("fileHead")
-				.repeatMatch("ignoringTokenDefiner","tokenDefiners")
+			Grammar.build("fileHead")
+			.repeatMatch("ignoringTokenDefiner","tokenDefiners")
 		)
 		.map(
-				Grammar.build("grammarLiteral")
-				.matchToken(GrammarTokens.IDENTIFYER,"name")
+			Grammar.build("grammarLiteral")
+			.matchToken(GrammarTokens.IDENTIFYER,"grammarName")
 		)
 		.map(
 			Grammar.build("tokenSubst")
@@ -63,18 +73,15 @@ public class GrammarParser extends Parser {
 			.matchToken(GrammarTokens.IDENTIFYER, "tokenName")
 		)
 		.map(
-				Grammar.build("nameAssignment")
-				.ignoreToken(GrammarTokens.WHITESPACE)
-				.matchToken(GrammarTokens.ARROW)
-				.ignoreToken(GrammarTokens.WHITESPACE)
-				.matchToken(GrammarTokens.IDENTIFYER,"name")
+			Grammar.build("nameAssignment")
+			.ignoreToken(GrammarTokens.WHITESPACE)
+			.matchToken(GrammarTokens.ARROW)
+			.ignoreToken(GrammarTokens.WHITESPACE)
+			.matchToken(GrammarTokens.IDENTIFYER,"name")
 				
 		)
-		
-	
 		.map(
 			Grammar.build("matchOperation")
-			.ignoreToken(GrammarTokens.WHITESPACE)
 			.matchTokenOptional(GrammarTokens.STAR,"anyExcept")
 			.ignoreToken(GrammarTokens.WHITESPACE)
 			.matchTokenOptional(GrammarTokens.OPTIONAL,"optional")
@@ -86,8 +93,6 @@ public class GrammarParser extends Parser {
 			.matchTokenOptional(GrammarTokens.STAR,"repeat")
 			.ignoreToken(GrammarTokens.WHITESPACE)
 			.matchOptional("nameAssignment", "assignment")
-			.ignoreToken(GrammarTokens.WHITESPACE)
-			.matchToken(GrammarTokens.LINE_END)
 			
 		)
 		.map(
@@ -98,31 +103,31 @@ public class GrammarParser extends Parser {
 			.ignoreToken(GrammarTokens.WHITESPACE)
 		)
 		.map(
-				Grammar.build("orOperation")
-				.ignoreToken(GrammarTokens.WHITESPACE)
-				.matchToken(GrammarTokens.ARRAY_OPEN)
-				.repeatMatch("arrayItem", "items")
-				.matchToken(GrammarTokens.ARRAY_CLOSE)
-				.ignoreToken(GrammarTokens.WHITESPACE)
-				.matchToken(GrammarTokens.LINE_END)
+			Grammar.build("orOperation")
+			.matchToken(GrammarTokens.ARRAY_OPEN)
+			.repeatMatch("arrayItem", "items")
+			.matchToken(GrammarTokens.ARRAY_CLOSE)
 		)
 		.map(
-				Grammar.build("rule")
-				.matchAny("operation", new String[] {"orOperation","matchOperation"})
+			Grammar.build("rule")
+			.ignoreToken(GrammarTokens.WHITESPACE)
+			.matchAny("operation", new String[] {"orOperation","matchOperation"})
+			.ignoreToken(GrammarTokens.WHITESPACE)
+			.matchAnyToken(GrammarTokens.LINE_END,GrammarTokens.EOF)
 		)
 		.map(
-				Grammar.build("grammar")
-				.matchToken(GrammarTokens.IDENTIFYER,"name")
-				.ignoreToken(GrammarTokens.WHITESPACE)
-				.matchToken(GrammarTokens.COLON)
-				.ignoreToken(GrammarTokens.WHITESPACE)
-				.matchToken(GrammarTokens.LINE_END)
-				.repeatMatch("rule", "chain")
+			Grammar.build("grammar")
+			.matchToken(GrammarTokens.IDENTIFYER,"name")
+			.ignoreToken(GrammarTokens.WHITESPACE)
+			.matchToken(GrammarTokens.COLON)
+			.ignoreToken(GrammarTokens.WHITESPACE)
+			.matchAnyToken(GrammarTokens.LINE_END,GrammarTokens.EOF)
+			.repeatMatch("rule", "chain")
 		)
 		.map(
-				Grammar.build("grammarFile")
-				.match("fileHead", "head")
-				.repeatMatch("grammar","grammars")
+			Grammar.build("grammarFile")
+			.match("fileHead", "head")
+			.repeatMatch("grammar","grammars")
 		);
 	public GrammarParser() {
 		super(gram, "grammarFile");
@@ -134,6 +139,63 @@ public class GrammarParser extends Parser {
 	public static void main(String[] args) throws IOException, ParsingException {
 		JPGenerator gen = new JPGenerator("com.niton.parser.specific.grammar.gen", "D:\\Users\\Nils\\Desktop\\Workspaces\\API\\JainParse\\src\\java\\main");
 		gen.generate(gram);
+	}
+	/**
+	 * @throws ParsingException 
+	 * @see com.niton.parser.Parser#convert(com.niton.parser.GrammarObject)
+	 */
+	@Override
+	public GrammarResult convert(GrammarObject o) throws ParsingException {
+		GrammarFile g = new GrammarFile((SubGrammerObject) o);
+		GrammarResult result = new GrammarResult();
+		for (IgnoringTokenDefiner definer : g.getHead().getTokenDefiners()) {
+			result.getTokens().put(definer.getDefiner().getName(), new Token(definer.getDefiner().getLiteral().getRegex()));
+		}
+		for (com.niton.parser.specific.grammar.gen.Grammar gram : g.getGrammars()) {
+			ChainGrammer gr = Grammar.build(gram.getName());
+			int line = 0;
+			for (Rule r : gram.getChain()) {
+				line ++;
+				if(r.getOperation().getName().equals("matchOperation")) {
+					MatchOperation op = new MatchOperation((SubGrammerObject) r.getOperation());
+					String name = null;
+					if(op.getAssignment() != null)
+						name = op.getAssignment().getName();
+					if(op.getCheck().getName().equals("grammarLiteral")) {
+						//GRAMMAR
+						GrammarLiteral check = new GrammarLiteral((SubGrammerObject) op.getCheck());
+						String grammarName = check.getGrammarName();
+						if(op.getAnyExcept() != null)
+							throw new ParsingException("Any Except Operator is not valid for Grammars (can only be used for tokens) ["+gram.getName()+" line "+line+"]");
+						else if(op.getIgnore() != null)
+							gr.ignore(grammarName);
+						else if(op.getOptional() != null)
+							gr.matchOptional(grammarName, name);
+						else if(op.getRepeat() != null)
+							gr.repeatMatch(grammarName, name);
+						else
+							gr.match(grammarName,name);
+					}else if(op.getCheck().getName().equals("tokenSubst")) {
+						TokenSubst toksub = new TokenSubst((SubGrammerObject) op.getCheck());
+						String token = toksub.getTokenName();
+						if(op.getAnyExcept() != null)
+							gr.anyExcept(token, name);
+						else if(op.getIgnore() != null)
+							gr.ignoreToken(token);
+						else if(op.getOptional() != null)
+							gr.matchTokenOptional(token, name);
+						else if(op.getRepeat() != null)
+							gr.repeatMatchToken(token, name);
+						else
+							gr.matchToken(token,name);
+					}else {
+						throw new ParsingException("The check \""+op.getCheck().getName()+"\" is an unkown type to us!");
+					}
+				}
+			}
+			result.getGrammars().map(gr);
+		}
+		return result;
 	}
 	
 }

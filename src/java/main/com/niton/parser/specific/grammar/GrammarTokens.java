@@ -15,6 +15,7 @@ public enum GrammarTokens implements Tokenable{
 	SLASH("\\/"),
 	COMMA(","),
 	COLON(":"),
+	EOF("\\Z"),
 
 	//SOME Escaping shit
 	QUOTE("(?<!\\\\)\\'"),
