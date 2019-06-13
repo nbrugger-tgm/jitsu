@@ -56,8 +56,9 @@ There are a few basic tokens nearly every parser will need.
 
 > At least avoid to allready specify the chars to a specific role in the parser except the char is really only used for one purpose like `[` as `START_OBJECT`
 
-At the next step we need to take care ab
+At the next step we need to take care about Json String escaping which also needs to be done by the parser.
+Means that `\"` will be an own token and `"` also. This is a bit complicated and you need to be familliar 
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTEyMTE5OTc0NDgsMTY5ODAxNjMzOF19
+eyJoaXN0b3J5IjpbLTkxOTg3OTIwMSwxNjk4MDE2MzM4XX0=
 -->
