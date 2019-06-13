@@ -54,9 +54,10 @@ There are a few basic tokens nearly every parser will need.
 
 > Also do not create Tokens which are overlapping (eg. `TOK1='[A-Za-züöäß]+'` `NAME='[A-Z][a-z]+'`) and define them as simple as possible 
 
-> At least avoid to allready specify the chars to a specific role in the parser except the char is really only used for one purpose like '[' as 'START_OBJECT'
+> At least avoid to allready specify the chars to a specific role in the parser except the char is really only used for one purpose like `[` as `START_OBJECT`
 
+At the next step we need to take care ab
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNTI5MTU1NzczLDE2OTgwMTYzMzhdfQ==
+eyJoaXN0b3J5IjpbLTEyMTE5OTc0NDgsMTY5ODAxNjMzOF19
 -->
