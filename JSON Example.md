@@ -32,9 +32,9 @@ depending on how you design your Parser you may also create
 
 We won't do it in here for time reasons but normaly you would make this extra step of abstration
 > We are done with the preperation!
-
-
+## Grammar File
+Now we create the main part of the Parser, the Grammar File
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTc1NDg1ODg3NiwxNjk4MDE2MzM4XX0=
+eyJoaXN0b3J5IjpbMTk5MTk3NDY1NSwxNjk4MDE2MzM4XX0=
 -->
