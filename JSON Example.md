@@ -56,13 +56,15 @@ There are a few basic tokens nearly every parser will need.
 
 > At least avoid to allready specify the chars to a specific role in the parser except the char is really only used for one purpose like `[` as `START_OBJECT`
 
+> Now a thig you are allowed 
+
 At the next step we need to take care about Json String escaping which also needs to be done by the parser.
-Means that `\"` will be an o token and `"` also. This is a bit complicated and you need to be familliar with the glory hell of regex so here is the string escaping "code"
+Means that `\"` , `"` and `\` all will have seperate tokens which do not overlap. This is a bit complicated and you need to be familliar with the glory hell of regex so here is the string escaping "code"
 ```js
 
 ```
 
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTc2NDQyNzQ1MywxNjk4MDE2MzM4XX0=
+eyJoaXN0b3J5IjpbODY4ODY4OTA4LDE2OTgwMTYzMzhdfQ==
 -->
