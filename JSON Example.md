@@ -3,6 +3,8 @@ This is a full tutorial how to build a complete parser, in this case JSON as it 
 ## Preparation
 We need the official JSON syntax, which is found [here](http://json.org)
 
+And as we will need a bit of advanced regex (dont worry i will do it for you) we will need the tool https://regexr.com 
+
 Then we will need to decide what our parser should produce, the 2 most common ways are -> deserialisation or flexible model
 ### Deserialisation
 Means that we have POJOs and we are shure the JSON follows the structure of the POJO and fill an instance of it with the JSON values via reflections. This is very very usefull and every professional Parser has such a feature but it is very time consuming and an extreme overkill for an tutorial
@@ -66,5 +68,5 @@ Means that `\"` , `"` and `\` all will have seperate tokens which do not overlap
 
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTIwODcxMDg1NSwxNjk4MDE2MzM4XX0=
+eyJoaXN0b3J5IjpbLTE5MzAxNTMxNTQsMTY5ODAxNjMzOF19
 -->
