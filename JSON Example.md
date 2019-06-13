@@ -65,8 +65,8 @@ Means that `\"` , `"` and `\` all will have seperate tokens which do not overlap
 ```js
 
 ```
-basicly it is adding `(?<!\\)` before the unescaped varant. There are some cases where it is a bit more com
+basicly it is adding `(?<!\\)` before the unescaped varant. There are some cases where it is a bit more complicated
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMzA3MzUyOTA1LDE2OTgwMTYzMzhdfQ==
+eyJoaXN0b3J5IjpbLTgwNTgxMjcwMywxNjk4MDE2MzM4XX0=
 -->
