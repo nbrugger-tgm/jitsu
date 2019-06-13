@@ -31,8 +31,12 @@ depending on how you design your Parser you may also create
  - `Elements` (collection of `Element`s, used within Array)
 
 We won't do it in here for time reasons but normaly you would make this extra step of abstration
+> We are done with the preperation!
+
+
+
 
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTExNTkxMzY2ODEsMTY5ODAxNjMzOF19
+eyJoaXN0b3J5IjpbLTg2MjY3ODE3NiwxNjk4MDE2MzM4XX0=
 -->
