@@ -14,22 +14,23 @@ Now we need to find the information how the model works.
  I will not explain this detailed as this are very trivial steps. Simply create Classes that represent all the elements which may ocour in a JSON, eg.
  
 
- - String
- - Number
- - Value
+ - String (sub of Value)
+ - Number (sub of Value)
+ - Value 
  - Member
- - Array
- - Object
+ - Array (sub of Value)
+ - Object (sub of Value)
+ - Element
 
 depending on how you design your Parser you may also create
 
- - True
- - False
- - Null
- - Members
- - Elements
+ - True (sub of Value)
+ - False (sub of Value)
+ - Null (sub of Value)
+ - Members (collection of Member)
+ - Elements (collection of Elements)
 
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE4Njc1MjQzNTcsMTY5ODAxNjMzOF19
+eyJoaXN0b3J5IjpbLTE3NDQ4OTQ1ODYsMTY5ODAxNjMzOF19
 -->
