@@ -68,7 +68,8 @@ OR
 	 - `name_to_assign` needs to be a valid identifyer
 	 - Whitespace between the arrow and the name is allowed also bevore the arrow
  - #### array
-	 - 
+	 - `{item1 item2, item3...}`
+	 - Indicates that 
 
 ## Example
 A full example (building a JSON parser) can be found here, a short one is bellow.
@@ -112,6 +113,6 @@ The same as GRM file
 	    
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTEyODQxOTY2MiwtOTU0NjY2ODE1LC0xMz
+eyJoaXN0b3J5IjpbMjAxNDM4NjQ4NSwtOTU0NjY2ODE1LC0xMz
 gyNzIxNTIxLDczMDkxMjM2OCwtMTI1MDAzMzA2Ml19
 -->
