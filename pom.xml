@@ -42,6 +42,12 @@
 			<artifactId>javapoet</artifactId>
 			<version>1.11.1</version>
 		</dependency>
+		
+		<dependency>
+			<groupId>com.niton</groupId>
+			<artifactId>media-api</artifactId>
+			<version>2.1</version>
+		</dependency>
 	</dependencies>
 
 	<build>

@@ -1,0 +1,134 @@
+//General
+LINE_END='\r\n'
+IDENTIFYER='[A-Za-z_]+'
+EQ='[=]'
+WHITESPACE='[ \t]+'
+SLASH='\/'
+COMMA=','
+
+//SOME Escaping shit
+QUOTE='(?<!\\)\\''
+ESCAPED_QUOTE='\\\\''
+BACKSLASH='\\(?!\')'
+
+
+
+//Specific
+TOKEN_SIGN='#'
+OPTIONAL='\?'
+STAR='\*'
+ARROW='>'
+ARRAY_OPEN='\{'
+ARRAY_CLOSE='\}'
+IGNORE='~'
+COLON=':'
+
+
+
+
+//UTILITY
+whiteignore:
+	{#WHITESPACE, #LINE_END}
+
+comment: 
+	#SLASH
+	#SLASH
+	*#LINE_END >text
+
+combineignore:
+	{whiteignore, comment}
+	
+allignore:
+	combineignore*
+	
+
+
+	
+//File Head ( Definig Tokens )
+
+tokenLiteral:
+	#QUOTE
+	*#QUOTE >regex
+	#QUOTE
+	
+tokenDefiner: 
+	comment*
+	#IDENTIFYER >name
+	~#WHITESPACE
+	#EQ 
+	~#WHITESPACE
+	tokenLiteral >literal
+	#LINE_END
+
+ignoringTokenDefiner:
+	~allignore
+	tokenDefiner >definer
+	~allignore
+
+fileHead:
+	ignoringTokenDefiner*
+	
+	
+	
+//Body
+
+grammarLiteral:
+	#IDENTIFYER
+	
+tokenSubst:
+	#TOKEN_SIGN
+	#IDENTIFYER >tokenName
+	
+nameAssignment
+	#ARROW
+	~#WHITESPACE
+	#IDENTIFYER >givenName
+	
+matchOperation:
+	~#WHITESPACE
+	?#STAR >anyExcept
+	~#WHITESPACE
+	?#OPTIONAL >optional
+	~#WHITESPACE
+	?#IGNORE >ignore
+	~#WHITESPACE
+	{tokenSubst, grammarLiteral} >check
+	~#WHITESPACE
+	?#STAR >repeat
+	~#WHITESPACE
+	?nameAssignment >nameAssignment
+	~#WHITESPACE
+	#LINE_END
+	
+	
+arrayItem:
+	{tokenSubst, grammarLiteral} > item
+	~#WHITESPACE
+	~#COMMA
+	~#WHITESPACE
+	
+orOperation:
+	~#WHITESPACE
+	#ARRAY_OPEN
+	arrayItem* > items
+	#ARRAY_CLOSE
+	~#WHITESPACE
+	#LINE_END
+	
+	
+rule:
+	{orOperation matchOperation} >operation
+
+grammar:
+	#IDENTIFYER >name
+	~#WHITESPACE
+	#COLON
+	#LINE_END
+	rule* >chain
+	~allignore
+	
+grammarFile:
+	fileHead >head
+	grammar* > grammars
+	
+	

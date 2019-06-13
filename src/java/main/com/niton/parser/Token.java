@@ -23,7 +23,7 @@ public class Token {
      * @version 2019-05-27
      */
     public Token(String regex) {
-	this.regex = Pattern.compile(regex,Pattern.MULTILINE);
+    	this.regex = Pattern.compile(regex,Pattern.MULTILINE);
     }
     
     /**
