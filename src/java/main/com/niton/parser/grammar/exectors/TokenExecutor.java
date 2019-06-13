@@ -1,8 +1,9 @@
-package com.niton.parser.check;
+package com.niton.parser.grammar.exectors;
 
 import java.util.ArrayList;
 
 import com.niton.parser.GrammarObject;
+import com.niton.parser.GrammarReference;
 import com.niton.parser.ParsingException;
 import com.niton.parser.TokenGrammarObject;
 import com.niton.parser.Tokenizer.AssignedToken;
@@ -13,7 +14,7 @@ import com.niton.parser.Tokenizer.AssignedToken;
  * @author Nils
  * @version 2019-05-28
  */
-public class TokenGrammer extends Grammar {
+public class TokenExecutor extends GrammarExecutor {
 	private String tokenName;
 
 	/**
@@ -24,7 +25,7 @@ public class TokenGrammer extends Grammar {
 	 * @param tokenName
 	 * @param name
 	 */
-	public TokenGrammer(String tokenName, String name) {
+	public TokenExecutor(String tokenName, String name) {
 		super();
 		this.tokenName = tokenName;
 		setName(name);
@@ -32,10 +33,10 @@ public class TokenGrammer extends Grammar {
 
 	/**
 	 * @throws ParsingException
-	 * @see com.niton.parser.check.Grammar#check(java.util.ArrayList)
+	 * @see com.niton.parser.grammar.Grammar#check(java.util.ArrayList)
 	 */
 	@Override
-	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
+	public GrammarObject process(ArrayList<AssignedToken> tokens,GrammarReference ref) throws ParsingException {
 		AssignedToken token = tokens.get(index());
 		if (token.name.equals(tokenName)) {
 			TokenGrammarObject obj = new TokenGrammarObject();
@@ -59,13 +60,5 @@ public class TokenGrammer extends Grammar {
 	 */
 	public void setTokenName(String tokenName) {
 		this.tokenName = tokenName;
-	}
-
-	/**
-	 * @see com.niton.parser.check.Grammar#getGrammarObjectType()
-	 */
-	@Override
-	public Class<? extends GrammarObject> getGrammarObjectType() {
-		return TokenGrammarObject.class;
 	}
 }

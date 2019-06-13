@@ -1,9 +1,10 @@
-package com.niton.parser.check;
+package com.niton.parser.grammar.exectors;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 
 import com.niton.parser.GrammarObject;
+import com.niton.parser.GrammarReference;
 import com.niton.parser.ParsingException;
 import com.niton.parser.TokenGrammarObject;
 import com.niton.parser.Tokenizer.AssignedToken;
@@ -14,19 +15,20 @@ import com.niton.parser.Tokenizer.AssignedToken;
  * @author Nils
  * @version 2019-05-29
  */
-public class MultiTokenGrammer extends Grammar {
+public class MultiTokenExecutor extends GrammarExecutor {
+	
 	private String[] tokens;
 
-	public MultiTokenGrammer(String[] tokens, String name) {
+	public MultiTokenExecutor(String[] tokens, String name) {
 		this.tokens = tokens;
 		setName(name);
 	}
 
 	/**
-	 * @see com.niton.parser.check.Grammar#process(java.util.ArrayList)
+	 * @see com.niton.parser.grammar.Grammar#process(java.util.ArrayList)
 	 */
 	@Override
-	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
+	public GrammarObject process(ArrayList<AssignedToken> tokens,GrammarReference ref) throws ParsingException {
 		AssignedToken token = tokens.get(index());
 		for (int i = 0; i < this.tokens.length; i++) {
 			if (token.name.equals(this.tokens[i])) {
@@ -55,12 +57,5 @@ public class MultiTokenGrammer extends Grammar {
 		this.tokens = tokens;
 	}
 
-	/**
-	 * @see com.niton.parser.check.Grammar#getGrammarObjectType()
-	 */
-	@Override
-	public Class<? extends GrammarObject> getGrammarObjectType() {
-		return TokenGrammarObject.class;
-	}
 	
 }

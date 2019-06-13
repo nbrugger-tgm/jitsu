@@ -150,6 +150,7 @@ class GrammarParserTest {
 			GrammarParser parser = new GrammarParser();
 			byte[] file = ResurceLoader.readOutOfJarFile("resources/Grammar.gmr");
 			GrammarResult result = parser.parse(file);
+
 		});
 	}
 	

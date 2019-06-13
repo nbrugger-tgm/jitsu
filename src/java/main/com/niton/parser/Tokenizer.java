@@ -74,9 +74,10 @@ public class Tokenizer {
 				undefined.add(undef);
 				last += undef.value.length();
 			}else if(last > assignedToken.start) {
-				throw new ParsingException("Tokens overlapping: "+assignedToken+" overlaps previous Token! Last token ended at "+last+" and this token startet at "+assignedToken.start);
+				throw new ParsingException("Tokens overlapping: "+assignedToken+" overlaps previous Token! Last token ended at "+last+" and this token startet at "+assignedToken.start+" ("+content.substring(last-5, last+5)+")");
 			}
 			if(!assignedToken.name.equals(Tokens.NEW_LINE.name())) {
+				
 				last += assignedToken.value.length();
 			}else {
 				last += 2;

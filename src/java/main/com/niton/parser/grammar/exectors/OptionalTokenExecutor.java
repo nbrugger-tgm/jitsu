@@ -1,8 +1,9 @@
-package com.niton.parser.check;
+package com.niton.parser.grammar.exectors;
 
 import java.util.ArrayList;
 
 import com.niton.parser.GrammarObject;
+import com.niton.parser.GrammarReference;
 import com.niton.parser.IgnoredGrammerObject;
 import com.niton.parser.ParsingException;
 import com.niton.parser.TokenGrammarObject;
@@ -15,20 +16,19 @@ import com.niton.parser.Tokenizer.AssignedToken;
  * @author Nils
  * @version 2019-05-29
  */
-public class OptinalTokenGrammer extends Grammar {
+public class OptionalTokenExecutor extends GrammarExecutor {
 	private String token;
-
-	public OptinalTokenGrammer(String token, String name) {
+	
+	public OptionalTokenExecutor(String token, String name) {
 		this.token = token;
 		setName(name);
 	}
 
 	/**
-	 * @see com.niton.parser.check.Grammar#process(java.util.ArrayList)
+	 * @see com.niton.parser.grammar.Grammar#process(java.util.ArrayList)
 	 */
 	@Override
-	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
-
+	public GrammarObject process(ArrayList<AssignedToken> tokens,GrammarReference ref) throws ParsingException {
 		TokenGrammarObject tgo = new TokenGrammarObject();
 		tgo.setName(getName());
 		if (tokens.get(index()).name.equals(token)) {
@@ -38,6 +38,13 @@ public class OptinalTokenGrammer extends Grammar {
 		} else {
 			return new IgnoredGrammerObject();
 		}
+	}
+	
+	public GrammarObject check(ArrayList<AssignedToken> tokens, int pos,GrammarReference reference) throws ParsingException {
+		index(pos);
+		if (index() >= tokens.size())
+			return new IgnoredGrammerObject();
+		return process(tokens, reference);
 	}
 
 	/**
@@ -54,11 +61,4 @@ public class OptinalTokenGrammer extends Grammar {
 		this.token = token;
 	}
 
-	/**
-	 * @see com.niton.parser.check.Grammar#getGrammarObjectType()
-	 */
-	@Override
-	public Class<? extends GrammarObject> getGrammarObjectType() {
-		return TokenGrammarObject.class;
-	}
 }

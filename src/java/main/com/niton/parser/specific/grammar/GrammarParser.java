@@ -151,6 +151,7 @@ public class GrammarParser extends Parser<GrammarResult> {
 		GrammarResult result = new GrammarResult();
 		for (IgnoringTokenDefiner definer : g.getHead().getTokenDefiners()) {
 			result.getTokens().put(definer.getDefiner().getName(), new Token(definer.getDefiner().getLiteral().getRegex().replaceAll("\\\\'", "'")));
+
 		}
 		for (com.niton.parser.specific.grammar.gen.Grammar gram : g.getGrammars()) {
 			ChainGrammer gr = Grammar.build(gram.getName());

@@ -1,8 +1,10 @@
-package com.niton.parser.check;
+package com.niton.parser.grammar.exectors;
 
 import java.util.ArrayList;
 
 import com.niton.parser.GrammarObject;
+import com.niton.parser.GrammarReference;
+import com.niton.parser.IgnoredGrammerObject;
 import com.niton.parser.ParsingException;
 import com.niton.parser.SubGrammerObject;
 import com.niton.parser.TokenGrammarObject;
@@ -14,19 +16,20 @@ import com.niton.parser.Tokenizer.AssignedToken;
  * @author Nils
  * @version 2019-05-29
  */
-public class RepeatTokenGrammer extends Grammar {
+public class RepeatTokenExecutor extends GrammarExecutor {
 	private String token;
+	
 
-	public RepeatTokenGrammer(String token, String name) {
+	public RepeatTokenExecutor(String token, String name) {
 		this.token = token;
 		this.setName(name);
 	}
 
 	/**
-	 * @see com.niton.parser.check.Grammar#process(java.util.ArrayList)
+	 * @see com.niton.parser.grammar.Grammar#process(java.util.ArrayList)
 	 */
 	@Override
-	public GrammarObject process(ArrayList<AssignedToken> tokens) throws ParsingException {
+	public GrammarObject process(ArrayList<AssignedToken> tokens,GrammarReference ref) throws ParsingException {
 		TokenGrammarObject object = new TokenGrammarObject();
 		object.setName(getName());
 		for (int i = index(); i < tokens.size(); i++) {
@@ -53,12 +56,10 @@ public class RepeatTokenGrammer extends Grammar {
 	public void setToken(String token) {
 		this.token = token;
 	}
-
-	/**
-	 * @see com.niton.parser.check.Grammar#getGrammarObjectType()
-	 */
-	@Override
-	public Class<? extends GrammarObject> getGrammarObjectType() {
-		return TokenGrammarObject.class;
+	public GrammarObject check(ArrayList<AssignedToken> tokens, int pos,GrammarReference reference) throws ParsingException {
+		index(pos);
+		if (index() >= tokens.size())
+			return new IgnoredGrammerObject();
+		return process(tokens, reference);
 	}
 }
