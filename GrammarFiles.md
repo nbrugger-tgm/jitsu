@@ -69,6 +69,7 @@ OR
 	 - Whitespace between the arrow and the name is allowed also bevore the arrow
 
 ## Example
+A full example (building a JSON parser) can be found here, a short one is bellow.
 Some of the tokens used are pseudocode
 
 ```java
@@ -109,6 +110,6 @@ The same as GRM file
 	    
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTEzODI3MjE1MjEsNzMwOTEyMzY4LC0xMj
-UwMDMzMDYyXX0=
+eyJoaXN0b3J5IjpbLTk1NDY2NjgxNSwtMTM4MjcyMTUyMSw3Mz
+A5MTIzNjgsLTEyNTAwMzMwNjJdfQ==
 -->
