@@ -106,9 +106,6 @@ public class JPGenerator {
 							if (gr instanceof GrammarMatchGrammer)
 								cgrKey = ((GrammarMatchGrammer) gr).getGrammar();
 							ChainGrammer cgr = (ChainGrammer) reference.get(cgrKey);
-
-							System.out.println("GR  "+gr);
-							System.out.println("CGR "+cgr+" ("+cgrKey+")");
 							
 							getter.add(
 								MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
@@ -148,6 +145,9 @@ public class JPGenerator {
 						getter.add(MethodSpec.methodBuilder("get" + camelCase(gr.getName()))
 								.returns(String.class)
 								.addModifiers(Modifier.PUBLIC)
+								.beginControlFlow("if(obj.getObject($S) == null)", gr.getName())
+								.addStatement("return null")
+								.endControlFlow()
 								.addStatement("return (($T)obj.getObject($S)).joinTokens()", gr.getGrammarObjectType(), gr.getName())
 								.build());
 					} else {
@@ -173,6 +173,7 @@ public class JPGenerator {
 			TypeSpec type = build.build();
 			JavaFile javaFile = JavaFile.builder(pack, type).indent("\t").build();
 			javaFile.writeTo(new File(path));
+			System.out.println("Generated : "+javaFile.packageName+"."+javaFile.typeSpec.name);
 		}
 	}
 
