@@ -61,12 +61,12 @@ There are a few basic tokens nearly every parser will need.
 > Now a thig you are allowed to: Commenting! it is done with // between Token or grammar definers
 
 At the next step we need to take care about Json String escaping which also needs to be done by the parser.
-Means that `\"` , `"` and `\` all will have seperate tokens which do not overlap. This is a bit complicated and you need to be familliar with the glory hell of regex so here is the string escaping "code"
+Means that `\"` , `"` and `\` all will have seperate tokens which do not overlap. This is a bit complicated and you need to be familliar with the glory hell of regex so here is the string escaping "code".
 ```js
 
 ```
-
+basicly it is adding `(?<!\\)` before the unescaped varant. There are some cases where it is a bit more com
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE5MzAxNTMxNTQsMTY5ODAxNjMzOF19
+eyJoaXN0b3J5IjpbMzA3MzUyOTA1LDE2OTgwMTYzMzhdfQ==
 -->
