@@ -11,9 +11,19 @@ In this approach we create Classes like JsonArray JsonObject JsonValue and so on
 > So we would clearly use the **Flexible Model**
 
 Now we need to find the information how the model works.
- I will not explain this detailed as this are very trivial steps. Simply create Classes that represent
-![enter image description here](http://prntscr.com/o14sfs)
+ I will not explain this detailed as this are very trivial steps. Simply create Classes that represent all the elements which may ocour in a JSON, eg.
+ 
+
+ - String
+ - Number
+ - Value
+ - Member
+ - Array
+ - Object
+
+depending on how you design your Parser you may also cre
+
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTY5ODAxNjMzOF19
+eyJoaXN0b3J5IjpbMTExOTcwNDUxMiwxNjk4MDE2MzM4XX0=
 -->
