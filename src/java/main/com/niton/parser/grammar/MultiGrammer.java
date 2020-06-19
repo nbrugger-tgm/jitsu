@@ -3,6 +3,7 @@ package com.niton.parser.grammar;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import com.niton.parser.AnyGrammarObject;
 import com.niton.parser.GrammarObject;
 import com.niton.parser.ParsingException;
 import com.niton.parser.TokenGrammarObject;
@@ -43,7 +44,7 @@ public class MultiGrammer extends Grammar {
 	 */
 	@Override
 	public Class<? extends GrammarObject> getGrammarObjectType() {
-		return GrammarObject.class;
+		return AnyGrammarObject.class;
 	}
 
 	/**

@@ -3,7 +3,7 @@ package com.niton.parser;
 import com.niton.parser.grammar.Tokenable;
 
 /**
- * This is the Tokens Class
+ * A collection of universal usable Tokens
  * 
  * @author Nils
  * @version 2019-05-28
@@ -27,14 +27,12 @@ public enum Tokens implements Tokenable{
     NEW_LINE("$");
     public final String pattern;
 
-    /**
-     * Creates an Instance of Tokens.java
-     * 
-     * @author Nils
-     * @version 2019-05-28
-     */
-    private Tokens(String token) {
+    Tokens(String token) {
 	pattern = token;
     }
 
+    @Override
+    public String pattern() {
+        return pattern;
+    }
 }

@@ -5,7 +5,10 @@ import java.util.ArrayList;
 import com.niton.parser.Tokenizer.AssignedToken;
 
 /**
- * This is the SubGrammerObject Class
+ * The result of a {@link com.niton.parser.grammar.ChainGrammer}
+ *
+ * Describes a row of GrammarObjects. Could also be seen as Result Container.
+ * This is the result of any Grammar matching more than one thing. Very important to build a syntax tree
  * 
  * @author Nils
  * @version 2019-05-29
@@ -13,6 +16,10 @@ import com.niton.parser.Tokenizer.AssignedToken;
 public class SubGrammerObject extends GrammarObject {
 	public ArrayList<GrammarObject> objects = new ArrayList<>();
 
+	/**
+	 * Collects all Tokens of underlying Grammars recursively. This leads to the original parsed text except of ignored tokens
+	 * @return the ordered list of all recursive tokens
+	 */
 	public ArrayList<AssignedToken> join() {
 		ArrayList<AssignedToken> token = new ArrayList<>();
 		for (GrammarObject object : objects) {
@@ -24,6 +31,10 @@ public class SubGrammerObject extends GrammarObject {
 		return token;
 	}
 
+	/**
+	 * Simmilar to  {@link #join()} but joining the token values to a string
+	 * @return
+	 */
 	public String joinTokens() {
 		StringBuilder builder = new StringBuilder();
 		for (AssignedToken grammerObject : join()) {
@@ -32,12 +43,17 @@ public class SubGrammerObject extends GrammarObject {
 		return builder.toString();
 	}
 
-	public GrammarObject getObject(String name) {
+	/**
+	 * Get a named sub-object by its name
+	 * @param name the name of the sub object to get
+	 * @return the GrammarObject
+	 */
+	public <T extends GrammarObject> T getObject(String name) {
 		for (GrammarObject grammerObject : objects) {
 			if(grammerObject.getName() == null)
 				continue;
 			if (grammerObject.getName().equals(name))
-				return grammerObject;
+				return (T) grammerObject;
 		}
 		return null;
 	}

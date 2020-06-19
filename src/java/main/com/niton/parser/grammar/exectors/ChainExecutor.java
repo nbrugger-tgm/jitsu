@@ -31,7 +31,7 @@ public class ChainExecutor extends GrammarExecutor {
 	}
 	/**
 	 * @throws ParsingException
-	 * @see com.niton.parser.grammar.Grammar#check(java.util.ArrayList)
+	 * @see com.niton.parser.grammar.Grammar#process(java.util.ArrayList,GrammarReference)
 	 */
 	@Override
 	public GrammarObject process(ArrayList<AssignedToken> tokens,GrammarReference reference) throws ParsingException {

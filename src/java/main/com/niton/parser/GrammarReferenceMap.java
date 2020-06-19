@@ -8,15 +8,11 @@ import java.util.Set;
 import com.niton.parser.grammar.Grammar;
 
 /**
- * This is the GrammerReference Class
+ * The default implementation of a GrammarReference using a {@link HashMap}
  * @author Nils Brugger
  * @version 2019-06-07
  */
 public class GrammarReferenceMap extends HashMap<String, Grammar> implements Iterable<Map.Entry<String, Grammar>>, GrammarReference {
-	/**
-	 * <b>Type:</b> long<br> 
-	 * <b>Description:</b><br>
-	 */
 	private static final long serialVersionUID = 4311654136057396994L;
 	
 	@Override
@@ -28,6 +24,11 @@ public class GrammarReferenceMap extends HashMap<String, Grammar> implements Ite
 		return this;
 	}
 
+	/**
+	 * Adds a Grammar to the reference map
+	 * @param g the grammar to the map
+	 * @param name the name of the grammar
+	 */
 	public GrammarReferenceMap map(Grammar g,String name) {
 		put(name, g);
 		return this;

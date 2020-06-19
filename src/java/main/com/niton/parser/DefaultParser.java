@@ -3,7 +3,7 @@ package com.niton.parser;
 import com.niton.parser.grammar.Grammar;
 
 /**
- * This is the DefaultParser Class
+ * The degault implementation of the parser returning the plain {@link GrammarObject}
  * @author Nils Brugger
  * @version 2019-06-12
  */

@@ -2,17 +2,13 @@ package com.niton.csvp.tests;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
 import org.junit.jupiter.api.Test;
 
-import com.niton.media.ResurceLoader;
-import com.niton.media.filesystem.NFile;
-import com.niton.parser.DefaultParser;
+import com.niton.media.IOUntility;
 import com.niton.parser.GrammarObject;
 import com.niton.parser.Parser;
-import com.niton.parser.ParsingException;
 import com.niton.parser.SubGrammerObject;
 import com.niton.parser.grammar.exectors.GrammarExecutor;
 import com.niton.parser.specific.grammar.GrammarParser;
@@ -147,10 +143,9 @@ class GrammarParserTest {
 	@Test
 	void parseFile() {
 		assertDoesNotThrow(()->{
-			GrammarParser parser = new GrammarParser();
-			byte[] file = ResurceLoader.readOutOfJarFile("resources/Grammar.gmr");
-			GrammarResult result = parser.parse(file);
-
+//			GrammarParser parser = new GrammarParser();
+//			byte[] file = IOUntility.readOutOfJarFile("resources/Example.gmr");
+//			GrammarResult result = parser.parse(file);
 		});
 	}
 	
@@ -160,7 +155,7 @@ class GrammarParserTest {
 		assertDoesNotThrow(()->{
 			Parser p = new GrammarParser();
 			if(debug) {
-				System.out.println("Tokens : \n"+p.getT().parse(s));
+				System.out.println("Tokens : \n"+p.getTokenizer().parse(s));
 				System.out.println("Grammar Pure :\n "+((SubGrammerObject)p.parsePlain(s)).toString(3));
 			}
 			GrammarObject result =  p.parsePlain(s);
@@ -179,10 +174,10 @@ class GrammarParserTest {
 				}
 			}
 			assertEquals(0, expectedGrammarNames.size(),"Some grammers where not parsed ("+expectedGrammarNames+")");
-			
-			GrammarExecutor exec =p.getG().get(p.getRoot()).getExecutor();
-			exec.check(p.getT().parse(s), p.getG());
-			assertEquals(p.getT().parse(s).size() ,exec.index());
+
+			GrammarExecutor exec =p.getReference().get(p.getRoot()).getExecutor();
+			exec.check(p.getTokenizer().parse(s), p.getReference());
+//			assertEquals(p.getT().parse(s).size() ,exec.index());
 		},"An exception ocoured on parsing");
 	}
 }

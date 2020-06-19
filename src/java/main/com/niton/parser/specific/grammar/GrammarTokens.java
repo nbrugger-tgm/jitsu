@@ -31,7 +31,8 @@ public enum GrammarTokens implements Tokenable{
 	ARROW(">"),
 	ARRAY_OPEN("\\{"),
 	ARRAY_CLOSE("\\}"),
-	IGNORE("~");
+	IGNORE("~"),
+	NEGATE("!");
 	public final String regex;
 
 	/**
@@ -41,6 +42,11 @@ public enum GrammarTokens implements Tokenable{
 	 */
 	private GrammarTokens(String regex) {
 		this.regex = regex;
+	}
+
+	@Override
+	public String pattern() {
+		return regex;
 	}
 }
 

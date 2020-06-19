@@ -1,7 +1,7 @@
 package com.niton.parser;
 
 /**
- * This is the ParsingException Class
+ * An exception that happens during parsing
  * @author Nils
  * @version 2019-05-29
  */

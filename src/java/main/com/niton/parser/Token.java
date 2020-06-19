@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.regex.Pattern;
 
 /**
- * This is the Token Class
+ * A token describes a group of chars which comonly appear next to each other or single characters.
+ * Works with RegEx. Features only to match when a special regex is bevore or after the main expression
  * @author Nils
  * @version 2019-05-27
  */
@@ -73,21 +74,14 @@ public class Token {
      * @param regex
      */
     public Token(ArrayList<Token> leading, ArrayList<Token> trailing, Pattern regex) {
-	super();
-	this.leading = leading;
-	this.trailing = trailing;
-	this.regex = regex;
+        super();
+        this.leading = leading;
+        this.trailing = trailing;
+        this.regex = regex;
     }
     
 
-    /**
-     * Creates an Instance of Token.java
-     * @author Nils
-     * @version 2019-05-27
-     * @param leading
-     * @param trailing
-     * @param regex
-     */
+
     public Token(Token leading, Token trailing, Pattern regex) {
 	super();
 	this.leading = new ArrayList<>(1);
@@ -106,7 +100,7 @@ public class Token {
     }
 
     /**
-     * @return the regex
+     * @return the compiled complete regex (contains tail/leading)
      */
     public Pattern getRegex() {
 	return regex;
@@ -192,21 +186,7 @@ public class Token {
      * @return
      */
     private CharSequence getLeadingRegex() {
-	if(leading.size() == 0)
-	    return ".*";
-	if(leading.size() == 1)
-	    return leading.get(0).getCompletePattern().pattern();
-	else {
-	    StringBuilder builder = new StringBuilder();
-	    for (Token token : leading) {
-		builder.append('(');
-		builder.append(token.getCompletePattern().pattern());
-		builder.append(')');
-		builder.append('|');
-	    }
-	    builder.deleteCharAt(builder.length()-1);
-	    return builder.toString();
-	}
+        return buildCondition(leading);
     }
 
     /**
@@ -216,21 +196,25 @@ public class Token {
      * @return
      */
     private CharSequence getTrailingRegex() {
-	if(leading.size() == 0)
-	    return ".*";
-	if(leading.size() == 1)
-	    return leading.get(0).getCompletePattern().pattern();
-	else {
-	    StringBuilder builder = new StringBuilder();
-	    for (Token token : leading) {
-		builder.append('(');
-		builder.append(token.getCompletePattern().pattern());
-		builder.append(')');
-		builder.append('|');
-	    }
-	    builder.deleteCharAt(builder.length()-1);
-	    return builder.toString();
-	}
+        return buildCondition(trailing);
+    }
+
+    private CharSequence buildCondition(ArrayList<Token> trailing) {
+        if(trailing.size() == 0)
+            return ".*";
+        if(trailing.size() == 1)
+            return trailing.get(0).getCompletePattern().pattern();
+        else {
+            StringBuilder builder = new StringBuilder();
+            for (Token token : trailing) {
+                builder.append('(');
+                builder.append(token.getCompletePattern().pattern());
+                builder.append(')');
+                builder.append('|');
+            }
+            builder.deleteCharAt(builder.length()-1);
+            return builder.toString();
+        }
     }
 }
 

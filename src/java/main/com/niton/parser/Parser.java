@@ -10,62 +10,55 @@ import java.io.UnsupportedEncodingException;
 
 import com.niton.media.filesystem.NFile;
 import com.niton.parser.grammar.Grammar;
-import com.niton.parser.specific.grammar.GrammarResult;
 
 /**
- * This is the Parser Class
- * 
+ * The parser superset.
+ * This classes use is to make the complete Parsing process
  * @author Nils
  * @version 2019-05-28
+ * @param <R> the class to parse into
  */
 public abstract class Parser<R> {
-	private Tokenizer t = new Tokenizer();
-	private GrammarReference g;
+	private Tokenizer tokenizer = new Tokenizer();
+	private GrammarReference reference;
 	private String root;
 
-	public Parser(GrammarReference csv,Grammar root) {
-		setG(csv);
+	/**
+	 * @param references a collection of all used Grammars
+	 * @param root the grammar to be used as root
+	 */
+	public Parser(GrammarReference references,Grammar root) {
+		setReference(references);
 		this.root = root.getName();
-	}
-	/**
-	 * Creates an Instance of Parser.java
-	 * 
-	 * @author Nils
-	 * @version 2019-05-29
-	 * @param csv
-	 */
-	public Parser(GrammarReference csv,String root) {
-		setG(csv);
-		this.root = root;
-	}
-	
-	/**
-	 * @return the g
-	 */
-	public GrammarReference getG() {
-		return g;
 	}
 
 	/**
-	 * @return the root
+	 * @see #Parser(GrammarReference, Grammar)
+	 * @param root the name of the grammar to use
 	 */
+	public Parser(GrammarReference csv,String root) {
+		setReference(csv);
+		this.root = root;
+	}
+
+	public GrammarReference getReference() {
+		return reference;
+	}
+
+
 	public String getRoot() {
 		return root;
 	}
 
-	/**
-	 * @return the t
-	 */
-	public Tokenizer getT() {
-		return t;
+	public Tokenizer getTokenizer() {
+		return tokenizer;
 	}
 
 	/**
-	 * Description :
-	 * 
+	 * Parses the text into a instance of R
 	 * @author Nils
 	 * @version 2019-05-29
-	 * @param string
+	 * @param content the string to parse
 	 * @throws ParsingException
 	 */
 	public R parse(String content) throws ParsingException {
@@ -73,7 +66,7 @@ public abstract class Parser<R> {
 	}
 	
 	public GrammarObject parsePlain(String content) throws ParsingException {
-		return g.get(root).getExecutor().check(t.parse(content),g);
+		return reference.get(root).getExecutor().check(tokenizer.parse(content), reference);
 	}
 	public R parse(Reader content) throws ParsingException, IOException {
 		StringBuilder buffer = new StringBuilder();
@@ -95,10 +88,10 @@ public abstract class Parser<R> {
 	}
 	
 	/**
-	 * @param g the g to set
+	 * @param reference the g to set
 	 */
-	public void setG(GrammarReference g) {
-		this.g = g;
+	public void setReference(GrammarReference reference) {
+		this.reference = reference;
 	}
 	/**
 	 * @param root the root to set
@@ -107,12 +100,18 @@ public abstract class Parser<R> {
 		this.root = root;
 	}
 	/**
-	 * @param t the t to set
+	 * @param tokenizer the t to set
 	 */
-	public void setT(Tokenizer t) {
-		this.t = t;
+	public void setTokenizer(Tokenizer tokenizer) {
+		this.tokenizer = tokenizer;
 	}
-	
+
+	/**
+	 * This converts the result of parsing {@link GrammarObject} into a Custom Type
+	 * @param o the GrammarObject to convert
+	 * @return an instance of the targetet Type
+	 * @throws ParsingException
+	 */
 	public abstract R convert(GrammarObject o) throws ParsingException;
 	/**
 	 * <b>Description :</b><br>

@@ -1,7 +1,6 @@
 package com.niton.parser.specific.grammar;
 
 import java.util.HashMap;
-import java.util.LinkedList;
 
 import com.niton.parser.GrammarReferenceMap;
 import com.niton.parser.Token;

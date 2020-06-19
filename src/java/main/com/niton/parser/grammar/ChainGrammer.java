@@ -173,9 +173,17 @@ public class ChainGrammer extends Grammar {
 		chain.add(new AnyExceptTokenGrammer(token, name));
 		return this;
 	}
+	
+	public ChainGrammer anyExceptOneOf(String name,String... tokens) {
+		chain.add(new AnyExceptMultiTokenGrammer(tokens, name));
+		return this;
+	}
 
 	public ChainGrammer anyExcept(Tokenable token, String name) {
 		return anyExcept(token.name(), name);
+	}
+	public ChainGrammer anyExceptOneOf(String name,Tokenable... tokens) {
+		return anyExceptOneOf(name,Arrays.stream(tokens).map((a)->a.name()).collect(Collectors.toList()).toArray(new String[tokens.length]));
 	}
 
 	/**
@@ -326,6 +334,14 @@ public class ChainGrammer extends Grammar {
 		return anyExcept(token.name(), null);
 	}
 
+	
+	public ChainGrammer anyExceptOneOf(String... tokens) {
+		return anyExceptOneOf(null, tokens);
+	}
+
+	public ChainGrammer anyExceptOneOf(Tokenable... tokens) {
+		return anyExceptOneOf(null, Arrays.stream(tokens).map((a)->a.name()).collect(Collectors.toList()).toArray(new String[tokens.length]));
+	}
 	/**
 	 * Description :
 	 * 

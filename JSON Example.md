@@ -13,8 +13,9 @@ In this approach we create Classes like JsonArray JsonObject JsonValue and so on
 > So we would clearly use the **Flexible Model**
 
 Now we need to find the information how the model works.
- I will not explain this detailed as this are very trivial steps. Simply create Classes that represent all the elements which may ocour in a JSON.
+I will not explain this detailed as this are very trivial steps. Simply create Classes that represent all the elements which may ocour in a JSON.
  This is the Structure i will use:
+
  - `Json` (Top level container)
  -  `String` (sub of `Value`)
  - `Number` (sub of `Value`)
@@ -32,8 +33,8 @@ depending on how you design your Parser you may also create
  - `Members` (collection of `Member`s, used within Object)
  - `Elements` (collection of `Element`s, used within Array)
 
-We won't do it in here for time reasons but normaly you would make this extra step of abstration
-> We are done with the preperation!
+We won't do it in here for time reasons but normally you would make this extra step of abstraction
+> We are done with the preparation!
 ## Grammar File
 Now we create the main part of the Parser, the [Grammar File](https://github.com/nbrugger-tgm/JainParse/blob/master/GrammarFiles.md)
 ### Adding Tokens
@@ -52,7 +53,7 @@ There are a few basic tokens nearly every parser will need.
 	POINT='\.'
 	EOF='\Z'
 ```
-> Do **NOT**, use the `$` and `^` regex as they do not capture th \r or \n which is very neccesarry for my Parser to work!
+> Do **NOT**, use the `$` and `^` regex as they do not capture the \r or \n which is very neccesarry for my Parser to work!
 
 > Also do not create Tokens which are overlapping (eg. `TOK1='[A-Za-züöäß]+'` `NAME='[A-Z][a-z]+'`) and define them as simple as possible 
 
@@ -61,7 +62,7 @@ There are a few basic tokens nearly every parser will need.
 > Now a thig you are allowed to: Commenting! it is done with // between Token or grammar definers
 
 At the next step we need to take care about Json String escaping which also needs to be done by the parser.
-Means that `\"` , `"` and `\` all will have seperate tokens which do not overlap. This is a bit complicated and you need to be familliar with the glory hell of regex so here is the string escaping "code".
+Means that `\"` , `"` and ```\``` all will have seperate tokens which do not overlap. This is a bit complicated and you need to be familliar with the glory hell of regex so here is the string escaping "code".
 ```js
 
 ```

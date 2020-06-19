@@ -47,8 +47,7 @@ OR
 	 - multi
 	 - name_assign
  - #### specification
-	 - `~` Ignore: Ignores `item` completely
-	 - `?` Optional: The `item` is optional, it is used if it exists but ignored if not
+	  - `?` Optional: The `item` is optional, it is used if it exists but ignored if not
 	 - `!` AnyExcept: Anything except `item` is used (multiple Times)
 		 - Example
 			 - `*END_OF_LINE` 
@@ -57,16 +56,16 @@ OR
  - #### item
 	 - is a refence to a Token or grammar
 	 - Syntax: `[#]reference`
-	 - The # is used when reference is an token
-	 - If there is no # it is an grammar
+	 - The `#` is used when reference is an token
+	 - If there is no `#` it is an grammar
  - #### multi
 	 - Simply a `*`
 	 - Indicates that `item` is captured more or less than (or exactly) one time
  - #### name_assign
 	 - Assigns a name to the rule
 	 - `> <name_to_assign>`
-	 - `name_to_assign` needs to be a valid identifyer
-	 - Whitespace between the arrow and the name is allowed also bevore the arrow
+	 - `name_to_assign` needs to be a valid identifier
+	 - Whitespace between the arrow and the name is allowed also before the arrow
  - #### array
 	 - `{item1 item2, item3...}`
 	 - Indicates that any of the items in the array has to match
@@ -103,18 +102,19 @@ The same as GRM file
     SEMICOLON = ';'
     
     String:
-	    #STRING_DELMITTER
-	    *#STRING_DELMITTER >content
-	    #STRING_DELMITTER
+        #STRING_DELMITTER
+        *#STRING_DELMITTER >content
+        #STRING_DELMITTER
     
     VariableAssignment:
-	    #IDENTIFYER > name
-	    ~#WHITESPACE
-	    #EQUAL
-	    String > value
-	    #SEMICOLON
-	    
-	    
+        #IDENTIFYER > name
+        ~#WHITESPACE
+        #EQUAL
+        String > value
+        #SEMICOLON
+
+
+​	    
 
 <!--stackedit_data:
 eyJoaXN0b3J5IjpbMTQ4OTc2MDEzNSwtOTU0NjY2ODE1LC0xMz
