@@ -5,7 +5,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import com.niton.parser.grammar.Grammar;
+import com.niton.parser.specific.grammar.GrammarFileContent;
 
 /**
  * The default implementation of a GrammarReference using a {@link HashMap}
@@ -23,7 +23,10 @@ public class GrammarReferenceMap extends HashMap<String, Grammar> implements Ite
 		put(g.getName(), g);
 		return this;
 	}
-
+	public GrammarReferenceMap add(GrammarFileContent res){
+		merge(res.getGrammars());
+		return this;
+	}
 	/**
 	 * Adds a Grammar to the reference map
 	 * @param g the grammar to the map

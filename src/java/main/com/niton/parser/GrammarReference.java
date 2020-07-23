@@ -1,9 +1,6 @@
 package com.niton.parser;
 
-import java.util.Collection;
 import java.util.Set;
-
-import com.niton.parser.grammar.Grammar;
 
 /**
  * Used to resolve grammar names

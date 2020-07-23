@@ -1,35 +1,22 @@
-LINE_END_WIN='\r\n'
-LINE_END_UNIX='\n'
-LINE_END_OSX='\r'
-CHRACTERS='(?<!\\)[A-Za-z]+'
 NUMBER='[0-9]+'
-UNDERSCORE='_'
-EQUAL='[=]'
-WHITESPACE='[ \t]+'
-COMMA=','
-COLON=':'
-POINT='\.'
-EOF='\Z'
 BRACKET_OPEN='\('
 BRACKET_CLOSE='\)'
-SEMICOLON=';'
-
-QUOTE='(?<!\\)"'
-BACKSLASH='\\(?!\')'
+PLUS='+'
+MINUS='-'
+STAR='*'
 SLASH='(?<!\\)\/'
-BACKSPACE='\b'
-FORMFEED='\f'
-TAB='\t'
 
-identifyerCollection:
-	{#CHARACTERS #UNDERSCORE} >content
-	
-identifyer:
-	identifyerCollection* >name
-	
-methodCall:
-	identifyer >methodName
-	#BRACKET_OPEN
-	#BRACKET_CLOSED
-	#SEMICOLON
-	
+Number:
+    #NUMBER >"value"
+
+calc_expression:
+                #BRACKET_OPEN
+                expression >firstExpression
+                {STAR, PLUS, MINUS, SLASH}>.matchAny().name("calculationType")
+                .grammar("expression").match().name("secondExpression")
+                .token(DefaultToken.BRACKET_CLOSED).match()
+        )
+        .map(
+            Grammar.build("expression")
+                .grammars(new String[]{"Number", "calc_expression"}).matchAny().name("content")
+        );

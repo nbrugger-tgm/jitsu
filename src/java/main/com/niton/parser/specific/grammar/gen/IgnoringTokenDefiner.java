@@ -1,15 +1,15 @@
 package com.niton.parser.specific.grammar.gen;
 
-import com.niton.parser.SubGrammerObject;
+import com.niton.parser.result.SuperGrammarResult;
 
 public class IgnoringTokenDefiner {
-	private SubGrammerObject obj;
+	private SuperGrammarResult result;
 
-	public IgnoringTokenDefiner(SubGrammerObject obj) {
-		this.obj = obj;
+	public IgnoringTokenDefiner(SuperGrammarResult res) {
+		this.result = res;
 	}
 
-	public TokenDefiner getDefiner() {
-		return new TokenDefiner((SubGrammerObject)obj.getObject("definer"));
+	public TokenDefiner getContent() {
+		return new TokenDefiner(result.getObject("content"));
 	}
 }

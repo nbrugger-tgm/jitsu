@@ -1,52 +1,53 @@
 package com.niton.parser.specific.grammar;
 
-import com.niton.parser.grammar.Tokenable;
+import com.niton.parser.Tokenable;
 
 /**
  * This is the GrammarTokens Class
+ *
  * @author Nils Brugger
  * @version 2019-06-09
  */
-public enum GrammarTokens implements Tokenable{
-	LINE_END("[\\r\\n]+"),
-	IDENTIFYER("[A-Za-z_]+"),
-	EQ("[=]"),
-	WHITESPACE("[ \t]+"),
-	SLASH("\\/"),
-	COMMA(","),
-	COLON(":"),
-	EOF("\\Z"),
+enum GrammarTokens implements Tokenable {
+    LINE_END("(\\r?\\n)+"),
+    IDENTIFYER("[A-Za-z_]+"),
+    EQ("[=]"),
+    SPACE("[ \t]+"),
+    SLASH("\\/"),
+    COMMA(","),
+    COLON(":"),
+    EOF("\\Z"),
 
-	//SOME Escaping shit
-	QUOTE("(?<!\\\\)\\'"),
-	ESCAPED_QUOTE("\\\\\\'"),
-	BACKSLASH("\\\\(?!\\')"),
+    //SOME Escaping s***
+    QUOTE("(?<!\\\\)\\'"),
+    ESCAPED_QUOTE("\\\\\\'"),
+    BACKSLASH("\\\\(?!\\')"),
 
 
+    //Specific
+    TOKEN_SIGN("#"),
+    OPTIONAL_SIGN("\\?"),
+    REPEAT_SIGN("\\*"),
+    ARROW(">"),
+    ARRAY_OPEN("\\{"),
+    ARRAY_CLOSE("\\}"),
+    IGNORE_SIGN("~"),
+    ANY_EXCEPT_SIGN("!");
+    public final String regex;
 
-	//Specific
-	TOKEN_SIGN("#"),
-	OPTIONAL("\\?"),
-	STAR("\\*"),
-	ARROW(">"),
-	ARRAY_OPEN("\\{"),
-	ARRAY_CLOSE("\\}"),
-	IGNORE("~"),
-	NEGATE("!");
-	public final String regex;
+    /**
+     * Creates an Instance of GrammarTokens.java
+     *
+     * @author Nils Brugger
+     * @version 2019-06-09
+     */
+    GrammarTokens(String regex) {
+        this.regex = regex;
+    }
 
-	/**
-	 * Creates an Instance of GrammarTokens.java
-	 * @author Nils Brugger
-	 * @version 2019-06-09
-	 */
-	private GrammarTokens(String regex) {
-		this.regex = regex;
-	}
-
-	@Override
-	public String pattern() {
-		return regex;
-	}
+    @Override
+    public String pattern() {
+        return regex;
+    }
 }
 

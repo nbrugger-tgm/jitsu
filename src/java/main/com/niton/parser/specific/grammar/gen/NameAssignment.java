@@ -1,20 +1,20 @@
 package com.niton.parser.specific.grammar.gen;
 
-import com.niton.parser.SubGrammerObject;
-import com.niton.parser.TokenGrammarObject;
+import com.niton.parser.ResultResolver;
+import com.niton.parser.result.SuperGrammarResult;
 import java.lang.String;
 
 public class NameAssignment {
-	private SubGrammerObject obj;
+	private SuperGrammarResult result;
 
-	public NameAssignment(SubGrammerObject obj) {
-		this.obj = obj;
+	public NameAssignment(SuperGrammarResult res) {
+		this.result = res;
 	}
 
 	public String getName() {
-		if(obj.getObject("name") == null) {
+		if(result.getObject("name") == null) {
 			return null;
 		}
-		return ((TokenGrammarObject)obj.getObject("name")).joinTokens();
+		return ((String)ResultResolver.getReturnValue(result.getObject("name")));
 	}
 }

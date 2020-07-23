@@ -36,62 +36,59 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
 ### Rule
 ```
 <specification><item><multi><name_assign>
-
-OR
-
-<any_except><array><name_assign>
 ```
 
- - Optionals:
+ - Optional:
 	 - specification
-	 - multi
 	 - name_assign
- - #### specification
-	  - `?` Optional: The `item` is optional, it is used if it exists but ignored if not
+	 - multi
+	 
+ - #### specifications
+	 - `?` Optional: The `item` is optional, it is used if it exists but ignored if not
 	 - `!` AnyExcept: Anything except `item` is used (multiple Times)
 		 - Example
-			 - `*END_OF_LINE` 
-			 - will collect all Tokens bevore the `END OF LINE` Token
+			 - `!END_OF_LINE` 
+			 - will collect all Tokens bevore the `END_OF_LINE` Token
 	 - `~` Ignore: Ignores `item` completely it it exists
+	 - An empty specification indicates to simply match the `item` (in case of an *array* this means it matches the first matchable item)
  - #### item
-	 - is a refence to a Token or grammar
-	 - Syntax: `[#]reference`
-	 - The `#` is used when reference is an token
-	 - If there is no `#` it is an grammar
+	 - is a refence to a Token ,grammar or an array
+	 - Syntax: `[#]reference` or `<array>`
+	    - The ``reference`` is used for grammars and tokens
+	 - The `#` is used when reference is a token
+	 - If there is no `#` it is a grammar
+	 - #### array
+     	 - `{item1 item2, item3...}`
+     	 - Indicates that any of the items in the array has to match -> `OR`
+     	 - you can ***not*** mix grammars and tokens
  - #### multi
-	 - Simply a `*`
-	 - Indicates that `item` is captured more or less than (or exactly) one time
+     - Symbol: `*`
+     - Indicates that the specification will be used more or less than (or exactly) one time (0..N)
+     - note that this does not makes sense when used with `!` (Any Except)
  - #### name_assign
 	 - Assigns a name to the rule
 	 - `> <name_to_assign>`
 	 - `name_to_assign` needs to be a valid identifier
 	 - Whitespace between the arrow and the name is allowed also before the arrow
- - #### array
-	 - `{item1 item2, item3...}`
-	 - Indicates that any of the items in the array has to match
-	 - you can ***not*** mix grammars and tokens
-	 - #### any_except
-		 - is indicated by a `!`
-		 - negates the statment that any token except the ones from the array are matched
 
 ## Example
 A full example (building a JSON parser) can be found here, a short one is bellow.
 Some of the tokens used are pseudocode
 
 ```java
-Grammer
+Grammar
 	.build("String")
-	.matchToken(Tokens.STRING_DELIMITER)
-	.anyExcept(Tokens.STRING_DELIMITER,"content")
-	.matchToken(Tokens.STRING_DELIMITER);
+	.token(Tokens.STRING_DELIMITER).match()
+	.token(Tokens.STRING_DELIMITER).anyExcept().name("content")
+	.token(Tokens.STRING_DELIMITER).match();
 
-Grammer
+Grammar
 	.build("VariableAssignment")
-	.matchToken(Tokens.IDENTIFYER,"name")
-	.ignoreToken(Tokens.WHITESPACE)
-	.matchToken(Tokens.EQUAL)// EQUAL is =
-	.match("String","value")
-	.matchToken(Tokens.SEMICOLON);
+	.token(Tokens.IDENTIFYER).match().name("name")
+	.token(Tokens.WHITESPACE).ignore()
+	.token(Tokens.EQUAL).match()// EQUAL is =
+	.grammar("String").match().name("value")
+	.token(Tokens.SEMICOLON).match();
 ```
 The same as GRM file
 
@@ -103,7 +100,7 @@ The same as GRM file
     
     String:
         #STRING_DELMITTER
-        *#STRING_DELMITTER >content
+        !#STRING_DELMITTER >content
         #STRING_DELMITTER
     
     VariableAssignment:
@@ -112,11 +109,3 @@ The same as GRM file
         #EQUAL
         String > value
         #SEMICOLON
-
-
-​	    
-
-<!--stackedit_data:
-eyJoaXN0b3J5IjpbMTQ4OTc2MDEzNSwtOTU0NjY2ODE1LC0xMz
-gyNzIxNTIxLDczMDkxMjM2OCwtMTI1MDAzMzA2Ml19
--->
