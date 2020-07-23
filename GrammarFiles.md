@@ -1,5 +1,5 @@
 # Grammar Files
-Grammar Files are used to define a Grammar in a File reather than just cerate them with code.
+Grammar Files are used to define a Grammar in a File rather than just cerate them with code.
 
 ## Syntax
 ### File Over All
@@ -42,7 +42,7 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
 	 - specification
 	 - name_assign
 	 - multi
-	 
+	
  - #### specifications
 	 - `?` Optional: The `item` is optional, it is used if it exists but ignored if not
 	 - `!` AnyExcept: Anything except `item` is used (multiple Times)
@@ -54,43 +54,54 @@ Grammar Files are used to define a Grammar in a File reather than just cerate th
  - #### item
 	 - is a refence to a Token ,grammar or an array
 	 - Syntax: `[#]reference` or `<array>`
+	   
 	    - The ``reference`` is used for grammars and tokens
 	 - The `#` is used when reference is a token
 	 - If there is no `#` it is a grammar
-	 - #### array
-     	 - `{item1 item2, item3...}`
-     	 - Indicates that any of the items in the array has to match -> `OR`
-     	 - you can ***not*** mix grammars and tokens
+     - #### array
+         	 - `{item1 item2, item3...}`
+         	 - Indicates that any of the items in the array has to match -> `OR`
+         	 - you can ***not*** mix grammars and tokens in an array
  - #### multi
      - Symbol: `*`
      - Indicates that the specification will be used more or less than (or exactly) one time (0..N)
      - note that this does not makes sense when used with `!` (Any Except)
  - #### name_assign
 	 - Assigns a name to the rule
+	
 	 - `> <name_to_assign>`
+	
 	 - `name_to_assign` needs to be a valid identifier
+	
 	 - Whitespace between the arrow and the name is allowed also before the arrow
+	
+	 - > This is used to access the captured string later on easy
 
 ## Example
-A full example (building a JSON parser) can be found here, a short one is bellow.
-Some of the tokens used are pseudocode
+
+### Code
 
 ```java
-Grammar
-	.build("String")
-	.token(Tokens.STRING_DELIMITER).match()
-	.token(Tokens.STRING_DELIMITER).anyExcept().name("content")
-	.token(Tokens.STRING_DELIMITER).match();
-
-Grammar
-	.build("VariableAssignment")
-	.token(Tokens.IDENTIFYER).match().name("name")
-	.token(Tokens.WHITESPACE).ignore()
-	.token(Tokens.EQUAL).match()// EQUAL is =
-	.grammar("String").match().name("value")
-	.token(Tokens.SEMICOLON).match();
+GrammarReference grammar = new GrammarReferenceMap()
+    .map(
+        Grammar
+            .build("String")
+            .token(Tokens.STRING_DELIMITER).match() //a string starts with an String delmitter -> "
+            .token(Tokens.STRING_DELIMITER).anyExcept().name("content") 
+            //capture everything to the next String delmiter -> the content of the string and save it with the name "content" for later usage
+            .token(Tokens.STRING_DELIMITER).match() //at the end there must be an Sring delmitter too
+	)
+    .map(
+        Grammar
+            .build("VariableAssignment")
+            .token(Tokens.IDENTIFYER).match().name("name")
+            .token(Tokens.WHITESPACE).ignore()
+            .token(Tokens.EQUAL).match()// EQUAL is =
+            .grammar("String").match().name("value")
+            .token(Tokens.SEMICOLON).match()
+    );
 ```
-The same as GRM file
+### Grammar File
 
     STRING_DELMITTER = '"'
     IDENTIFYER = '[A-Za-z_]+'
@@ -109,3 +120,13 @@ The same as GRM file
         #EQUAL
         String > value
         #SEMICOLON
+
+In the second step you need to load/parse the grammar File
+
+```java
+GrammarParser grammarParser = new GrammarParser();
+File grmFile = new File("/path/to/grammar/file.grm");
+GrammarFileContent grammar = grammar.parse(grmFile);
+```
+
+`grammar` is the same in both cases except that in the example with the file it also contains the tokens 
