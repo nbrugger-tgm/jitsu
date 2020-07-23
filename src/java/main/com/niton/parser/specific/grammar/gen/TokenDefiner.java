@@ -1,24 +1,24 @@
 package com.niton.parser.specific.grammar.gen;
 
-import com.niton.parser.SubGrammerObject;
-import com.niton.parser.TokenGrammarObject;
+import com.niton.parser.ResultResolver;
+import com.niton.parser.result.SuperGrammarResult;
 import java.lang.String;
 
 public class TokenDefiner {
-	private SubGrammerObject obj;
+	private SuperGrammarResult result;
 
-	public TokenDefiner(SubGrammerObject obj) {
-		this.obj = obj;
+	public TokenDefiner(SuperGrammarResult res) {
+		this.result = res;
 	}
 
 	public String getName() {
-		if(obj.getObject("name") == null) {
+		if(result.getObject("name") == null) {
 			return null;
 		}
-		return ((TokenGrammarObject)obj.getObject("name")).joinTokens();
+		return ((String)ResultResolver.getReturnValue(result.getObject("name")));
 	}
 
 	public TokenLiteral getLiteral() {
-		return new TokenLiteral((SubGrammerObject)obj.getObject("literal"));
+		return new TokenLiteral(result.getObject("literal"));
 	}
 }

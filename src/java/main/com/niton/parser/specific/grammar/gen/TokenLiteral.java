@@ -1,20 +1,20 @@
 package com.niton.parser.specific.grammar.gen;
 
-import com.niton.parser.SubGrammerObject;
-import com.niton.parser.TokenGrammarObject;
+import com.niton.parser.ResultResolver;
+import com.niton.parser.result.SuperGrammarResult;
 import java.lang.String;
 
 public class TokenLiteral {
-	private SubGrammerObject obj;
+	private SuperGrammarResult result;
 
-	public TokenLiteral(SubGrammerObject obj) {
-		this.obj = obj;
+	public TokenLiteral(SuperGrammarResult res) {
+		this.result = res;
 	}
 
 	public String getRegex() {
-		if(obj.getObject("regex") == null) {
+		if(result.getObject("regex") == null) {
 			return null;
 		}
-		return ((TokenGrammarObject)obj.getObject("regex")).joinTokens();
+		return ((String)ResultResolver.getReturnValue(result.getObject("regex")));
 	}
 }

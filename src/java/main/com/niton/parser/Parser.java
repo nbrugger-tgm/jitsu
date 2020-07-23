@@ -1,15 +1,12 @@
 package com.niton.parser;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 
 import com.niton.media.filesystem.NFile;
-import com.niton.parser.grammar.Grammar;
+import com.niton.parser.exceptions.ParsingException;
+import com.niton.parser.specific.grammar.GrammarFileContent;
+import com.niton.parser.token.TokenStream;
+import com.niton.parser.token.Tokenizer;
 
 /**
  * The parser superset.
@@ -28,10 +25,15 @@ public abstract class Parser<R> {
 	 * @param root the grammar to be used as root
 	 */
 	public Parser(GrammarReference references,Grammar root) {
-		setReference(references);
-		this.root = root.getName();
+		this(references,root.getName());
 	}
-
+	/**
+	 * @param references a collection of all used Grammars
+	 * @param root the grammar to be used as root
+	 */
+	public Parser(GrammarReference references,GrammarName root) {
+		this(references,root.getName());
+	}
 	/**
 	 * @see #Parser(GrammarReference, Grammar)
 	 * @param root the name of the grammar to use
@@ -65,16 +67,23 @@ public abstract class Parser<R> {
 		return convert(parsePlain(content));
 	}
 	
-	public GrammarObject parsePlain(String content) throws ParsingException {
-		return reference.get(root).getExecutor().check(tokenizer.parse(content), reference);
+	public GrammarResult parsePlain(String content) throws ParsingException {
+		return reference.get(root).parse(new TokenStream(tokenizer.tokenize(content)), reference);
 	}
 	public R parse(Reader content) throws ParsingException, IOException {
-		StringBuilder buffer = new StringBuilder();
-		int i = content.read();
-		while(i != -1) {
-			buffer.appendCodePoint(i);
+		BufferedReader reader = new BufferedReader(content);
+		StringBuilder bldr = new StringBuilder();
+		String ln;
+		while((ln = reader.readLine()) != null) {
+			bldr.append(ln);
+			bldr.append(System.lineSeparator());
 		}
-		return parse(buffer.toString());
+		return parse(bldr.toString());
+	}
+	public void add(GrammarFileContent res){
+		tokenizer.tokens.putAll(res.getTokens());
+		if(reference instanceof GrammarReferenceMap)
+			((GrammarReferenceMap) reference).add(res);
 	}
 	
 	public R parse(NFile content) throws ParsingException, IOException {
@@ -107,12 +116,12 @@ public abstract class Parser<R> {
 	}
 
 	/**
-	 * This converts the result of parsing {@link GrammarObject} into a Custom Type
+	 * This converts the result of parsing {@link GrammarResult} into a Custom Type
 	 * @param o the GrammarObject to convert
 	 * @return an instance of the targetet Type
 	 * @throws ParsingException
 	 */
-	public abstract R convert(GrammarObject o) throws ParsingException;
+	public abstract R convert(GrammarResult o) throws ParsingException;
 	/**
 	 * <b>Description :</b><br>
 	 * 

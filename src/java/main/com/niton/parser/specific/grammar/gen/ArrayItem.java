@@ -1,16 +1,18 @@
 package com.niton.parser.specific.grammar.gen;
 
-import com.niton.parser.AnyGrammarObject;
-import com.niton.parser.SubGrammerObject;
+import com.niton.parser.ResultResolver;
+import com.niton.parser.result.AnyGrammarResult;
+import com.niton.parser.result.SuperGrammarResult;
 
 public class ArrayItem {
-	private SubGrammerObject obj;
+	private SuperGrammarResult result;
 
-	public ArrayItem(SubGrammerObject obj) {
-		this.obj = obj;
+	public ArrayItem(SuperGrammarResult res) {
+		this.result = res;
 	}
 
-	public AnyGrammarObject getItem() {
-		return (AnyGrammarObject) obj.getObject("item");
+	public AnyGrammarResult getItem() {
+		ResultResolver.setResolveAny(false);
+		return (AnyGrammarResult) ResultResolver.getReturnValue(result.getObject("item"));
 	}
 }

@@ -10,7 +10,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<app.name>JainParser</app.name>
 		<app.artifact>jainparse</app.artifact>
-		<app.version>1.0.4</app.version>
+		<app.version>1.3.0</app.version>
 		<sources.test>src/java/test</sources.test>
 		<sources.main>src/java/main</sources.main>
 		<sources.resource>resources</sources.resource>

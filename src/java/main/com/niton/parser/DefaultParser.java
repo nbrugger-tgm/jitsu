@@ -1,28 +1,30 @@
 package com.niton.parser;
 
-import com.niton.parser.grammar.Grammar;
+import com.niton.parser.grammars.ChainGrammar;
 
 /**
- * The degault implementation of the parser returning the plain {@link GrammarObject}
+ * The degault implementation of the parser returning the plain {@link GrammarResult}
  * @author Nils Brugger
  * @version 2019-06-12
  */
-public class DefaultParser extends Parser<GrammarObject> {
+public class DefaultParser extends Parser<GrammarResult> {
 
 	/**
-	 * @see com.niton.parser.Parser#convert(com.niton.parser.GrammarObject)
+	 * @see com.niton.parser.Parser#convert(GrammarResult)
 	 */
 	@Override
-	public GrammarObject convert(GrammarObject o) {
+	public GrammarResult convert(GrammarResult o) {
 		return o;
 	}
 
-	public DefaultParser(GrammarReference csv, Grammar root) {
-		super(csv, root);
+	public DefaultParser(GrammarReference reference, Grammar root) {
+		super(reference, root);
 	}
-
-	public DefaultParser(GrammarReference csv, String root) {
-		super(csv, root);
+	public DefaultParser(ChainGrammar root) {
+		super(root, root);
+	}
+	public DefaultParser(GrammarReference ref, String root) {
+		super(ref, root);
 	}
 }
 

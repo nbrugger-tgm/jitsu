@@ -1,25 +1,17 @@
 package com.niton.parser.specific.grammar.gen;
 
-import com.niton.parser.GrammarObject;
-import com.niton.parser.SubGrammerObject;
-import java.util.ArrayList;
+import com.niton.parser.ResultResolver;
+import com.niton.parser.result.SuperGrammarResult;
+import java.util.List;
 
 public class FileHead {
-	private SubGrammerObject obj;
+	private SuperGrammarResult result;
 
-	public FileHead(SubGrammerObject obj) {
-		this.obj = obj;
+	public FileHead(SuperGrammarResult res) {
+		this.result = res;
 	}
 
-	public ArrayList<IgnoringTokenDefiner> getTokenDefiners() {
-		SubGrammerObject collection =  (SubGrammerObject)obj.getObject("tokenDefiners");
-		if(collection == null) {
-			return null;
-		}
-		ArrayList<IgnoringTokenDefiner> out = new ArrayList<>();
-		for (GrammarObject iter : collection.objects) {
-			out.add(new IgnoringTokenDefiner((SubGrammerObject) iter));
-		}
-		return out;
+	public List<IgnoringTokenDefiner> getTokenDefiners() {
+		return ((List<IgnoringTokenDefiner>)ResultResolver.getReturnValue(result.getObject("token_definers")));
 	}
 }

@@ -1,20 +1,20 @@
 package com.niton.parser.specific.grammar.gen;
 
-import com.niton.parser.SubGrammerObject;
-import com.niton.parser.TokenGrammarObject;
+import com.niton.parser.ResultResolver;
+import com.niton.parser.result.SuperGrammarResult;
 import java.lang.String;
 
 public class Comment {
-	private SubGrammerObject obj;
+	private SuperGrammarResult result;
 
-	public Comment(SubGrammerObject obj) {
-		this.obj = obj;
+	public Comment(SuperGrammarResult res) {
+		this.result = res;
 	}
 
 	public String getMessage() {
-		if(obj.getObject("message") == null) {
+		if(result.getObject("message") == null) {
 			return null;
 		}
-		return ((TokenGrammarObject)obj.getObject("message")).joinTokens();
+		return ((String)ResultResolver.getReturnValue(result.getObject("message")));
 	}
 }
