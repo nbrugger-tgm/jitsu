@@ -1,6 +1,7 @@
 package com.niton;
 
 import com.niton.parser.*;
+import com.niton.parser.GrammarResult;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammars.*;
 import com.niton.parser.result.*;

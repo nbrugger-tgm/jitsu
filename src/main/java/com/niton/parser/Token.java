@@ -1,4 +1,4 @@
-package com.niton.parser.token;
+package com.niton.parser;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -28,8 +28,6 @@ public class Token {
      * @version 2019-05-27
      */
     public Token(String regex) {
-        if(regex.equals("$"))
-            throw new RuntimeException("The $ Regex is not allowed use (\\r?\\n) instead");
         this.regex = Pattern.compile(regex, Pattern.MULTILINE);
     }
 
