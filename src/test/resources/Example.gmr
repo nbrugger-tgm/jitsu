@@ -1,0 +1,20 @@
+NUMBER='[0-9]+'
+BRACKET_OPEN='\('
+BRACKET_CLOSE='\)'
+PLUS='\+'
+MINUS='\-'
+STAR='\*'
+SLASH='(?<!\\)\/'
+
+Number:
+    #NUMBER > value
+
+calc_expression:
+    #BRACKET_OPEN
+    expression >firstExpression
+    {STAR, PLUS, MINUS, SLASH} > calculationType
+    expression > secondExpression
+    #BRACKET_CLOSED
+
+expression:
+    {Number, calc_expression} > content

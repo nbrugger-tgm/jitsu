@@ -1,43 +1,66 @@
 # JSON
-This is a full tutorial how to build a complete parser, in this case JSON as it is simple but covers everything except reursion this API is able to do.
+
+This is a full tutorial how to build a complete parser, in this case JSON as it is simple but covers
+everything except reursion this API is able to do.
+
 ## Preparation
+
 We need the official JSON syntax, which is found [here](http://json.org)
 
-And as we will need a bit of advanced regex (dont worry i will do it for you) we will need the tool https://regexr.com 
+And as we will need a bit of advanced regex (dont worry i will do it for you) we will need the
+tool https://regexr.com
 
-Then we will need to decide what our parser should produce, the 2 most common ways are -> deserialisation or flexible model
+Then we will need to decide what our parser should produce, the 2 most common ways are ->
+deserialisation or flexible model
+
 ### Deserialisation
-Means that we have POJOs and we are shure the JSON follows the structure of the POJO and fill an instance of it with the JSON values via reflections. This is very very usefull and every professional Parser has such a feature but it is very time consuming and an extreme overkill for an tutorial
+
+Means that we have POJOs and we are shure the JSON follows the structure of the POJO and fill an
+instance of it with the JSON values via reflections. This is very very usefull and every
+professional Parser has such a feature but it is very time consuming and an extreme overkill for an
+tutorial
+
 ### Flexible Model
-In this approach we create Classes like JsonArray JsonObject JsonValue and so on which are filled with flexible structures like HashMaps or Lists, means that we can fill this lists and maps up with everything we like to. This causes much of Casting and instanceof later on but is simple to realize at the parsing stage
+
+In this approach we create Classes like JsonArray JsonObject JsonValue and so on which are filled
+with flexible structures like HashMaps or Lists, means that we can fill this lists and maps up with
+everything we like to. This causes much of Casting and instanceof later on but is simple to realize
+at the parsing stage
 > So we would clearly use the **Flexible Model**
 
-Now we need to find the information how the model works.
- I will not explain this detailed as this are very trivial steps. Simply create Classes that represent all the elements which may ocour in a JSON.
- This is the Structure i will use:
- - `Json` (Top level container)
- -  `String` (sub of `Value`)
- - `Number` (sub of `Value`)
- - `Value`  (marking interface)
- - `Member`
- - `Array` (sub of `Value`, sub of `Element`)
- - `Object` (sub of `Value`, sub of `Element`)
- - `Element` (marking interface)
+Now we need to find the information how the model works. I will not explain this detailed as this
+are very trivial steps. Simply create Classes that represent all the elements which may ocour in a
+JSON. This is the Structure i will use:
+
+- `Json` (Top level container)
+- `String` (sub of `Value`)
+- `Number` (sub of `Value`)
+- `Value`  (marking interface)
+- `Member`
+- `Array` (sub of `Value`, sub of `Element`)
+- `Object` (sub of `Value`, sub of `Element`)
+- `Element` (marking interface)
 
 depending on how you design your Parser you may also create
 
- - `True` (sub of `Value`)
- - `False` (sub of `Value`)
- - `Null` (sub of `Value`)
- - `Members` (collection of `Member`s, used within Object)
- - `Elements` (collection of `Element`s, used within Array)
+- `True` (sub of `Value`)
+- `False` (sub of `Value`)
+- `Null` (sub of `Value`)
+- `Members` (collection of `Member`s, used within Object)
+- `Elements` (collection of `Element`s, used within Array)
 
-We won't do it in here for time reasons but normaly you would make this extra step of abstration
-> We are done with the preperation!
+We won't do it in here for time reasons but normally you would make this extra step of abstraction
+> We are done with the preparation!
+
 ## Grammar File
-Now we create the main part of the Parser, the [Grammar File](https://github.com/nbrugger-tgm/JainParse/blob/master/GrammarFiles.md)
+
+Now we create the main part of the Parser,
+the [Grammar File](https://github.com/nbrugger-tgm/JainParse/blob/master/GrammarFiles.md)
+
 ### Adding Tokens
+
 There are a few basic tokens nearly every parser will need.
+
 ```js
     LINE_END_WIN='\r\n'
 	LINE_END_UNIX='\n'
@@ -52,21 +75,27 @@ There are a few basic tokens nearly every parser will need.
 	POINT='\.'
 	EOF='\Z'
 ```
-> Do **NOT**, use the `$` and `^` regex as they do not capture th \r or \n which is very neccesarry for my Parser to work!
 
-> Also do not create Tokens which are overlapping (eg. `TOK1='[A-Za-züöäß]+'` `NAME='[A-Z][a-z]+'`) and define them as simple as possible 
+> Do **NOT**, use the `$` and `^` regex as they do not capture the \r or \n which is very neccesarry for my Parser to work!
+
+> Also do not create Tokens which are overlapping (eg. `TOK1='[A-Za-züöäß]+'` `NAME='[A-Z][a-z]+'`) and define them as simple as possible
 
 > At least avoid to allready specify the chars to a specific role in the parser except the char is really only used for one purpose like `[` as `START_OBJECT`
 
 > Now a thig you are allowed to: Commenting! it is done with // between Token or grammar definers
 
-At the next step we need to take care about Json String escaping which also needs to be done by the parser.
-Means that `\"` , `"` and `\` all will have seperate tokens which do not overlap. This is a bit complicated and you need to be familliar with the glory hell of regex so here is the string escaping "code".
+At the next step we need to take care about Json String escaping which also needs to be done by the
+parser. Means that `\"` , `"` and ```\``` all will have seperate tokens which do not overlap. This
+is a bit complicated and you need to be familliar with the glory hell of regex so here is the string
+escaping "code".
+
 ```js
 
 ```
-basicly it is adding `(?<!\\)` before the unescaped varant. There are some cases where it is a bit more com
+
+basicly it is adding `(?<!\\)` before the unescaped varant. There are some cases where it is a bit
+more complicated
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMzA3MzUyOTA1LDE2OTgwMTYzMzhdfQ==
+eyJoaXN0b3J5IjpbLTgwNTgxMjcwMywxNjk4MDE2MzM4XX0=
 -->
