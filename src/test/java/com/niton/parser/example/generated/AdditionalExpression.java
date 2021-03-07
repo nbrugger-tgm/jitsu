@@ -3,6 +3,7 @@ package com.niton.parser.example.generated;
 import com.niton.parser.ResultResolver;
 import com.niton.parser.result.AnyGrammarResult;
 import com.niton.parser.result.SuperGrammarResult;
+
 import java.util.List;
 
 public class AdditionalExpression {
@@ -22,6 +23,6 @@ public class AdditionalExpression {
 	}
 
 	public List<AdditionalOperand> getOperands() {
-		return ((List<AdditionalOperand>)ResultResolver.getReturnValue(result.getObject("operands")));
+		return ((List<AdditionalOperand>) ResultResolver.getReturnValue(result.getObject("operands")));
 	}
 }

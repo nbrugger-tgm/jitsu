@@ -2,16 +2,16 @@ package com.niton.parser.grammars;
 
 import com.niton.parser.Grammar;
 import com.niton.parser.GrammarReference;
-import com.niton.parser.matchers.ReferenceGrammarMatcher;
 import com.niton.parser.GrammarResult;
+import com.niton.parser.matchers.ReferenceGrammarMatcher;
 
 /**
  * This is the GrammarMatchGrammar Class
- * 
+ *
  * @author Nils Brugger
  * @version 2019-06-05
  */
-public class GrammarReferenceGrammar extends Grammar<ReferenceGrammarMatcher,GrammarResult> {
+public class GrammarReferenceGrammar extends Grammar<ReferenceGrammarMatcher, GrammarResult> {
 	private String grammar;
 
 	public GrammarReferenceGrammar(String g) {
@@ -24,9 +24,6 @@ public class GrammarReferenceGrammar extends Grammar<ReferenceGrammarMatcher,Gra
 	public String getGrammar() {
 		return grammar;
 	}
-	public Grammar grammer(GrammarReference ref){
-		return ref.get(grammar);
-	}
 
 	/**
 	 * @param grammar the grammar to set
@@ -35,9 +32,13 @@ public class GrammarReferenceGrammar extends Grammar<ReferenceGrammarMatcher,Gra
 		this.grammar = grammar;
 	}
 
+	public Grammar grammer(GrammarReference ref) {
+		return ref.get(grammar);
+	}
+
 	/**
-	 * @see Grammar#createExecutor()
 	 * @return
+	 * @see Grammar#createExecutor()
 	 */
 	@Override
 	public ReferenceGrammarMatcher createExecutor() {

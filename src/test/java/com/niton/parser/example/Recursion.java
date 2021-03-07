@@ -1,10 +1,8 @@
 package com.niton.parser.example;
 
 import com.niton.JPGenerator;
-import com.niton.ResultDisplay;
 import com.niton.parser.*;
 import com.niton.parser.exceptions.ParsingException;
-import com.niton.parser.result.SuperGrammarResult;
 import com.niton.parser.token.DefaultToken;
 
 import java.io.IOException;
@@ -19,22 +17,22 @@ import static com.niton.parser.token.DefaultToken.*;
  */
 public class Recursion {
 
-    /**
-     * <b>Description :</b><br>
-     *
-     * @param args
-     * @throws IOException
-     * @throws ParsingException
-     * @author Nils Brugger
-     * @version 2019-06-07
-     */
-    public static void main(String... args) throws IOException, ParsingException {
-        String s = "1+2+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+";
-        mappingApproach(s);
-        //treeApproach(s);
-    }
+	/**
+	 * <b>Description :</b><br>
+	 *
+	 * @param args
+	 * @throws IOException
+	 * @throws ParsingException
+	 * @author Nils Brugger
+	 * @version 2019-06-07
+	 */
+	public static void main(String... args) throws IOException, ParsingException {
+		String s = "1+2+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+";
+		mappingApproach(s);
+		//treeApproach(s);
+	}
 
-    private static void treeApproach(String s) throws ParsingException {
+	private static void treeApproach(String s) throws ParsingException {
 //        System.out.println("Tree");
 //        ChainGrammar grm =
 //                Grammar.build("expression")
@@ -53,74 +51,79 @@ public class Recursion {
 //        display(exp);
 //        System.out.println("");
 //        System.out.println(s+"="+caclulate(exp));
-    }
+	}
 
-    private static void mappingApproach(String s) throws ParsingException, IOException {
-        System.out.println("Map");
-        GrammarReference ref = new GrammarReferenceMap()
-                .map(
-                        Grammar.build("Number")
-                                .token(NUMBER).match().name("value")
-                )
-                .map(
-                        Grammar.build("SignedNumber")
-                            .token(BRACKET_OPEN).match()
-                            .tokens(PLUS,MINUS).match().name("sign")
-                            .grammar("Number").match().name("number")
-                            .token(BRACKET_CLOSED).match()
-                )
-                .map(
-                        Grammar.build("enclosed_expression")
-                                .token(BRACKET_OPEN).match()
-                                .grammar("expression").match().name("content")
-                                .token(BRACKET_CLOSED).match()
-                )
-                .map(
-                        Grammar.build("numeric_expression")
-                                .grammars("Number","SignedNumber").match().name("content")
-                )
-                .map(
-                        Grammar.build("factor_expression")
-                                .grammars("numeric_expression","expression").match().name("first_expression")
-                                .grammar("factor_Operand").match().name("operand1")
-                                .grammar("factor_Operand").repeat().name("operands")
-                )
-                .map(
-                        Grammar.build("factor_Operand")
-                                .tokens(STAR,SLASH).match().name("operator")
-                                .grammar("expression").match().name("second_expression")
-                )
-                .map(
-                        Grammar.build("additional_expression")
-                                .grammars("numeric_expression","expression").match().name("first_expression")
-                                .grammar("additional_Operand").match().name("operand1")
-                                .grammar("additional_Operand").repeat().name("operands")
-                )
-                .map(
-                        Grammar.build("additional_Operand")
-                                .tokens(PLUS,MINUS).match().name("operator")
-                                .grammar("expression").match().name("second_expression")
-                )
-                .map(
-                        Grammar.build("calculation_expression")
-                                .grammars("factor_expression","additional_expression").match().name("content")
-                )
-                .map(
-                        Grammar.build("expression")
-                                .grammars("calculation_expression","enclosed_expression","Number","SignedNumber").match().name("content")
-                );
-        DefaultParser p = new DefaultParser(ref, "expression");
-        GrammarResult res = p.parse(s);
-        System.out.println("Result Coverage : "+res.joinTokens());
-        JPGenerator gen = new JPGenerator("com.niton.parser.example.generated", "D:\\Users\\Nils\\Desktop\\Workspaces\\API\\JainParse\\src\\java\\test");
-        gen.generate(ref, DefaultToken.values());
+	private static void mappingApproach(String s) throws ParsingException, IOException {
+		System.out.println("Map");
+		GrammarReference ref = new GrammarReferenceMap()
+				.map(
+						Grammar.build("Number")
+						       .token(NUMBER).add("value")
+				)
+				.map(
+						Grammar.build("SignedNumber")
+						       .token(BRACKET_OPEN).add()
+						       .tokens(PLUS, MINUS).add("sign")
+						       .grammar("Number").add("number")
+						       .token(BRACKET_CLOSED).add()
+				)
+				.map(
+						Grammar.build("enclosed_expression")
+						       .token(BRACKET_OPEN).add()
+						       .grammar("expression").add("content")
+						       .token(BRACKET_CLOSED).add()
+				)
+				.map(
+						Grammar.build("numeric_expression")
+						       .grammars("Number", "SignedNumber").add("content")
+				)
+				.map(
+						Grammar.build("factor_expression")
+						       .grammars("numeric_expression", "expression").add("first_expression")
+						       .grammar("factor_Operand").add("operand1")
+						       .grammar("factor_Operand").repeat().add("operands")
+				)
+				.map(
+						Grammar.build("factor_Operand")
+						       .tokens(STAR, SLASH).add("operator")
+						       .grammar("expression").add("second_expression")
+				)
+				.map(
+						Grammar.build("additional_expression")
+						       .grammars("numeric_expression", "expression").add("first_expression")
+						       .grammar("additional_Operand").add("operand1")
+						       .grammar("additional_Operand").repeat().name("operands")
+				)
+				.map(
+						Grammar.build("additional_Operand")
+						       .tokens(PLUS, MINUS).add("operator")
+						       .grammar("expression").add("second_expression")
+				)
+				.map(
+						Grammar.build("calculation_expression")
+						       .grammars("factor_expression", "additional_expression")
+						       .add("content")
+				)
+				.map(
+						Grammar.build("expression")
+						       .grammars("calculation_expression",
+						                 "enclosed_expression",
+						                 "Number",
+						                 "SignedNumber").add("content")
+				);
+		DefaultParser p   = new DefaultParser(ref, "expression");
+		GrammarResult res = p.parse(s);
+		System.out.println("Result Coverage : " + res.joinTokens());
+		JPGenerator gen = new JPGenerator("com.niton.parser.example.generated",
+		                                  "D:\\Users\\Nils\\Desktop\\Workspaces\\API\\JainParse\\src\\java\\test");
+		gen.generate(ref, DefaultToken.values());
 //        Expression exp = new Expression((SuperGrammarResult) res);
 //        display(exp);
 //        System.out.println("");
 //        System.out.println(s+"="+caclulate(exp));
 //        ResultDisplay display = new ResultDisplay((SuperGrammarResult) res);
 //        display.display();
-    }
+	}
 
 //	private static int caclulate(Expression exp) {
 //		if(exp.getContent().getType().equals("Number")){

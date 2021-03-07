@@ -3,10 +3,9 @@ package com.niton.parser.specific.grammar.gen;
 import com.niton.parser.ResultResolver;
 import com.niton.parser.result.AnyGrammarResult;
 import com.niton.parser.result.SuperGrammarResult;
-import java.lang.String;
 
 public class SubGrammar {
-	private SuperGrammarResult result;
+	private final SuperGrammarResult result;
 
 	public SubGrammar(SuperGrammarResult res) {
 		this.result = res;
@@ -23,13 +22,15 @@ public class SubGrammar {
 	}
 
 	public String getRepeat() {
-		if(result.getObject("repeat") == null) {
+		if (result.getObject("repeat") == null) {
 			return null;
 		}
-		return ((String)ResultResolver.getReturnValue(result.getObject("repeat")));
+		return ((String) ResultResolver.getReturnValue(result.getObject("repeat")));
 	}
 
 	public NameAssignment getAssignment() {
-		return new NameAssignment(result.getObject("assignment"));
+		if (ResultResolver.getReturnValue(result.getObject("assignment")) == null) return null;
+		return new NameAssignment((SuperGrammarResult) ResultResolver.getReturnValue(result.getObject(
+				"assignment")));
 	}
 }

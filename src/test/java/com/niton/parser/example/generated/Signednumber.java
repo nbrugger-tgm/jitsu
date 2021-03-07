@@ -2,7 +2,6 @@ package com.niton.parser.example.generated;
 
 import com.niton.parser.ResultResolver;
 import com.niton.parser.result.SuperGrammarResult;
-import java.lang.String;
 
 public class Signednumber {
 	private SuperGrammarResult result;

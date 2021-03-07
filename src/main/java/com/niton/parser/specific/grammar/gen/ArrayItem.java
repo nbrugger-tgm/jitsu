@@ -5,7 +5,7 @@ import com.niton.parser.result.AnyGrammarResult;
 import com.niton.parser.result.SuperGrammarResult;
 
 public class ArrayItem {
-	private SuperGrammarResult result;
+	private final SuperGrammarResult result;
 
 	public ArrayItem(SuperGrammarResult res) {
 		this.result = res;
@@ -14,5 +14,10 @@ public class ArrayItem {
 	public AnyGrammarResult getItem() {
 		ResultResolver.setResolveAny(false);
 		return (AnyGrammarResult) ResultResolver.getReturnValue(result.getObject("item"));
+	}
+
+	public String getSeperator() {
+		ResultResolver.setResolveAny(true);
+		return (String) ResultResolver.getReturnValue(result.getObject("seperator"));
 	}
 }

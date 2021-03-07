@@ -33,7 +33,7 @@ whiteignore:
 comment: 
 	#SLASH
 	#SLASH
-	*#LINE_END >text
+	!#LINE_END >text
 
 combineignore:
 	{whiteignore, comment}
@@ -48,7 +48,7 @@ allignore:
 
 tokenLiteral:
 	#QUOTE
-	*#QUOTE >regex
+	!#QUOTE >regex
 	#QUOTE
 	
 tokenDefiner: 

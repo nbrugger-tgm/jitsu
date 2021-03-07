@@ -2,6 +2,7 @@ package com.niton.parser;
 
 /**
  * Extending this interface qualifies instances as useable tokens
+ *
  * @author Nils Brugger
  * @version 2019-06-09
  */

@@ -3,10 +3,10 @@ package com.niton.parser.specific.grammar.gen;
 import com.niton.parser.ResultResolver;
 import com.niton.parser.result.SuperGrammarResult;
 
-public class TokenDefiner {
-	private SuperGrammarResult result;
+public class Content {
+	private final SuperGrammarResult result;
 
-	public TokenDefiner(SuperGrammarResult res) {
+	public Content(SuperGrammarResult res) {
 		this.result = res;
 	}
 
@@ -17,7 +17,9 @@ public class TokenDefiner {
 		return ((String) ResultResolver.getReturnValue(result.getObject("name")));
 	}
 
-	public TokenLiteral getLiteral() {
-		return new TokenLiteral(result.getObject("literal"));
+	public Literal getLiteral() {
+		if (ResultResolver.getReturnValue(result.getObject("literal")) == null) return null;
+		return new Literal((SuperGrammarResult) ResultResolver.getReturnValue(result.getObject(
+				"literal")));
 	}
 }

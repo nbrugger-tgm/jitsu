@@ -1,16 +1,16 @@
 package com.niton.parser.grammars;
 
 import com.niton.parser.Grammar;
-import com.niton.parser.result.IgnoredGrammarResult;
 import com.niton.parser.matchers.IgnoreMatcher;
+import com.niton.parser.result.IgnoredGrammarResult;
 
 /**
  * This Grammar ignores the given grammar
- * 
+ *
  * @author Nils
  * @version 2019-05-29
  */
-public class IgnoreGrammar extends Grammar<IgnoreMatcher,IgnoredGrammarResult> {
+public class IgnoreGrammar extends Grammar<IgnoreMatcher, IgnoredGrammarResult> {
 	private Grammar grammar;
 
 	public IgnoreGrammar(Grammar grammar) {

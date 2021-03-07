@@ -22,15 +22,24 @@ java {
     withJavadocJar()
     withSourcesJar()
 }
+test {
+    // Use junit platform for unit tests
+    useJUnitPlatform()
+}
 dependencies {
-    implementation 'com.squareup:javapoet:1.11.1'
     implementation 'com.niton:media-api:2.8.5'
-    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
-    compileOnly 'org.projectlombok:lombok:1.18.16'
-    annotationProcessor 'org.projectlombok:lombok:1.18.16'
+    implementation 'com.squareup:javapoet:1.13.0'
 
-    testCompileOnly 'org.projectlombok:lombok:1.18.16'
-    testAnnotationProcessor 'org.projectlombok:lombok:1.18.16'
+
+    compileOnly 'org.projectlombok:lombok:1.18.18'
+    annotationProcessor 'org.projectlombok:lombok:1.18.18'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.18'
+    testCompileOnly 'org.projectlombok:lombok:1.18.18'
+
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.7.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.1'
 }
 
 group = 'com.niton'
@@ -39,7 +48,7 @@ description = 'JainParser'
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 javadoc {
-	failOnError = false
+    failOnError = false
 }
 
 tasks.withType(JavaCompile) {
@@ -60,17 +69,17 @@ publishing {
             }
         }
     }
-    repositories {		
-		maven {
+    repositories {
+        maven {
             name = "Artifactory"
             url = "https://niton.jfrog.io/artifactory/java-libs"
             credentials {
                 username = "nbrugger@student.tgm.ac.at"
-				def pwdFile = new File("TOKENS")
-				if(pwdFile.exists())
+                def pwdFile = new File("TOKENS")
+                if (pwdFile.exists())
                     password = pwdFile.readLines().get(0)
                 else
-					password = System.getenv("ARTIFACTORY_API_KEY")
+                    password = System.getenv("ARTIFACTORY_API_KEY")
             }
         }
     }

@@ -1,25 +1,25 @@
 package com.niton.parser.grammars;
 
 import com.niton.parser.Grammar;
-import com.niton.parser.result.TokenGrammarResult;
 import com.niton.parser.matchers.TokenMatcher;
+import com.niton.parser.result.TokenGrammarResult;
 
 /**
  * This is the TokenGrammar Class
- * 
+ *
  * @author Nils
  * @version 2019-05-28
  */
-public class TokenGrammar extends Grammar<TokenMatcher,TokenGrammarResult> {
+public class TokenGrammar extends Grammar<TokenMatcher, TokenGrammarResult> {
 	private String tokenName;
 
 	/**
 	 * Creates an Instance of TokenGrammar.java
-	 * 
-	 * @author Nils
-	 * @version 2019-05-28
+	 *
 	 * @param tokenName
 	 * @param name
+	 * @author Nils
+	 * @version 2019-05-28
 	 */
 	public TokenGrammar(String tokenName, String name) {
 		super();
@@ -52,12 +52,12 @@ public class TokenGrammar extends Grammar<TokenMatcher,TokenGrammarResult> {
 	 */
 	@Override
 	public TokenMatcher createExecutor() {
-		return new TokenMatcher(tokenName);
+		return new TokenMatcher(this);
 	}
 
 	@Override
 	public void reconfigMatcher(TokenMatcher tokenMatcher) {
-		tokenMatcher.setTokenName(tokenName);
+		tokenMatcher.setTokenName(this);
 	}
 
 }

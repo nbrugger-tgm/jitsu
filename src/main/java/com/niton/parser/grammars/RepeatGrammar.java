@@ -1,12 +1,12 @@
 package com.niton.parser.grammars;
 
 import com.niton.parser.Grammar;
-import com.niton.parser.result.ListGrammarResult;
 import com.niton.parser.matchers.RepeatMatcher;
+import com.niton.parser.result.ListGrammarResult;
 
 /**
  * Checks the grammar as often as is ocures
- * 
+ *
  * @author Nils
  * @version 2019-05-29
  */
@@ -31,7 +31,6 @@ public class RepeatGrammar extends Grammar<RepeatMatcher, ListGrammarResult> {
 	public void setCheck(Grammar check) {
 		this.check = check;
 	}
-
 
 
 	/**

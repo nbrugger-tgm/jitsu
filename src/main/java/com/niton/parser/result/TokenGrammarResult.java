@@ -1,12 +1,12 @@
 package com.niton.parser.result;
 
+import com.niton.parser.GrammarResult;
+import com.niton.parser.grammars.TokenGrammar;
+import com.niton.parser.token.Tokenizer.AssignedToken;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
-import com.niton.parser.GrammarResult;
-import com.niton.parser.token.Tokenizer.AssignedToken;
-import com.niton.parser.grammars.TokenGrammar;
 
 /**
  * The result of the {@link TokenGrammar}
@@ -20,6 +20,7 @@ public class TokenGrammarResult extends GrammarResult {
 
 	/**
 	 * Joins the values of the tokens together eventualy reproducing the source 1:1
+	 *
 	 * @return the joined token values
 	 */
 	public String joinTokens() {

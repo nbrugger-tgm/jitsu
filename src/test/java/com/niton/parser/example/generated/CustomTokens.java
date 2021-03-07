@@ -1,7 +1,6 @@
 package com.niton.parser.example.generated;
 
 import com.niton.parser.Tokenable;
-import java.lang.String;
 
 enum CustomTokens implements Tokenable {
 	LETTERS("[A-Za-z]+"),

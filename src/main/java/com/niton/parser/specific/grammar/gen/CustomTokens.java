@@ -1,7 +1,6 @@
 package com.niton.parser.specific.grammar.gen;
 
 import com.niton.parser.Tokenable;
-import java.lang.String;
 
 enum CustomTokens implements Tokenable {
 	LINE_END("(\\r?\\n)+"),

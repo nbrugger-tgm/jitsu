@@ -7,11 +7,17 @@ import com.niton.parser.result.TokenGrammarResult;
 /**
  * This grammar accepts any token except the one given in the Constructor<br>
  * If this token is reached the grammar is fullfilles
- * 
+ *
  * @author Nils
  * @version 2019-05-29
  */
-public class AnyExceptGrammar extends Grammar<AnyExceptMatcher,TokenGrammarResult> {
+public class AnyExceptGrammar extends Grammar<AnyExceptMatcher, TokenGrammarResult> {
+
+	private Grammar dunnoaccept;
+
+	public AnyExceptGrammar(Grammar grammarNotToAccept) {
+		this.dunnoaccept = grammarNotToAccept;
+	}
 
 	/**
 	 * @return the dunnoaccept
@@ -25,12 +31,6 @@ public class AnyExceptGrammar extends Grammar<AnyExceptMatcher,TokenGrammarResul
 	 */
 	public void setDunnoaccept(Grammar dunnoaccept) {
 		this.dunnoaccept = dunnoaccept;
-	}
-
-	private Grammar dunnoaccept;
-
-	public AnyExceptGrammar(Grammar grammarNotToAccept) {
-		this.dunnoaccept = grammarNotToAccept;
 	}
 
 	/**

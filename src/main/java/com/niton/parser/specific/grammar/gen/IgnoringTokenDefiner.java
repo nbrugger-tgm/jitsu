@@ -1,15 +1,18 @@
 package com.niton.parser.specific.grammar.gen;
 
+import com.niton.parser.ResultResolver;
 import com.niton.parser.result.SuperGrammarResult;
 
 public class IgnoringTokenDefiner {
-	private SuperGrammarResult result;
+	private final SuperGrammarResult result;
 
 	public IgnoringTokenDefiner(SuperGrammarResult res) {
 		this.result = res;
 	}
 
-	public TokenDefiner getContent() {
-		return new TokenDefiner(result.getObject("content"));
+	public Content getContent() {
+		if (ResultResolver.getReturnValue(result.getObject("content")) == null) return null;
+		return new Content((SuperGrammarResult) ResultResolver.getReturnValue(result.getObject(
+				"content")));
 	}
 }

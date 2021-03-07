@@ -1,16 +1,16 @@
 package com.niton.parser.grammars;
 
 import com.niton.parser.Grammar;
+import com.niton.parser.matchers.AnyOfMatcher;
 import com.niton.parser.result.AnyGrammarResult;
-import com.niton.parser.matchers.MultiMatcher;
 
 /**
  * Checks agains all given Grammars syncron and returns the first matching
- * 
+ *
  * @author Nils
  * @version 2019-05-29
  */
-public class MultiGrammar extends Grammar<MultiMatcher,AnyGrammarResult> {
+public class MultiGrammar extends Grammar<AnyOfMatcher, AnyGrammarResult> {
 	private Grammar[] tokens;
 
 	public MultiGrammar(Grammar[] grammars) {
@@ -35,12 +35,12 @@ public class MultiGrammar extends Grammar<MultiMatcher,AnyGrammarResult> {
 	 * @see Grammar#createExecutor()
 	 */
 	@Override
-	public MultiMatcher createExecutor() {
-		return new MultiMatcher(this);
+	public AnyOfMatcher createExecutor() {
+		return new AnyOfMatcher(this);
 	}
 
 	@Override
-	public void reconfigMatcher(MultiMatcher multiMatcher) {
+	public void reconfigMatcher(AnyOfMatcher multiMatcher) {
 		multiMatcher.setGrammars(this);
 	}
 }

@@ -2,7 +2,6 @@ package com.niton.parser.example.generated;
 
 import com.niton.parser.ResultResolver;
 import com.niton.parser.result.SuperGrammarResult;
-import java.lang.String;
 
 public class Number {
 	private SuperGrammarResult result;
@@ -12,9 +11,9 @@ public class Number {
 	}
 
 	public String getValue() {
-		if(result.getObject("value") == null) {
+		if (result.getObject("value") == null) {
 			return null;
 		}
-		return ((String)ResultResolver.getReturnValue(result.getObject("value")));
+		return ((String) ResultResolver.getReturnValue(result.getObject("value")));
 	}
 }

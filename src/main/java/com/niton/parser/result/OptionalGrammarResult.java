@@ -8,30 +8,32 @@ import java.util.LinkedList;
 
 /**
  * This is the IngoredGrammarObject Class
+ *
  * @author Nils
  * @version 2019-05-29
  */
 public class OptionalGrammarResult extends GrammarResult {
-    private GrammarResult value = null;
-    /**
-     * @see Object#toString()
-     */
-    @Override
-    public String toString() {
-        return "[optional]";
-    }
+	private GrammarResult value = null;
 
-    public void setValue(GrammarResult value) {
-        this.value = value;
-    }
+	/**
+	 * @see Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "[optional]";
+	}
 
-    public GrammarResult getValue() {
-        return value;
-    }
+	public GrammarResult getValue() {
+		return value;
+	}
 
-    @Override
-    public Collection<? extends Tokenizer.AssignedToken> join() {
-        return value != null ? value.join() : new LinkedList<>();
-    }
+	public void setValue(GrammarResult value) {
+		this.value = value;
+	}
+
+	@Override
+	public Collection<? extends Tokenizer.AssignedToken> join() {
+		return value != null ? value.join() : new LinkedList<>();
+	}
 }
 

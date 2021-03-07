@@ -3,17 +3,17 @@ package com.niton.parser.specific.grammar.gen;
 import com.niton.parser.ResultResolver;
 import com.niton.parser.result.SuperGrammarResult;
 
-public class NameAssignment {
+public class Literal {
 	private final SuperGrammarResult result;
 
-	public NameAssignment(SuperGrammarResult res) {
+	public Literal(SuperGrammarResult res) {
 		this.result = res;
 	}
 
-	public String getName() {
-		if (result.getObject("name") == null) {
+	public String getRegex() {
+		if (result.getObject("regex") == null) {
 			return null;
 		}
-		return ((String) ResultResolver.getReturnValue(result.getObject("name")));
+		return ((String) ResultResolver.getReturnValue(result.getObject("regex")));
 	}
 }
