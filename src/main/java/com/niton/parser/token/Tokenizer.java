@@ -41,6 +41,12 @@ public class Tokenizer {
 		}
 	}
 
+	public Tokenizer(List<Tokenable> tokens) {
+		for (Tokenable t : tokens) {
+			this.tokens.put(t.name(), new Token(t.pattern()));
+		}
+	}
+
 	void add(GrammarFileContent result) {
 		tokens.putAll(result.tokens);
 	}
