@@ -37,7 +37,7 @@ public class GrammarParser extends Parser<GrammarFileContent> {
 			                              .token(QUOTE).anyExcept().add("regex")
 			                              .token(QUOTE).add(),
 			tokenDefiner         = Grammar.build(TOKEN_DEFINER)
-			                              .token(IDENTIFYER).add("name")
+			                              .token(IDENTIFIER).add("name")
 			                              .token(SPACE).ignore().add()
 			                              .token(EQ).add()
 			                              .token(SPACE).ignore().add()
@@ -51,15 +51,15 @@ public class GrammarParser extends Parser<GrammarFileContent> {
 			                              .repeat()
 			                              .add("token_definers"),
 			grammarReference     = Grammar.build(GRAMMAR_REFERENCE)
-			                              .token(IDENTIFYER).add("grammar_name"),
+			                              .token(IDENTIFIER).add("grammar_name"),
 			tokenReference       = Grammar.build(TOKEN_REFERENCE)
 			                              .token(TOKEN_SIGN).add()
-			                              .token(IDENTIFYER).add("token_name"),
+			                              .token(IDENTIFIER).add("token_name"),
 			nameAssignment       = Grammar.build(NAME_ASSIGNMENT)
 			                              .token(SPACE).ignore().add()
 			                              .token(ARROW).add()
 			                              .token(SPACE).ignore().add()
-			                              .token(IDENTIFYER).add("name"),
+			                              .token(IDENTIFIER).add("name"),
 			arrayItem            =
 					Grammar.build(ARRAY_ITEM)
 					       .grammars(tokenReference, grammarReference).add("item")
@@ -97,7 +97,7 @@ public class GrammarParser extends Parser<GrammarFileContent> {
 					       .add(),
 			rootGrammar          = Grammar.build(ROOT_GRAMMAR)
 			                              .grammar(repeatIgnore).ignore().add()
-			                              .token(IDENTIFYER).add("name")
+			                              .token(IDENTIFIER).add("name")
 			                              .token(SPACE).ignore().add()
 			                              .token(COLON).add()
 			                              .token(SPACE).ignore().add()
@@ -138,7 +138,7 @@ public class GrammarParser extends Parser<GrammarFileContent> {
 		GrammarFile        g      = new GrammarFile((SuperGrammarResult) o);
 		GrammarFileContent result = new GrammarFileContent();
 		for (IgnoringTokenDefiner definer : g.getHead().getTokenDefiners()) {
-			result.getTokens()
+			result.getTokenMap()
 			      .put(definer.getContent().getName(),
 			           new Token(definer.getContent()
 			                            .getLiteral()

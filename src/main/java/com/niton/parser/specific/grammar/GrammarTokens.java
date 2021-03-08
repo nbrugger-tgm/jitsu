@@ -10,7 +10,7 @@ import com.niton.parser.Tokenable;
  */
 enum GrammarTokens implements Tokenable {
 	LINE_END("(\\r?\\n)+"),
-	IDENTIFYER("[A-Za-z_]+"),
+	IDENTIFIER("[A-Za-z_]+"),
 	EQ("[=]"),
 	SPACE("[ \t]+"),
 	SLASH("\\/"),
