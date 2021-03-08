@@ -22,6 +22,11 @@ public abstract class Parser<R> {
 	private GrammarReference reference;
 	private String           root;
 
+	public Parser(GrammarFileContent gfc, String jsonValue) {
+		this(gfc.getGrammars(),jsonValue);
+		setTokenizer(new Tokenizer(gfc.getTokens()));
+	}
+
 	/**
 	 * @param references a collection of all used Grammars
 	 * @param root       the grammar to be used as root
@@ -113,7 +118,7 @@ public abstract class Parser<R> {
 	}
 
 	public void add(GrammarFileContent res) {
-		tokenizer.tokens.putAll(res.getTokens());
+		tokenizer.tokens.putAll(res.getTokenMap());
 		if (reference instanceof GrammarReferenceMap) {
 			((GrammarReferenceMap) reference).add(res);
 		}
