@@ -60,6 +60,7 @@ public abstract class GrammarMatcher<T extends GrammarResult> {
             throw new ParsingException("Not all tokens consumed at the end of parsing",
                                        getLastException());
         }
+        if(logging)
 		System.out.println(indent + "[" + this.getClass()
 		                                      .getSimpleName()
 		                                      .replace("Matcher",
