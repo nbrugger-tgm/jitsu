@@ -1,5 +1,6 @@
 package com.niton;
 
+import com.niton.parser.GrammarReference;
 import com.niton.parser.GrammarResult;
 import com.niton.parser.result.*;
 import com.niton.parser.token.Tokenizer.AssignedToken;
@@ -8,52 +9,101 @@ import lombok.Setter;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.HashMap;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 
 
 public class ResultDisplay extends com.niton.media.visual.Canvas {
-	private static HashMap<Class<? extends GrammarResult>, Color> resColorMap = new HashMap();
 
-	static {
-		resColorMap.put(AnyGrammarResult.class, Color.CYAN);
-		resColorMap.put(IgnoredGrammarResult.class, Color.red);
-		resColorMap.put(TokenGrammarResult.class, Color.GREEN);
-		resColorMap.put(SuperGrammarResult.class, Color.PINK);
-	}
-
-	private        SuperGrammarResult                             res;
+	int y_off = 0;
+	private final SuperGrammarResult  res;
+	private final GrammarReference    ref;
 	@Getter
 	@Setter
-	private        List<AssignedToken>                            tokenList;
-	private        Font                                           f           = new Font(Font.MONOSPACED,
-	                                                                                     Font.PLAIN,
-	                                                                                     12);
-	private Map<String, Color> tokenNames;
+	private       List<AssignedToken> tokenList;
+	private final Font                f = new Font(Font.MONOSPACED,
+	                                               Font.PLAIN,
+	                                               12);
+	private       Map<String, Color>  tokenNames;
+	private       Map<String, Color>  grammarNames;
+	private       int                 x_off;
 
-	public ResultDisplay(SuperGrammarResult res) {
+	public ResultDisplay(SuperGrammarResult res, GrammarReference ref) {
 		this.res  = res;
 		tokenList = res.join();
+		this.ref  = ref;
 		setFps(1);
+		setLimitFrames(true);
+		setFocusTraversalKeysEnabled(true);
+		setFocusable(true);
+		grabFocus();
+		addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyTyped(KeyEvent e) {
+				tokenNames = new HashMap<>();
+				for (AssignedToken tkn : tokenList) {
+					tokenNames.put(tkn.name, new Color((int) (Math.random() * Integer.MAX_VALUE)));
+				}
+				grammarNames = new HashMap<>();
+				for (String tkn : ref.grammarNames()) {
+					grammarNames.put(tkn, new Color((int) (Math.random() * Integer.MAX_VALUE)));
+				}
+			}
+		});
 	}
 
 	@Override
 	public void paint(Graphics2D g, int i) {
+		if(!isVisible())
+			return;
 		g.setFont(f);
-		int x_off = 0;
-		int y_off = 0;
 		if (tokenNames == null) {
 			tokenNames = new HashMap<>();
 			for (AssignedToken tkn : tokenList) {
 				tokenNames.put(tkn.name, new Color((int) (Math.random() * Integer.MAX_VALUE)));
 			}
 		}
-
+		if (grammarNames == null) {
+			grammarNames = new HashMap<>();
+			for (String tkn : ref.grammarNames()) {
+				grammarNames.put(tkn, new Color((int) (Math.random() * Integer.MAX_VALUE)));
+			}
+		}
+		int h     = g.getFontMetrics().getHeight() + 6;
+		int x_max = 0;
 		y_off = 3;
 		x_off = 3;
-		int h = g.getFontMetrics().getHeight() + 6;
-		for (Map.Entry<String, Color> tkn : tokenNames.entrySet()) {
+
+		drawHistoryMap(g, h, tokenNames);
+		x_max = Math.max(x_max, x_off);
+		y_off += 3;
+		x_off = 3;
+		drawHistoryMap(g, h, grammarNames);
+		x_max = Math.max(x_max, x_off);
+		x_off = 3;
+		y_off += h;
+		for (AssignedToken tkn : tokenList) {
+			drawBox(g, h, Collections.singletonList(tkn), tokenNames.get(tkn.name));
+		}
+		x_max = Math.max(x_max, x_off);
+		y_off += h;
+		x_off = 3;
+		for (AssignedToken tkn : res.join()) {
+			drawBox(g, h, Collections.singletonList(tkn), tokenNames.get(tkn.name));
+		}
+		x_off = 3;
+		y_off += h;
+		drawTree(g, h, res);
+		x_max = Math.max(x_max, x_off);
+		this.setPreferredSize(new Dimension(x_max, y_off));
+	}
+
+	private void drawHistoryMap(Graphics2D g,
+	                            int h,
+	                            Map<String, Color> map) {
+		for (Map.Entry<String, Color> tkn : map.entrySet()) {
 			String val = tkn.getKey();
 			int    w   = g.getFontMetrics().stringWidth(val) + 6;
 			g.setColor(tkn.getValue());
@@ -64,101 +114,77 @@ public class ResultDisplay extends com.niton.media.visual.Canvas {
 			x_off += w;
 		}
 		y_off += h;
-		x_off = 0;
-		y_off += 3;
-
-		for (AssignedToken tkn : tokenList) {
-			x_off = drawBox(g, x_off, y_off, h, tkn.value, tokenNames.get(tkn.name));
-		}
-		y_off += h;
-		x_off = 0;
-		this.setPreferredSize(new Dimension(x_off + 6, y_off));
-		for (AssignedToken tkn : res.join()) {
-			x_off = drawBox(g, x_off, y_off, h, tkn.value, tokenNames.get(tkn.name));
-		}
-		x_off = 0;
-		y_off += h;
-		drawTree(g, x_off, y_off, h, res);
 	}
 
-	private int drawTree(Graphics2D g, int x_off, int y_off, int h, GrammarResult res) {
-		int absW   = 0;
+	private void drawTree(Graphics2D g, int h, GrammarResult res) {
+
+		if(res instanceof TokenGrammarResult && res.getOriginGrammarName() == null)
+			return;
+		if (res == null) {
+			return;
+		}
 		int lx_off = x_off;
-		absW = res.join()
-		          .stream()
-		          .mapToInt(e -> g.getFontMetrics().stringWidth(e.value))
-		          .sum() + (6 * res.join().size());
-
-		lx_off = drawBox(g,
-		                 x_off,
-		                 y_off,
-		                 h,
-		                 res.getOriginGrammarName() != null ? res.getOriginGrammarName() : new String(),
-		                 resColorMap.get(res.getClass()),
-		                 absW);
+		Color bx = grammarNames.get(res.getOriginGrammarName());
+		if(bx == null){
+			System.out.println(res.getOriginGrammarName()+" has no color");bx = Color.WHITE;}
+		drawBox(
+				g,
+				h,
+				res.join(),
+				bx
+		);
+		{
+			int exchange = lx_off;
+			lx_off = x_off;
+			x_off  = exchange;
+		}
 		y_off += h;
-		lx_off = x_off;
-
-//        if (res instanceof TokenGrammarResult || res instanceof IgnoredGrammarResult) {
-//            for (AssignedToken tkn : res.join()) {
-//                lx_off = drawBox(g, lx_off, y_off, h, tkn.value, tokenNames.get(tkn.name));
-//            }
-//            y_off += h;
-//        }
-
 		if (res instanceof SuperGrammarResult) {
 			for (GrammarResult subRes : ((SuperGrammarResult) res).objects) {
-				lx_off = drawTree(g, lx_off, y_off, h, subRes);
+				drawTree(g, h, subRes);
 			}
-			lx_off = x_off;
-			y_off += h;
 		}
 
 		if (res instanceof ListGrammarResult) {
 			for (GrammarResult subRes : ((ListGrammarResult) res).getList()) {
-				lx_off = drawTree(g, lx_off, y_off, h, subRes);
+				drawTree(g, h, subRes);
 			}
-			lx_off = x_off;
-			y_off += h;
+		}
+
+		if (res instanceof OptionalGrammarResult) {
+			drawTree(g,h,((OptionalGrammarResult) res).getValue());
 		}
 		if (res instanceof AnyGrammarResult) {
-			drawTree(g, lx_off, y_off, h, ((AnyGrammarResult) res).getRes());
-			y_off += h;
+			drawTree(g,h,((AnyGrammarResult) res).getRes());
 		}
-		if (res instanceof OptionalGrammarResult) {
-			drawTree(g, lx_off, y_off, h, ((OptionalGrammarResult) res).getValue());
-			y_off += h;
-		}
-		return lx_off;
+		y_off -= h;
+		x_off = lx_off;
 	}
 
-	private int drawBox(Graphics2D g,
-	                    int x_off,
-	                    int y_off,
-	                    int h,
-	                    String text,
-	                    Color color,
-	                    int absW) {
-		int w = absW;
+	private void drawBox(Graphics2D g,
+	                     int h,
+	                     Collection<? extends AssignedToken> text,
+	                     Color color) {
+		int w = text
+		                  .stream()
+		                  .mapToInt(e -> g.getFontMetrics().stringWidth(e.value))
+		                  .sum() + (3 * text.size());
 		g.setColor(color);
 		g.fillRect(x_off, y_off, w, h);
 		g.setColor(Color.BLACK);
 		g.drawRect(x_off, y_off, w, h);
-		g.drawString(text, 3 + x_off, h - 3 + y_off);
-		x_off += w;
-		return x_off;
-	}
-
-	private int drawBox(Graphics2D g, int x_off, int y_off, int h, String text, Color c) {
-		String val = text;
-		val = val.replaceAll("\n", "\\\\n");
-		val = val.replaceAll("\r", "\\\\r");
-		return drawBox(g, x_off, y_off, h, val, c, g.getFontMetrics().stringWidth(val) + 6);
+		for (AssignedToken c : text) {
+			String val = c.value;
+			val = val.replaceAll("\n", "\\\\n");
+			val = val.replaceAll("\r", "\\\\r");
+			x_off += 3;
+			g.drawString(val, x_off, h - 1 + y_off);
+			x_off += g.getFontMetrics().stringWidth(val);
+		}
 	}
 
 	public void display() {
-		JFrame jf = new JFrame();
-		jf.setMinimumSize(new Dimension(900, 700));
+		JFrame      jf = new JFrame();
 		JScrollPane sp = new JScrollPane();
 		sp.setViewportView(this);
 		sp.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
