@@ -1,8 +1,13 @@
 package com.niton.parser.example;
 
 import com.niton.JPGenerator;
+import com.niton.ResultDisplay;
 import com.niton.parser.*;
+import com.niton.parser.example.generated.*;
+import com.niton.parser.example.generated.Number;
 import com.niton.parser.exceptions.ParsingException;
+import com.niton.parser.result.AnyGrammarResult;
+import com.niton.parser.result.SuperGrammarResult;
 import com.niton.parser.token.DefaultToken;
 
 import java.io.IOException;
@@ -27,125 +32,120 @@ public class Recursion {
 	 * @version 2019-06-07
 	 */
 	public static void main(String... args) throws IOException, ParsingException {
-		String s = "1+2+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+";
+		String s = "1*2*3+4+5+6+7*(+8)/(9*(-10)+9+8+7)*6+5+4+3/2*1+2+3*(4+5+6)+7+8";
 		mappingApproach(s);
-		//treeApproach(s);
-	}
-
-	private static void treeApproach(String s) throws ParsingException {
-//        System.out.println("Tree");
-//        ChainGrammar grm =
-//                Grammar.build("expression")
-//                        .grammars(
-//                                Grammar.build("Number")
-//                                        .token(NUMBER).match().name("value"),
-//                                Grammar.build("calc_expression")
-//                                        .token(BRACKET_OPEN).match()
-//                                        .grammar("expression").match().name("firstExpression")
-//                                        .tokens(DefaultToken.STAR, DefaultToken.PLUS, DefaultToken.MINUS, DefaultToken.SLASH).match().name("calculationType")
-//                                        .grammar("expression").match().name("secondExpression")
-//                                        .token(BRACKET_CLOSED).match()
-//                        ).match().name("content");
-//        DefaultParser p = new DefaultParser(grm);
-//        GrammarResult res = p.parse(s);
-//        display(exp);
-//        System.out.println("");
-//        System.out.println(s+"="+caclulate(exp));
 	}
 
 	private static void mappingApproach(String s) throws ParsingException, IOException {
 		System.out.println("Map");
-		GrammarReference ref = new GrammarReferenceMap()
-				.map(
+		GrammarReferenceMap ref = new GrammarReferenceMap()
+				.deepMap(
 						Grammar.build("Number")
 						       .token(NUMBER).add("value")
 				)
-				.map(
+				.deepMap(
 						Grammar.build("SignedNumber")
 						       .token(BRACKET_OPEN).add()
 						       .tokens(PLUS, MINUS).add("sign")
 						       .grammar("Number").add("number")
 						       .token(BRACKET_CLOSED).add()
 				)
-				.map(
+				.deepMap(
 						Grammar.build("enclosed_expression")
 						       .token(BRACKET_OPEN).add()
 						       .grammar("expression").add("content")
 						       .token(BRACKET_CLOSED).add()
 				)
-				.map(
+				.deepMap(
 						Grammar.build("numeric_expression")
 						       .grammars("Number", "SignedNumber").add("content")
 				)
-				.map(
-						Grammar.build("factor_expression")
-						       .grammars("numeric_expression", "expression").add("first_expression")
-						       .grammar("factor_Operand").add("operand1")
-						       .grammar("factor_Operand").repeat().add("operands")
-				)
-				.map(
+				.deepMap(
 						Grammar.build("factor_Operand")
 						       .tokens(STAR, SLASH).add("operator")
-						       .grammar("expression").add("second_expression")
 				)
-				.map(
-						Grammar.build("additional_expression")
-						       .grammars("numeric_expression", "expression").add("first_expression")
-						       .grammar("additional_Operand").add("operand1")
-						       .grammar("additional_Operand").repeat().name("operands")
-				)
-				.map(
+				.deepMap(
 						Grammar.build("additional_Operand")
 						       .tokens(PLUS, MINUS).add("operator")
-						       .grammar("expression").add("second_expression")
 				)
-				.map(
-						Grammar.build("calculation_expression")
-						       .grammars("factor_expression", "additional_expression")
-						       .add("content")
+				.deepMap(
+		            Grammar.build("multiplication")
+					         .grammars("division","enclosed_expression","Number","SignedNumber").add("factor1")
+				             .token(STAR).add("operand")
+				           .grammars("multiplication","division","enclosed_expression","Number","SignedNumber").add("factor2")
 				)
-				.map(
+				.deepMap(
+						Grammar.build("division")
+						       .grammars("enclosed_expression","Number","SignedNumber").add("factor1")
+						       .token(SLASH).add("operand")
+						       .grammars("division","enclosed_expression","Number","SignedNumber").add("factor2")
+				)
+				.deepMap(
+						Grammar.build("addition")
+						.grammar("additional_Operand").add("operand")
+						.grammars("multiplication","division","enclosed_expression","Number","SignedNumber").add("summand")
+				)
+				.deepMap(
 						Grammar.build("expression")
-						       .grammars("calculation_expression",
-						                 "enclosed_expression",
-						                 "Number",
-						                 "SignedNumber").add("content")
+						       .grammars("multiplication","division","enclosed_expression","Number","SignedNumber").add("start")
+								.grammar("addition").repeat().add("operands")
+
 				);
 		DefaultParser p   = new DefaultParser(ref, "expression");
 		GrammarResult res = p.parse(s);
 		System.out.println("Result Coverage : " + res.joinTokens());
+		System.out.println(res);
 		JPGenerator gen = new JPGenerator("com.niton.parser.example.generated",
-		                                  "D:\\Users\\Nils\\Desktop\\Workspaces\\API\\JainParse\\src\\java\\test");
+		                                  "D:\\Users\\Nils\\Desktop\\Workspaces\\libs\\JainParse\\src\\test\\java");
 		gen.generate(ref, DefaultToken.values());
-//        Expression exp = new Expression((SuperGrammarResult) res);
-//        display(exp);
-//        System.out.println("");
-//        System.out.println(s+"="+caclulate(exp));
-//        ResultDisplay display = new ResultDisplay((SuperGrammarResult) res);
-//        display.display();
+        Expression exp = new Expression((SuperGrammarResult) res);
+        System.out.println("");
+        System.out.println(s+"="+caclulate(exp));
+        ResultDisplay display = new ResultDisplay((SuperGrammarResult) res, ref);
+        display.display();
+	}
+	public static double resolveAnyExpression(AnyGrammarResult val){
+		switch (val.getType()) {
+			case "enclosed_expression":
+				EnclosedExpression encl = new EnclosedExpression((SuperGrammarResult) val.getRes());
+				return caclulate(encl.getContent());
+			case "Number":
+				return Integer.parseInt(new Number((SuperGrammarResult) val.getRes()).getValue());
+			case "SignedNumber":
+				Signednumber nbr = new Signednumber((SuperGrammarResult) val.getRes());
+				return Integer.parseInt(nbr.getSign()+nbr.getNumber().toString());
+			case "multiplication":
+				return calculateMultiplication(new Multiplication((SuperGrammarResult) val.getRes()));
+			case "division" :
+				return calculateDivision(new Division((SuperGrammarResult) val.getRes()));
+		}
+		throw new RuntimeException("FUCK "+val);
 	}
 
-//	private static int caclulate(Expression exp) {
-//		if(exp.getContent().getType().equals("Number")){
-//			Number nb = new Number((SuperGrammarResult) exp.getContent().getRes());
-//			return Integer.parseInt(nb.getValue());
-//		}else if (exp.getContent().getType().equals("calc_expression")){
-//			CalcExpression subExp = new CalcExpression((SuperGrammarResult) exp.getContent().getRes());
-//			int i1 = caclulate(subExp.getFirstExpression());
-//			int i2 = caclulate(subExp.getSecondExpression());
-//			switch (subExp.getCalculationType()){
-//				case "+":
-//					return i1+i2;
-//				case "*":
-//					return i1*i2;
-//				case "/":
-//					return i1/i2;
-//				case "-":
-//					return i1-i2;
-//			}
-//		}
-//		return 0;
-//	}
+	private static double calculateDivision(Division division) {
+		return resolveAnyExpression(division.getFactor1())/resolveAnyExpression(division.getFactor2());
+	}
+
+	private static double caclulate(Expression exp) {
+		double start = resolveAnyExpression(exp.getStart());
+		for (Addition operand : exp.getOperands()) {
+			double val = resolveAnyExpression(operand.getSummand());
+			if(operand.getOperand().getOperator().equals("-"))
+				start -= val;
+			else
+				start += val;
+		}
+		System.out.println(exp+"="+start);
+		return start;
+	}
+
+	private static double calculateMultiplication(Multiplication multiplication) {
+		double one = resolveAnyExpression(multiplication.getFactor1());
+		double two = resolveAnyExpression(multiplication.getFactor2());
+		double res = one * two;
+		System.out.println(multiplication+"="+res);
+		return res;
+	}
 
 //	private static void display(Expression exp) {
 //

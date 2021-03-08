@@ -2,9 +2,10 @@ package com.niton.parser.example.generated;
 
 import com.niton.parser.ResultResolver;
 import com.niton.parser.result.SuperGrammarResult;
+import java.lang.String;
 
 public class Signednumber {
-	private SuperGrammarResult result;
+	private final SuperGrammarResult result;
 
 	public Signednumber(SuperGrammarResult res) {
 		this.result = res;
@@ -16,6 +17,10 @@ public class Signednumber {
 	}
 
 	public Number getNumber() {
-		return new Number(result.getObject("number"));
+		if(ResultResolver.getReturnValue(result.getObject("number")) == null)return null;return new Number((SuperGrammarResult)ResultResolver.getReturnValue(result.getObject("number")));
+	}
+
+	public String toString() {
+		return result.joinTokens();
 	}
 }

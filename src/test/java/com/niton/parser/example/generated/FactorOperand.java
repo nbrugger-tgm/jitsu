@@ -2,9 +2,10 @@ package com.niton.parser.example.generated;
 
 import com.niton.parser.ResultResolver;
 import com.niton.parser.result.SuperGrammarResult;
+import java.lang.String;
 
 public class FactorOperand {
-	private SuperGrammarResult result;
+	private final SuperGrammarResult result;
 
 	public FactorOperand(SuperGrammarResult res) {
 		this.result = res;
@@ -15,7 +16,7 @@ public class FactorOperand {
 		return (String) ResultResolver.getReturnValue(result.getObject("operator"));
 	}
 
-	public Expression getSecondExpression() {
-		return new Expression(result.getObject("second_expression"));
+	public String toString() {
+		return result.joinTokens();
 	}
 }
