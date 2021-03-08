@@ -2,9 +2,13 @@ package com.niton.parser.specific.grammar;
 
 import com.niton.parser.GrammarReferenceMap;
 import com.niton.parser.Token;
+import com.niton.parser.Tokenable;
+import com.niton.parser.token.GenericToken;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * This is the GrammarResult Class
@@ -33,7 +37,7 @@ public class GrammarFileContent {
 	/**
 	 * @return the tokens
 	 */
-	public Map<String, Token> getTokens() {
+	public Map<String, Token> getTokenMap() {
 		return tokens;
 	}
 
@@ -44,5 +48,9 @@ public class GrammarFileContent {
 		this.tokens = tokens;
 	}
 
+	public List<Tokenable> getTokens() {
+		return tokens.entrySet().stream().map(e-> new GenericToken(e.getValue(),e.getKey())).collect(
+				Collectors.toList());
+	}
 }
 

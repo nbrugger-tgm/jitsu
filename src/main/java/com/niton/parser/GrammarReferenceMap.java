@@ -1,6 +1,7 @@
 package com.niton.parser;
 
 import com.niton.parser.grammars.*;
+import com.niton.parser.matchers.ReferenceGrammarMatcher;
 import com.niton.parser.specific.grammar.GrammarFileContent;
 
 import java.util.HashMap;
@@ -65,8 +66,8 @@ public class GrammarReferenceMap extends HashMap<String, Grammar>
 		return keySet();
 	}
 
-	public GrammarReference deepMap(Grammar<?, ?> gram) {
-		if (gram.getName() != null) {
+	public GrammarReferenceMap deepMap(Grammar<?, ?> gram) {
+		if (gram.getName() != null && !(gram instanceof GrammarReferenceGrammar)) {
 			map(gram);
 		}
 		if (gram instanceof ChainGrammar) {
@@ -76,7 +77,6 @@ public class GrammarReferenceMap extends HashMap<String, Grammar>
 		} else if (gram instanceof AnyExceptGrammar) {
 			deepMap(((AnyExceptGrammar) gram).getDunnoaccept());
 		} else if (gram instanceof GrammarReferenceGrammar) {
-			;
 		} else if (gram instanceof IgnoreGrammar) {
 			deepMap(((IgnoreGrammar) gram).getGrammar());
 		} else if (gram instanceof MultiGrammar) {
