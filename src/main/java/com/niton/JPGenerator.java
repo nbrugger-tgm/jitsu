@@ -112,10 +112,10 @@ public class JPGenerator {
             if (!(subGrammar instanceof GrammarReferenceGrammar)) {
                 generateClass(subGrammar, ref);
             }
-			System.out.println("SUB: " + subGrammar);
+			//System.out.println("SUB: " + subGrammar);
 			subGrammar = resolve(subGrammar, ref);
 			TypeName returnType = getReturnType(subGrammar, ref);
-			System.out.println("RES_SUB : " + subGrammar + " -> " + returnType);
+			//System.out.println("RES_SUB : " + subGrammar + " -> " + returnType);
 
             if (subGrammar instanceof IgnoreGrammar) {
                 continue;
@@ -138,14 +138,14 @@ public class JPGenerator {
 				);
 			} else if (subGrammar instanceof RepeatGrammar) {
 				CodeBlock methodContent;
-				if (((RepeatGrammar) subGrammar).getCheck() instanceof ChainGrammar) {
+				if (resolve(((RepeatGrammar) subGrammar).getCheck(),ref) instanceof ChainGrammar) {
 					methodContent = CodeBlock.builder()
 					                         .addStatement(
 							                         "return ($T)((List<SuperGrammarResult>)$T.getReturnValue(result.getObject($S))).stream().map(res -> new $T(res)).collect($T.toList())",
 							                         returnType,
 							                         ResultResolver.class,
 							                         propertyName,
-							                         getReturnType(((RepeatGrammar) subGrammar).getCheck(),
+							                         getReturnType(resolve(((RepeatGrammar) subGrammar).getCheck(),ref),
 							                                       ref),
 							                         Collectors.class)
 					                         .build();
@@ -211,9 +211,16 @@ public class JPGenerator {
 				.addField(wrappedResult)
 				.addMethod(constructor);
 
+		MethodSpec toString = MethodSpec.methodBuilder("toString")
+		                                .returns(String.class)
+		                                .addModifiers(PUBLIC)
+		           .addStatement("return result.joinTokens()")
+				.build();
+
 		for (MethodSpec methodSpec : getter) {
 			build.addMethod(methodSpec);
 		}
+		build.addMethod(toString);
 		TypeSpec type     = build.build();
 		JavaFile javaFile = JavaFile.builder(pack, type).indent("\t").build();
 		javaFile.writeTo(new File(path));
