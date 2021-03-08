@@ -20,7 +20,7 @@ public class ChainGrammar extends Grammar<ChainMatcher, SuperGrammarResult>
 	private final List<Grammar>        chain           = new LinkedList<>();
 	@Getter
 	private final Map<Integer, String> naming          = new HashMap<>();
-	private       boolean              directRecursion = false;
+	private       boolean              directRecursion = true;
 
 	public List<Grammar> getChain() {
 		return chain;
