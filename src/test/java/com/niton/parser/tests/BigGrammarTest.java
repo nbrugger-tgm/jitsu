@@ -17,7 +17,7 @@ public class BigGrammarTest {
 				"D:\\Users\\Nils\\Desktop\\Workspaces\\Programme\\Nevermind\\resources\\basics.grm")
 				.getText();
 
-		ResultDisplay dspl = new ResultDisplay((SuperGrammarResult) parser.parsePlain(txt));
+		ResultDisplay dspl = new ResultDisplay((SuperGrammarResult) parser.parsePlain(txt), map);
 		dspl.setTokenList(parser.getTokenizer().tokenize(txt));
 		dspl.display();
 	}
