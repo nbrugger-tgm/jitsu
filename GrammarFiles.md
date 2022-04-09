@@ -18,7 +18,7 @@ Grammar Files are used to define a Grammar in a File rather than just cerate the
 ```
 
 - Spaces do not matter
-- only one token definition per line
+- only one tokenPattern definition per line
 - The `regex` Delimitter is `'` to use it within a regex use `\'`
 - `token_name` may contain letters and underscores
 - Example
@@ -66,7 +66,7 @@ Grammar Files are used to define a Grammar in a File rather than just cerate the
     - Syntax: `[#]reference` or `<array>`
 
         - The ``reference`` is used for grammars and tokens
-    - The `#` is used when reference is a token
+    - The `#` is used when reference is a tokenPattern
     - If there is no `#` it is a grammar
     - #### array
         	 - `{item1 item2, item3...}`
@@ -96,19 +96,19 @@ GrammarReference grammar = new GrammarReferenceMap()
     .map(
         Grammar
             .build("String")
-            .token(Tokens.STRING_DELIMITER).match() //a string starts with an String delmitter -> "
-            .token(Tokens.STRING_DELIMITER).anyExcept().name("content") 
+            .tokenPattern(Tokens.STRING_DELIMITER).match() //a string starts with an String delmitter -> "
+            .tokenPattern(Tokens.STRING_DELIMITER).anyExcept().name("content") 
             //capture everything to the next String delmiter -> the content of the string and save it with the name "content" for later usage
-            .token(Tokens.STRING_DELIMITER).match() //at the end there must be an Sring delmitter too
+            .tokenPattern(Tokens.STRING_DELIMITER).match() //at the end there must be an Sring delmitter too
 	)
     .map(
         Grammar
             .build("VariableAssignment")
-            .token(Tokens.IDENTIFYER).match().name("name")
-            .token(Tokens.WHITESPACE).ignore()
-            .token(Tokens.EQUAL).match()// EQUAL is =
+            .tokenPattern(Tokens.IDENTIFYER).match().name("name")
+            .tokenPattern(Tokens.WHITESPACE).ignore()
+            .tokenPattern(Tokens.EQUAL).match()// EQUAL is =
             .grammar("String").match().name("value")
-            .token(Tokens.SEMICOLON).match()
+            .tokenPattern(Tokens.SEMICOLON).match()
     );
 ```
 

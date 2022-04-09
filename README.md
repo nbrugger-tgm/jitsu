@@ -36,15 +36,15 @@ These steps are in the order you are most likely to do when you create a parser
     GrammarReference ref = new GrammarReferenceMap()
         .map(
             Grammar.build("Number")
-                .token(DefaultToken.NUMBER).add("value")
+                .tokenPattern(DefaultToken.NUMBER).add("value")
         )
         .map(
             Grammar.build("calc_expression")
-                .token(DefaultToken.BRACKET_OPEN).add()
+                .tokenPattern(DefaultToken.BRACKET_OPEN).add()
                 .grammar("expression").add("firstExpression")
                 .tokens(DefaultToken.STAR, DefaultToken.PLUS, DefaultToken.MINUS, DefaultToken.SLASH).matchAny().add("calculationType")
                 .grammar("expression").add("secondExpression")
-                .token(DefaultToken.BRACKET_CLOSED).add()
+                .tokenPattern(DefaultToken.BRACKET_CLOSED).add()
         )
         .map(
             Grammar.build("expression")

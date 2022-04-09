@@ -1,0 +1,92 @@
+//General
+LINE_END='\r?\n'
+UNDERSCORE='_'
+EQUAL='[=]'
+WHITESPACE='[ \t\r\n]+'
+COMMA=','
+COLON=':'
+POINT='\.'
+EOF='\Z'
+
+
+//Unescaped
+QUOTE='(?<!\\)"'
+BACKSLASH='\\(?!\')'
+SLASH='(?<!\\)\/'
+BACKSPACE='\b'
+FORMFEED='\f'
+TAB='\t'
+
+ESCAPED_QUOTE='\\\"'
+ESCAPED_BACKSLASH='\\\\'
+ESCAPED_SLASH='\\\/'
+ESCAPED_BACKSPACE='\\b'
+ESCAPED_FORMFEED='\\f'
+ESCAPED_TAB='\\t'
+
+
+//Specific
+IDENTIFIER='[a-zA-Z]+[a-zA-Z_\-0-9]+'
+OBJECT_OPEN='\{'
+OBJECT_CLOSE='\}'
+ARRAY_OPEN='\['
+ARRAY_CLOSE='\]'
+TRUE='true'
+FALSE='false'
+NULL='null'
+
+JsonIdentifier:
+    #IDENTIFIER > id
+
+JsonObject:
+    #OBJECT_OPEN
+    ~#WHITESPACE
+    JsonProperties > properties
+    ~#WHITESPACE
+    #OBJECT_CLOSE
+
+JsonProperties:
+    JsonProperty > first
+    JsonAdditionalProperty * > others
+
+JsonPropertiy:
+    {JsonString, JsonIdentifier} > name
+    ~#WHITESPACE
+    #COLON
+    ~#WHITESPACE
+    JsonValue > value
+    ~#WHITESPACE
+
+JsonAdditionalProperty:
+    #COMMA
+    ~#WHITESPACE
+    JsonProperty > prop
+
+JsonValue:
+    ~#WHITESPACE
+    {JsonObject,JsonArray,JsonString,JsonBool,JsonNull} > val
+    ~#WHITESPACE
+
+JsonArray:
+    #ARRAY_OPEN
+    JsonNode > node
+    #ARRAY_CLOSE
+
+JsonNode:
+    JsonValue > first
+    ?JsonAdditionalNode > next
+
+JsonAdditionalNode:
+    #COMMA
+    JsonNode > node
+
+JsonString:
+    #QUOTE
+    !#QUOTE > content
+    #QUOTE
+
+JsonBool:
+    {#TRUE,#FALSE} > bool
+
+JsonNull:
+    #NULL
