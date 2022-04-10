@@ -17,13 +17,7 @@ import java.util.List;
  * @version 2019-06-07
  */
 public abstract class GrammarMatcher<T extends AstNode> {
-	public static boolean logging = false;
 	private       String  originGrammarName;
-
-	public T parse(List<Tokenizer.AssignedToken> tokens, GrammarReference ref)
-			throws ParsingException {
-		return parse(new TokenStream(tokens), ref);
-	}
 
 	/**
 	 * same as {@link GrammarMatcher#parse(TokenStream, GrammarReference)} but only checks after the
@@ -43,29 +37,11 @@ public abstract class GrammarMatcher<T extends AstNode> {
 		}catch (IllegalStateException e) {
 			throw new ParsingException(String.format("Parsing %s failed", originGrammarName), e);
 		}
-		var indent = "\t".repeat(Math.max(0, tokens.level() - 1));
-		if (logging) {
-			System.out.printf(
-					"%s[%s] Try parse %s%n",
-					indent,
-					this.getClass().getSimpleName().replace("Matcher", ""),
-					getOriginGrammarName()
-			);
-		}
 		T res;
 		try {
 			res = process(tokens, reference);
 		} catch (ParsingException e) {
 			tokens.rollback();
-			if (logging) {
-				System.err.printf(
-						"%s[%s] ERROR %s -> %s%n",
-						indent,
-						this.getClass().getSimpleName().replace("Matcher", ""),
-						getOriginGrammarName(),
-						e.getMessage()
-				);
-			}
 			throw e;
 		}
 		tokens.commit();
@@ -76,13 +52,6 @@ public abstract class GrammarMatcher<T extends AstNode> {
 					res.getParsingExceptions()
 			);
 		}
-		if (logging)
-			System.out.printf(
-					"%s[%s] SUCCESS %s%n",
-					indent,
-					this.getClass().getSimpleName().replace("Matcher", ""),
-					getOriginGrammarName()
-			);
 		return res;
 	}
 

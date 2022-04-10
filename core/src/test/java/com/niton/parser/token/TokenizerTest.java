@@ -54,17 +54,18 @@ class TokenizerTest {
 	@Test
 	void useCase() throws ParsingException {
 		Tokenizer tokenizer = new Tokenizer();
-		var       tokens    = tokenizer.tokenize("I  am a string");
+		tokenizer.setIgnoreEOF(true);
+		var tokens            = tokenizer.tokenize("I  am a string");
 		assertThat(tokens)
-				.hasSize(7)
+				.usingRecursiveFieldByFieldElementComparator()
 				.containsExactly(
-						new AssignedToken("I", LETTERS.compile(), LETTERS.name(), 0),
-						new AssignedToken("  ", WHITESPACE.compile(), WHITESPACE.name(), 1),
-						new AssignedToken("am", LETTERS.compile(), LETTERS.name(), 3),
-						new AssignedToken(" ", WHITESPACE.compile(), WHITESPACE.name(), 4),
-						new AssignedToken("a", LETTERS.compile(), LETTERS.name(), 5),
-						new AssignedToken(" ", WHITESPACE.compile(), WHITESPACE.name(), 6),
-						new AssignedToken("string", LETTERS.compile(), LETTERS.name(), 12)
+						new AssignedToken("I", LETTERS.name(), 0),
+						new AssignedToken("  ", WHITESPACE.name(), 1),
+						new AssignedToken("am", LETTERS.name(), 3),
+						new AssignedToken(" ", WHITESPACE.name(), 5),
+						new AssignedToken("a", LETTERS.name(), 6),
+						new AssignedToken(" ", WHITESPACE.name(), 7),
+						new AssignedToken("string", LETTERS.name(), 8)
 				);
 	}
 }

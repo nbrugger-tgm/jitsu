@@ -22,45 +22,33 @@ class TokenSourceTest {
 	@DisplayName("Functionality")
 	class FunctionalChunkTests {
 		@Test
-		void smallChunkTest() throws IOException, ParsingException {
+		void smallChunkTest(){
 			StringReader reader = new StringReader("...WORT NOCHEINWORT98764ZAHL");
 			TokenSource  source = new TokenSource(reader);
 			assertEquals("", source.getBuffer());
 			source.setChunkSize(1);
 			assertEquals("", source.getBuffer());
-			int i;
-			for (i = 0; i < source.size(); i++) {
-				System.out.println(source.get(i));
-			}
-			assertEquals(8, i);
+			assertThat(source).hasSize(8);
 			assertEquals(source.get(5).getValue(), "NOCHEINWORT");
 		}
 
 		@Test
-		void avgChunkTest() throws IOException, ParsingException {
+		void avgChunkTest() {
 			StringReader reader = new StringReader("...WORT WORT98764ZAHL");
 			TokenSource  source = new TokenSource(reader);
 			assertEquals("", source.getBuffer());
 			source.setChunkSize(8);
 			assertEquals("", source.getBuffer());
-			int i;
-			for (i = 0; i < source.size(); i++) {
-				System.out.println(source.get(i));
-			}
-			assertEquals(8, i);
+			assertThat(source).hasSize(8);
 			assertEquals(source.get(5).getValue(), "WORT");
 		}
 
 		@Test
-		void bigChunkTest() throws IOException, ParsingException {
+		void bigChunkTest() {
 			StringReader reader = new StringReader("...WORT WORT98764ZAHL");
 			TokenSource  source = new TokenSource(reader);
 			assertEquals("", source.getBuffer());
-			int i;
-			for (i = 0; i < source.size(); i++) {
-				System.out.println(source.get(i));
-			}
-			assertEquals(8, i);
+			assertThat(source).hasSize(8);
 			assertEquals(source.get(5).getValue(), "WORT");
 		}
 	}
@@ -159,7 +147,7 @@ class TokenSourceTest {
 			void setTokenizer() throws ParsingException {
 				var tokenizer = mock(Tokenizer.class);
 				when(tokenizer.tokenize("ABC123+")).thenReturn(List.of(
-						new AssignedToken("ABC123+", Pattern.compile(".+"), "anything")
+						new AssignedToken("ABC123+","anything")
 				));
 				var source = new TokenSource(new StringReader("ABC123+"));
 				source.setTokenizer(tokenizer);

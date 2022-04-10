@@ -5,6 +5,8 @@ import lombok.Data;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.stream.Collectors.toList;
+
 @Data
 public class ReducedNode {
 	private final List<ReducedNode> children;
@@ -41,25 +43,35 @@ public class ReducedNode {
 	}
 
 	public Optional<ReducedNode> getSubNode(String name) {
+		verifyNode();
 		return children.stream().filter(n -> n.name.equals(name)).findFirst();
 	}
 
-	public String getValue() {
-		if (!isLeaf()) {
-			throw new UnsupportedOperationException("Only leafs can have values");
-		}
-		return value;
-	}
-
-	public List<ReducedNode> getChildren() {
+	private void verifyNode() {
 		if (isLeaf()) {
 			throw new UnsupportedOperationException("Only nodes can have children");
 		}
+	}
+
+	public String getValue() {
+		verifyLeaf();
+		return value;
+	}
+
+	private void verifyLeaf() {
+		if (!isLeaf()) {
+			throw new UnsupportedOperationException("Only leafs can have values");
+		}
+	}
+
+	public List<ReducedNode> getChildren() {
+		verifyNode();
 		return children;
 	}
 
 	public List<String> getChildNames() {
-		return children.stream().map(n -> n.name).collect(java.util.stream.Collectors.toList());
+		verifyNode();
+		return children.stream().map(n -> n.name).collect(toList());
 	}
 
 	public String format() {
@@ -114,12 +126,14 @@ public class ReducedNode {
 			  .append("\t<span class=\"node\">")
 			  .append(name)
 			  .append("</span>\n")
-			  .append("\t<ul class=\"sub-nodes\">");
+			  .append("\t<ul class=\"sub-nodes\">\n");
 			for (var child : children) {
-				sb.append(child.formatHtml().replace("\n", "\n\t"));
+				sb.append("\t\t")
+				  .append(child.formatHtml().replace("\n", "\n\t\t"))
+				  .append("\n");
 			}
-			sb.append("\n\t</ul>")
-			  .append("\n</li>");
+			sb.append("\t</ul>\n")
+			  .append("</li>");
 		}
 		return sb.toString();
 	}

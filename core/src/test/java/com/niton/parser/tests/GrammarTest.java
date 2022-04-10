@@ -6,9 +6,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 
-public class GrammarTest {
+class GrammarTest {
 	@Test
-	public void disallowDirectRecursion() {
+	void disallowDirectRecursion() {
 		var grm = Grammar.build("test-grm");
 		grm.setDirectRecursion(false);
 		Assertions.assertThrows(IllegalArgumentException.class, () -> {

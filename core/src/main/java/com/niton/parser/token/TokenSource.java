@@ -86,8 +86,7 @@ public class TokenSource extends AbstractList<AssignedToken> {
 			newTokens = tokenizer.tokenize(buffer);
 			newTokens = newTokens.stream()
 			                     .filter(
-					                     e -> !e.getRegex()
-					                            .equals(DefaultToken.EOF.pattern)
+					                     e -> !e.getName().equals(DefaultToken.EOF.name())
 			                     )
 			                     .collect(Collectors.toList());
 		}

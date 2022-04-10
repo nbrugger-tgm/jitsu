@@ -10,7 +10,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static com.niton.parser.token.DefaultToken.NUMBER;
 import static java.util.stream.IntStream.range;
 import static org.assertj.core.api.Assertions.*;
 
@@ -42,9 +41,9 @@ class TokenStreamTest {
 
 	@Test
 	void nextOrder() {
-		var         token1 = new AssignedToken("1", NUMBER.compile(), "test");
-		var         token2 = new AssignedToken("2", NUMBER.compile(), "test");
-		var         token3 = new AssignedToken("3", NUMBER.compile(), "test");
+		var         token1 = new AssignedToken("1", "test");
+		var         token2 = new AssignedToken("2", "test");
+		var         token3 = new AssignedToken("3", "test");
 		TokenStream stream = new TokenStream(List.of(token1, token2, token3));
 
 		assertThat(stream.next()).isEqualTo(token1);
@@ -54,11 +53,11 @@ class TokenStreamTest {
 
 	@Test
 	void nextShouldIncreaseIndex() {
-		var         token1 = new AssignedToken("1", NUMBER.compile(), "test");
-		var         token2 = new AssignedToken("2", NUMBER.compile(), "test");
-		var         token3 = new AssignedToken("3", NUMBER.compile(), "test");
-		var         token4 = new AssignedToken("4", NUMBER.compile(), "test");
-		var         token5 = new AssignedToken("5", NUMBER.compile(), "test");
+		var         token1 = new AssignedToken("1", "test");
+		var         token2 = new AssignedToken("2", "test");
+		var         token3 = new AssignedToken("3", "test");
+		var         token4 = new AssignedToken("4", "test");
+		var         token5 = new AssignedToken("5", "test");
 		TokenStream stream = new TokenStream(List.of(token1, token2, token3, token4, token5));
 		assertThat(stream.index()).isZero();
 		stream.next();
@@ -70,7 +69,7 @@ class TokenStreamTest {
 
 	@Test
 	void increaseAffectsIndex() {
-		var token1 = new AssignedToken("1", NUMBER.compile(), "test");
+		var token1 = new AssignedToken("1", "test");
 		var stream = new TokenStream(List.of(token1));
 		assertThat(stream.index()).isZero();
 		stream.increase();
@@ -211,26 +210,28 @@ class TokenStreamTest {
 	@Test
 	void getReturnsCorrectIndex() {
 		var stream = new TokenStream(List.of(
-				new AssignedToken("1", NUMBER.compile(), "test"),
-				new AssignedToken("2", NUMBER.compile(), "test")
+				new AssignedToken("1", "test"),
+				new AssignedToken("2", "test")
 		));
-		assertThat(stream.get(0)).usingRecursiveComparison().isEqualTo(new AssignedToken(
-				"1",
-				NUMBER.compile(),
-				"test"
-		));
-		assertThat(stream.get(1)).usingRecursiveComparison().isEqualTo(new AssignedToken(
-				"2",
-				NUMBER.compile(),
-				"test"
-		));
+		assertThat(stream.get(0))
+				.usingRecursiveComparison()
+				.isEqualTo(new AssignedToken(
+						"1",
+						"test"
+				));
+		assertThat(stream.get(1))
+				.usingRecursiveComparison()
+				.isEqualTo(new AssignedToken(
+						"2",
+						"test"
+				));
 	}
 
 	@Test
 	void getDoesNotChangeLevel() {
 		var stream = new TokenStream(List.of(
-				new AssignedToken("1", NUMBER.compile(), "test"),
-				new AssignedToken("2", NUMBER.compile(), "test")
+				new AssignedToken("1", "test"),
+				new AssignedToken("2", "test")
 		));
 		assertThat(stream.level()).isZero();
 		stream.get(1);
@@ -240,8 +241,8 @@ class TokenStreamTest {
 	@Test
 	void getDoesNotChangeIndex() {
 		var stream = new TokenStream(List.of(
-				new AssignedToken("1", NUMBER.compile(), "test"),
-				new AssignedToken("2", NUMBER.compile(), "test")
+				new AssignedToken("1", "test"),
+				new AssignedToken("2", "test")
 		));
 		assertThat(stream.index()).isZero();
 		stream.get(1);
@@ -251,8 +252,8 @@ class TokenStreamTest {
 	@Test
 	void getFailsOutOfBounds() {
 		var stream = new TokenStream(List.of(
-				new AssignedToken("1", NUMBER.compile(), "test"),
-				new AssignedToken("2", NUMBER.compile(), "test")
+				new AssignedToken("1", "test"),
+				new AssignedToken("2", "test")
 		));
 		assertThatCode(() -> stream.get(2)).isInstanceOf(IndexOutOfBoundsException.class);
 		assertThatCode(() -> stream.get(-1)).isInstanceOf(IndexOutOfBoundsException.class);
@@ -261,8 +262,8 @@ class TokenStreamTest {
 	@Test
 	void size() {
 		var stream = new TokenStream(List.of(
-				new AssignedToken("1", NUMBER.compile(), "test"),
-				new AssignedToken("2", NUMBER.compile(), "test")
+				new AssignedToken("1", "test"),
+				new AssignedToken("2", "test")
 		));
 		assertThat(stream.size()).isEqualTo(2);
 
@@ -275,7 +276,7 @@ class TokenStreamTest {
 		var stream = new TokenStream(List.of());
 		stream.setRecursionLevelLimit(5);
 		assertThat(stream.getRecursionLevelLimit()).isEqualTo(5);
-		assertThatCode(()-> {
+		assertThatCode(() -> {
 			for (int i = 0; i < 6; i++) {
 				stream.elevate();
 			}

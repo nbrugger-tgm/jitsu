@@ -3,11 +3,12 @@ package com.niton.parser.token;
 import com.niton.parser.exceptions.ParsingException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static java.lang.Math.*;
 
 /**
  * The tokenizer is the first step of parsing and devides the string into classified chunks ({@link
@@ -17,7 +18,6 @@ import java.util.regex.Pattern;
  * @version 2019-05-27
  */
 public class Tokenizer {
-
 	private final Map<String, TokenPattern> tokens    = new HashMap<>();
 	private       boolean                   ignoreEOF = false;
 
@@ -26,17 +26,14 @@ public class Tokenizer {
 	 * AssignedToken#value}
 	 */
 	@Data
-	@EqualsAndHashCode
 	@AllArgsConstructor
 	public static class AssignedToken {
-		private String  value;
-		private Pattern regex;
-		private String  name;
+		private String value;
+		private String name;
 		private int    start;
 
-		public AssignedToken(String value, Pattern regex, String name) {
+		public AssignedToken(String value, String name) {
 			this.value = value;
-			this.regex = regex;
 			this.name  = name;
 		}
 
@@ -73,11 +70,6 @@ public class Tokenizer {
 	public Tokenizer(Tokenable... tokens) {
 		setTokens(tokens);
 	}
-	public void setTokens(Tokenable... tokens) {
-		for (Tokenable t : tokens) {
-			this.tokens.put(t.name(), new TokenPattern(t.pattern()));
-		}
-	}
 
 	public Tokenizer(List<Tokenable> tokens) {
 		for (Tokenable t : tokens) {
@@ -87,6 +79,12 @@ public class Tokenizer {
 
 	public Map<String, TokenPattern> getTokens() {
 		return Collections.unmodifiableMap(tokens);
+	}
+
+	public void setTokens(Tokenable... tokens) {
+		for (Tokenable t : tokens) {
+			this.tokens.put(t.name(), new TokenPattern(t.pattern()));
+		}
 	}
 
 	/**
@@ -106,55 +104,6 @@ public class Tokenizer {
 		return assignedTokens;
 	}
 
-	private void verifyNoOverlap(String content, List<AssignedToken> tokens) throws ParsingException {
-		int                 last      = 0;
-		for (var assignedToken : tokens) {
-			if (assignedToken.start > last) {
-				last = assignedToken.start;
-			} else if (last > assignedToken.start) {
-				throw overlapException(content, last, assignedToken);
-			}
-			last += assignedToken.value.length();
-		}
-	}
-
-	private ParsingException overlapException(
-			String content,
-			int last,
-			AssignedToken assignedToken
-	) {
-		return new ParsingException(String.format(
-				"Tokens overlapping: %s overlaps previous Token! Last token ended at %d and this token startet at %d (%s)",
-				assignedToken,
-				last,
-				assignedToken.start,
-				content.substring(last - 5, last + 5)
-		));
-	}
-
-	private void fillGaps(String content, List<AssignedToken> tokens) {
-		int                 last      = 0;
-		List<AssignedToken> undefined = new ArrayList<>(tokens.size());
-		for (var assignedToken : tokens) {
-			if (assignedToken.start > last) {
-				var undef = new AssignedToken(
-						content.substring(
-								last,
-								assignedToken.start
-						),
-						Pattern.compile(".+"),
-						"UNDEFINED"
-				);
-				undef.start = last;
-				undefined.add(undef);
-				last += undef.value.length();
-			}
-			last += assignedToken.value.length();
-		}
-		tokens.addAll(undefined);
-		tokens.sort(Comparator.comparingInt((AssignedToken o) -> o.start));
-	}
-
 	private List<AssignedToken> parseTokens(String content) {
 		List<AssignedToken> parsed = new LinkedList<>();
 		for (String tokenName : this.tokens.keySet()) {
@@ -167,7 +116,6 @@ public class Tokenizer {
 			while (m.find()) {
 				AssignedToken res = new AssignedToken();
 				res.name  = tokenName;
-				res.regex = t.getCompletePattern();
 				res.value = m.group();
 				res.start = m.start();
 				parsed.add(res);
@@ -175,6 +123,59 @@ public class Tokenizer {
 		}
 		parsed.sort(Comparator.comparingInt((AssignedToken o) -> o.start));
 		return parsed;
+	}
+
+	private void verifyNoOverlap(String content, List<AssignedToken> tokens)
+			throws ParsingException {
+		int last = 0;
+		for (var assignedToken : tokens) {
+			if (assignedToken.start > last) {
+				last = assignedToken.start;
+			} else if (last > assignedToken.start) {
+				throw overlapException(content, last, assignedToken);
+			}
+			last += assignedToken.value.length();
+		}
+	}
+
+	private void fillGaps(String content, List<AssignedToken> tokens) {
+		int                 last      = 0;
+		List<AssignedToken> undefined = new ArrayList<>(tokens.size());
+		for (var assignedToken : tokens) {
+			if (assignedToken.start > last) {
+				var undef = new AssignedToken(
+						content.substring(last, assignedToken.start),
+						"UNDEFINED"
+				);
+				undef.start = last;
+				undefined.add(undef);
+				last += undef.value.length();
+			}
+			last += assignedToken.value.length();
+		}
+		if (last < content.length()) {
+			undefined.add(new AssignedToken(
+					content.substring(last),
+					"UNDEFINED"
+			));
+		}
+		tokens.addAll(undefined);
+		tokens.sort(Comparator.comparingInt((AssignedToken o) -> o.start));
+	}
+
+	private ParsingException overlapException(
+			String content,
+			int last,
+			AssignedToken assignedToken
+	) {
+		return new ParsingException(String.format(
+				"Tokens overlapping: %s overlaps previous Token!" +
+						" Last token ended at %d and this token startet at %d (%s)",
+				assignedToken,
+				last,
+				assignedToken.start,
+				content.substring(max(0,last - 5), min(last + 5, content.length()))
+		));
 	}
 
 	/**
