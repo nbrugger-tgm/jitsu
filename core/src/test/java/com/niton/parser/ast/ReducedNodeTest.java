@@ -128,7 +128,7 @@ class ReducedNodeTest {
 				"| `-test2: value2\n" +
 				"`-sub2\n" +
 				"  |-test1: value1\n" +
-				"  `-test2: value2";
+				"  `-test2: value2\n";
 		assertThat(node.format()).isEqualTo(expetedHtml);
 	}
 

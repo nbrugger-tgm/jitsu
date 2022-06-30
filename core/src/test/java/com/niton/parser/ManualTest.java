@@ -3,12 +3,10 @@ package com.niton.parser;
 import com.niton.parser.ast.ReducedNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.GrammarReferenceMap;
-import com.niton.parser.grammar.api.Grammar;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.function.Supplier;
 
 import static com.niton.parser.grammar.api.Grammar.*;
 import static com.niton.parser.token.DefaultToken.*;

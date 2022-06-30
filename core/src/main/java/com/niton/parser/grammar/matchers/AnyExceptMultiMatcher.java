@@ -34,7 +34,7 @@ public class AnyExceptMultiMatcher extends GrammarMatcher<TokenNode> {
 	throws ParsingException {
 		TokenNode obj = new TokenNode();
 
-		while (!anyMatch(tokens, reference)) {
+		while (!anyMatch(tokens, reference) && tokens.hasNext()) {
 			AssignedToken token = tokens.next();
 			obj.tokens.add(token);
 		}

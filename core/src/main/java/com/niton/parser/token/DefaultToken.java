@@ -42,14 +42,14 @@ public enum DefaultToken implements Tokenable {
 	BACK_SLASH("\\\\"),
 	NEW_LINE("\\r?\\n"),
 	EOF("\\Z(?!\\r?\\n)");
-	public final String pattern;
+	public final String regex;
 
 	DefaultToken(String token) {
-		pattern = token;
+		regex = token;
 	}
 
 	@Override
 	public String pattern() {
-		return pattern;
+		return regex;
 	}
 }

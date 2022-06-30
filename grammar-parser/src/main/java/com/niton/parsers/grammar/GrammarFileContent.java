@@ -1,14 +1,9 @@
 package com.niton.parsers.grammar;
 
 import com.niton.parser.grammar.GrammarReferenceMap;
-import com.niton.parser.token.TokenPattern;
 import com.niton.parser.token.Tokenable;
-import com.niton.parser.token.GenericToken;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 /**
  * This is the GrammarResult Class
@@ -17,8 +12,10 @@ import java.util.stream.Collectors;
  * @version 2019-06-12
  */
 public class GrammarFileContent {
-	public GrammarReferenceMap       grammars = new GrammarReferenceMap();
-	public Map<String, TokenPattern> tokens   = new HashMap<>();
+	private GrammarReferenceMap grammars = new GrammarReferenceMap();
+	private Set<Tokenable>      tokens;
+
+	GrammarFileContent(){}
 
 	/**
 	 * @return the grammars
@@ -30,27 +27,19 @@ public class GrammarFileContent {
 	/**
 	 * @param grammars the grammars to set
 	 */
-	public void setGrammars(GrammarReferenceMap grammars) {
+	void setGrammars(GrammarReferenceMap grammars) {
 		this.grammars = grammars;
-	}
-
-	/**
-	 * @return the tokens
-	 */
-	public Map<String, TokenPattern> getTokenMap() {
-		return tokens;
 	}
 
 	/**
 	 * @param tokens the tokens to set
 	 */
-	public void setTokens(Map<String, TokenPattern> tokens) {
+	void setTokens(Set<Tokenable> tokens) {
 		this.tokens = tokens;
 	}
 
-	public List<Tokenable> getTokens() {
-		return tokens.entrySet().stream().map(e-> new GenericToken(e.getValue(),e.getKey())).collect(
-				Collectors.toList());
+	public Set<Tokenable> getTokens() {
+		return tokens;
 	}
 }
 

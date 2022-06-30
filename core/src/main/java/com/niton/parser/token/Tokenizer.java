@@ -108,7 +108,7 @@ public class Tokenizer {
 		List<AssignedToken> parsed = new LinkedList<>();
 		for (String tokenName : this.tokens.keySet()) {
 			TokenPattern t = this.tokens.get(tokenName);
-			if (ignoreEOF && t.getRegex().pattern().equals(DefaultToken.EOF.pattern)) {
+			if (ignoreEOF && t.getRegex().pattern().equals(DefaultToken.EOF.regex)) {
 				continue;
 			}
 			Pattern p = t.getCompletePattern();
@@ -127,14 +127,16 @@ public class Tokenizer {
 
 	private void verifyNoOverlap(String content, List<AssignedToken> tokens)
 			throws ParsingException {
-		int last = 0;
+		int           last      = 0;
+		AssignedToken lastToken = null;
 		for (var assignedToken : tokens) {
 			if (assignedToken.start > last) {
 				last = assignedToken.start;
 			} else if (last > assignedToken.start) {
-				throw overlapException(content, last, assignedToken);
+				throw overlapException(content, last, assignedToken, lastToken);
 			}
 			last += assignedToken.value.length();
+			lastToken = assignedToken;
 		}
 	}
 
@@ -166,15 +168,17 @@ public class Tokenizer {
 	private ParsingException overlapException(
 			String content,
 			int last,
-			AssignedToken assignedToken
+			AssignedToken assignedToken,
+			AssignedToken overlapedWith
 	) {
 		return new ParsingException(String.format(
-				"Tokens overlapping: %s overlaps previous Token!" +
+				"Tokens overlapping: %s overlaps previous Token %s!" +
 						" Last token ended at %d and this token startet at %d (%s)",
 				assignedToken,
+				overlapedWith,
 				last,
 				assignedToken.start,
-				content.substring(max(0,last - 5), min(last + 5, content.length()))
+				content.substring(max(0, last - 5), min(last + 5, content.length()))
 		));
 	}
 

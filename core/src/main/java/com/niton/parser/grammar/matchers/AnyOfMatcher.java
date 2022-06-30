@@ -52,13 +52,13 @@ public class AnyOfMatcher extends GrammarMatcher<AnyNode> {
 			}
 		}
 		throw new ParsingException(String.format(
-				"Expected one of : [%s] but none of them was parsable due to  (at: %d): %n%s",
+				"Expected one of : [%s] but none of them was parsable due to  (at: %s): %n%s",
 				Arrays.stream(this.grammars.getGrammars()).map(e -> {
 					String n;
 					if ((n = e.getName()) != null) return n;
 					return e.getClass().getSimpleName();
 				}).collect(joining(", ")),
-				tokens.get(tokens.index()).getStart(),
+				tokens.hasNext()?tokens.get(tokens.index()).getStart():"EOF",
 				formatFails(fails)
 		));
 	}

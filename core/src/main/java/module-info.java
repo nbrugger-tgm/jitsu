@@ -2,6 +2,7 @@ module jainparse.core {
 	requires static lombok;
 	requires static org.jetbrains.annotations;
 
+	exports com.niton.parser;
 	exports com.niton.parser.token;
 	exports com.niton.parser.exceptions;
 	exports com.niton.parser.ast;

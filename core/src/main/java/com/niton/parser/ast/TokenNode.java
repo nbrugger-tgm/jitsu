@@ -2,6 +2,7 @@ package com.niton.parser.ast;
 
 import com.niton.parser.grammar.types.TokenGrammar;
 import com.niton.parser.token.Tokenizer.AssignedToken;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -14,6 +15,10 @@ import java.util.List;
  * @author Nils
  * @version 2019-05-29
  */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@AllArgsConstructor
+@NoArgsConstructor
 public class TokenNode extends AstNode {
 	public List<AssignedToken> tokens = new ArrayList<>();
 

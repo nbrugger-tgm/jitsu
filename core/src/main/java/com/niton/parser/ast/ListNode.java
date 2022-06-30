@@ -36,13 +36,13 @@ public class ListNode extends AstNode {
 
 	@Override
 	public Collection<Tokenizer.AssignedToken> join() {
-		if (list.size() == 0) {
+		if (list.isEmpty()) {
 			return new ArrayList<>(0);
 		}
 		return list.stream().map(AstNode::join).reduce((a, b) -> {
 			a.addAll(b);
 			return a;
-		}).get();
+		}).orElseGet(List::of);
 	}
 
 	@Override

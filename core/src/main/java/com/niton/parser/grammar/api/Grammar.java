@@ -89,6 +89,7 @@ public abstract class Grammar<M extends GrammarMatcher<R>, R extends AstNode> {
 	}
 
 	public boolean parsable(@NonNull TokenStream tokens,@NonNull GrammarReference ref) {
+		tokens.elevate();
 		try {
 			M matcher = createExecutor();
 			matcher.setOriginGrammarName(getName());
@@ -137,5 +138,30 @@ public abstract class Grammar<M extends GrammarMatcher<R>, R extends AstNode> {
 	public String toString() {
 		return String.format("%s(%s)", this.getClass().getSimpleName(), getName());
 	}
+
+	public MultiGrammar or(Grammar<?, ?>... alternatives) {
+		var combined = new Grammar<?,?>[alternatives.length+1];
+		combined[0] = this;
+		System.arraycopy(alternatives,0,combined,1,alternatives.length);
+		return new MultiGrammar(combined);
+	}
+
+	public ChainGrammar then(Grammar<?, ?> tokenDefiner) {
+		var chain = new ChainGrammar();
+		chain.addGrammar(this);
+		chain.addGrammar(tokenDefiner);
+		return chain;
+	}
+
+	public Grammar<M,R> named(String name){
+		this.name = name;
+		return this;
+	}
+
+	public Grammar<M,R> named(GrammarName name){
+		this.name = name.getName();
+		return this;
+	}
+
 }
 

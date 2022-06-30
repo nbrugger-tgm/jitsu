@@ -1,7 +1,6 @@
 package com.niton.parser.tests;
 
 import com.niton.parser.grammar.api.Grammar;
-import com.niton.parser.grammar.types.ChainGrammar;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

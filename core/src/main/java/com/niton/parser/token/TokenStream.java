@@ -91,4 +91,21 @@ public class TokenStream {
 	public int size() {
 		return tokens.size();
 	}
+
+	public String getPreviousTokens(int count) {
+		StringBuilder builder = new StringBuilder();
+		for (int i = 0; i < count; i++) {
+			builder.append(tokens.get(index()-i).getValue());
+		}
+		return builder.toString();
+	}
+
+	@Override
+	public String toString() {
+		return levelIndexes.toString();
+	}
+
+	public boolean hasNext() {
+		return index() < size();
+	}
 }

@@ -8,7 +8,7 @@ import com.niton.parser.token.Tokenable;
  * @author Nils Brugger
  * @version 2019-06-09
  */
-enum GrammarTokens implements Tokenable {
+public enum GrammarFileTokens implements Tokenable {
 	LINE_END("(\\r?\\n)+"),
 	IDENTIFIER("[A-Za-z_]+"),
 	EQ("[=]"),
@@ -16,7 +16,7 @@ enum GrammarTokens implements Tokenable {
 	SLASH("\\/"),
 	COMMA(","),
 	COLON(":"),
-	EOF("\\Z"),
+	EOF("\\Z(?!\\r?\\n)"),
 
 	//SOME Escaping s***
 	QUOTE("(?<!\\\\)\\'"),
@@ -39,9 +39,8 @@ enum GrammarTokens implements Tokenable {
 	 * Creates an Instance of GrammarTokens.java
 	 *
 	 * @author Nils Brugger
-	 * @version 2019-06-09
 	 */
-	GrammarTokens(String regex) {
+	GrammarFileTokens(String regex) {
 		this.regex = regex;
 	}
 

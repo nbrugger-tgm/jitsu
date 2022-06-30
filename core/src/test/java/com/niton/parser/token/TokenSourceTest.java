@@ -28,6 +28,7 @@ class TokenSourceTest {
 			assertEquals("", source.getBuffer());
 			source.setChunkSize(1);
 			assertEquals("", source.getBuffer());
+			source.get(7);
 			assertThat(source).hasSize(8);
 			assertEquals(source.get(5).getValue(), "NOCHEINWORT");
 		}
@@ -39,6 +40,7 @@ class TokenSourceTest {
 			assertEquals("", source.getBuffer());
 			source.setChunkSize(8);
 			assertEquals("", source.getBuffer());
+			source.get(7);
 			assertThat(source).hasSize(8);
 			assertEquals(source.get(5).getValue(), "WORT");
 		}
@@ -48,6 +50,7 @@ class TokenSourceTest {
 			StringReader reader = new StringReader("...WORT WORT98764ZAHL");
 			TokenSource  source = new TokenSource(reader);
 			assertEquals("", source.getBuffer());
+			source.get(7);
 			assertThat(source).hasSize(8);
 			assertEquals(source.get(5).getValue(), "WORT");
 		}

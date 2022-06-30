@@ -3,11 +3,8 @@ package com.niton.parser.grammar.api;
 import com.niton.parser.ast.AstNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.token.TokenStream;
-import com.niton.parser.token.Tokenizer;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
 
 /**
  * Contains the logic how to handle a specific grammar. It creates a {@link AstNode} out of

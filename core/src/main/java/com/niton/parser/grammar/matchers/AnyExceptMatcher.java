@@ -37,7 +37,7 @@ public class AnyExceptMatcher extends GrammarMatcher<TokenNode> {
 	public @NotNull TokenNode process(@NotNull TokenStream tokens, @NotNull GrammarReference reference)
 	throws ParsingException {
 		TokenNode obj = new TokenNode();
-		while (!dunnoaccept.parsable(tokens, reference)) {
+		while (!dunnoaccept.parsable(tokens, reference) && tokens.hasNext()) {
 			AssignedToken token = tokens.next();
 			obj.tokens.add(token);
 		}

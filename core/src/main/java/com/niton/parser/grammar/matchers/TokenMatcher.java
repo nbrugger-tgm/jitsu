@@ -33,6 +33,15 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
 	@Override
 	public @NotNull TokenNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref)
 			throws ParsingException {
+		if(!tokens.hasNext()){
+			throw new ParsingException(
+					String.format(
+							"%s Expected Token \"%s\" but found nothing (whole file parsed alread)",
+							this.tokenName,
+							tokenName.getTokenName()
+					)
+			);
+		}
 		AssignedToken token = tokens.next();
 		if (token.getName().equals(tokenName.getTokenName())) {
 			TokenNode obj = new TokenNode();

@@ -16,9 +16,9 @@ import org.jetbrains.annotations.NotNull;
 @Getter
 @Setter
 public class MultiGrammar extends Grammar<AnyOfMatcher, AnyNode> {
-	private Grammar<?,?>[] grammars;
+	private Grammar<?, ?>[] grammars;
 
-	public MultiGrammar(Grammar<?,?>[] grammars) {
+	public MultiGrammar(Grammar<?, ?>[] grammars) {
 		this.grammars = grammars;
 	}
 
@@ -33,5 +33,15 @@ public class MultiGrammar extends Grammar<AnyOfMatcher, AnyNode> {
 	@Override
 	public void reconfigMatcher(@NotNull AnyOfMatcher multiMatcher) {
 		multiMatcher.setGrammars(this);
+	}
+
+	@Override
+	public MultiGrammar or(Grammar<?, ?>... alternatives) {
+		var combined = new Grammar<?, ?>[alternatives.length + grammars.length];
+
+		System.arraycopy(grammars, 0, combined, 0, grammars.length);
+		System.arraycopy(alternatives, 0, combined, grammars.length, alternatives.length);
+		this.grammars = combined;
+		return this;
 	}
 }

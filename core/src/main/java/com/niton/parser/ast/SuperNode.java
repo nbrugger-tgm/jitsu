@@ -2,14 +2,20 @@ package com.niton.parser.ast;
 
 import com.niton.parser.grammar.types.ChainGrammar;
 import com.niton.parser.token.Tokenizer.AssignedToken;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import static java.util.function.Predicate.not;
 
 /**
  * The result of a {@link ChainGrammar}
  * <p>
  * Describes a row of GrammarObjects. Could also be seen as Result Container.
- * This is the result of any Grammar matching more than one thing. Very important to build a syntax tree
+ * This is the result of any Grammar matching more than one thing. Very important to build a syntax
+ * tree
  *
  * @author Nils
  * @version 2019-05-29
@@ -45,11 +51,38 @@ public class SuperNode extends AstNode {
 
 	@Override
 	public ReducedNode reduce(String name) {
-		List<ReducedNode> reduced = new ArrayList<>();
-		for (var key : naming.keySet()) {
-			reduced.add(getNode(key).reduce(key));
+		//When the children do not have a name, get children of the children
+		var subNodes = naming.size() > 0 ? getNamedProperties() : getDeepProperties();
+		if(subNodes.isEmpty() && naming.size()==0){
+			subNodes = List.of(ReducedNode.leaf("value",joinTokens()));
 		}
-		return ReducedNode.node(name, reduced);
+		return ReducedNode.node(
+				name,
+				subNodes
+		);
+	}
+
+	@NotNull
+	private List<ReducedNode> getDeepProperties() {
+		return subNodes.stream()
+		               .map(node -> node.reduce("no-name"))
+		               .filter(Objects::nonNull)
+		               .filter(not(ReducedNode::isLeaf))
+		               .map(ReducedNode::getChildren)
+		               .flatMap(List::stream)
+		               .collect(Collectors.toList());
+	}
+
+	@NotNull
+	private List<ReducedNode> getNamedProperties() {
+		return naming.keySet().stream()
+		             .map(key -> this.getRawNode(key).reduce(key))
+		             .filter(Objects::nonNull)
+		             .collect(Collectors.toList());
+	}
+
+	private AstNode getRawNode(String key) {
+		return getNode(key);
 	}
 
 
@@ -57,6 +90,7 @@ public class SuperNode extends AstNode {
 	 * Get a named sub-object by its name
 	 *
 	 * @param name the name of the sub object to get
+	 *
 	 * @return the GrammarObject
 	 */
 	public <T extends AstNode> T getNode(String name) {
@@ -74,7 +108,7 @@ public class SuperNode extends AstNode {
 		builder.append(getOriginGrammarName());
 		for (AstNode grammarObject : subNodes) {
 			builder.append("\n   ");
-			builder.append(grammarObject.toString().replaceAll("\n", "\n   "));
+			builder.append(grammarObject.toString().replace("\n", "\n   "));
 		}
 		builder.append("\n]");
 		return builder.toString();

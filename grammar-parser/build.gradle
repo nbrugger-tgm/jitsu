@@ -6,3 +6,7 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.18'
     testCompileOnly 'org.projectlombok:lombok:1.18.18'
 }
+java {
+    sourceCompatibility 11
+    targetCompatibility 11
+}

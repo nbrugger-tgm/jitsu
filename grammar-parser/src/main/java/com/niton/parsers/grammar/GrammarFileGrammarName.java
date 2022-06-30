@@ -2,7 +2,7 @@ package com.niton.parsers.grammar;
 
 import com.niton.parser.grammar.api.GrammarName;
 
-enum GrammarGrammarName implements GrammarName {
+enum GrammarFileGrammarName implements GrammarName {
 	WHITESPACE,
 	COMMENT,
 	TO_IGNORE,
@@ -17,7 +17,7 @@ enum GrammarGrammarName implements GrammarName {
 	SUB_GRAMMAR,
 	ARRAY,
 	ARRAY_ITEM,
-	ROOT_GRAMMAR,
+	CHAIN_GRAMMAR,
 	GRAMMAR_FILE;
 
 	@Override
