@@ -1,6 +1,9 @@
 package com.niton.parser.ast;
 
 import com.niton.parser.token.Tokenizer;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.LinkedList;
@@ -12,8 +15,13 @@ import java.util.Optional;
  * @author Nils
  * @version 2019-05-29
  */
+@NoArgsConstructor
 public class OptionalNode extends AstNode {
 	private AstNode value = null;
+
+	public OptionalNode(AstNode valueNode) {
+		value = valueNode;
+	}
 
 	/**
 	 * @see Object#toString()
@@ -37,7 +45,7 @@ public class OptionalNode extends AstNode {
 	}
 
 	@Override
-	public ReducedNode reduce(String name) {
+	public ReducedNode reduce(@NonNull String name) {
 		return Optional.ofNullable(value).map(v -> v.reduce(name)).orElse(null);
 	}
 }

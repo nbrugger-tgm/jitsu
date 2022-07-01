@@ -3,6 +3,7 @@ package com.niton.parser.ast;
 import com.niton.parser.grammar.types.TokenGrammar;
 import com.niton.parser.token.Tokenizer.AssignedToken;
 import lombok.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -53,7 +54,7 @@ public class TokenNode extends AstNode {
 	}
 
 	@Override
-	public ReducedNode reduce(String name) {
+	public ReducedNode reduce(@NotNull String name) {
 		return ReducedNode.leaf(name, joinTokens());
 	}
 }

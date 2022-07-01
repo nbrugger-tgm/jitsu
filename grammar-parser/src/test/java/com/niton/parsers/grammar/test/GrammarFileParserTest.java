@@ -129,6 +129,17 @@ class GrammarFileParserTest {
 						"	!#LINE_END >text", Set.of(), Set.of("whiteignore", "comment")
 		);
 	}
+	@Test
+	void parseCombinedGrammar() {
+		test(
+				"whiteignore:\r\n" +
+						"	?{#WHITESPACE, #LINE_END}*\r\n" +
+						"\r\n" +
+						"comment: \r\n" +
+						"	~SLASH\r\n" +
+						"	!#LINE_END >text", Set.of(), Set.of("whiteignore", "comment")
+		);
+	}
 
 	@Test
 	void parseTokensWithComments() {

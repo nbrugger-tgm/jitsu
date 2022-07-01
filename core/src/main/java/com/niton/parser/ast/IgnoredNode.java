@@ -1,6 +1,8 @@
 package com.niton.parser.ast;
 
 import com.niton.parser.token.Tokenizer;
+import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,8 +15,8 @@ import java.util.List;
  * @version 2019-05-29
  */
 public class IgnoredNode extends AstNode {
-	public static boolean                       saveRAM = false;
-	private       List<Tokenizer.AssignedToken> ignored = new ArrayList<>(0);
+	public  boolean                       saveRAM = false;
+	private List<Tokenizer.AssignedToken> ignored = new ArrayList<>(0);
 
 	/**
 	 * @see java.lang.Object#toString()
@@ -40,11 +42,12 @@ public class IgnoredNode extends AstNode {
 
 	@Override
 	public Collection<Tokenizer.AssignedToken> join() {
+		if (saveRAM) return List.of();
 		return ignored;
 	}
 
 	@Override
-	public ReducedNode reduce(String name) {
+	public ReducedNode reduce(@NonNull String name) {
 		return null;
 	}
 }

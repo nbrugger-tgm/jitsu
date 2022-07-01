@@ -44,7 +44,7 @@ public class RepeatMatcher extends GrammarMatcher<ListNode> {
 				AstNode gr = check.parse(tokens, ref);
 				obj.add(gr);
 			} catch (ParsingException e) {
-				obj.setParsingExceptions(e);
+				obj.setParsingException(e);
 				keep = false;
 			}
 		}

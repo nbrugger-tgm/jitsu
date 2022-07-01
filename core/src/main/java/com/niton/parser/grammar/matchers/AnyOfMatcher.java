@@ -44,8 +44,7 @@ public class AnyOfMatcher extends GrammarMatcher<AnyNode> {
 			try {
 				AstNode obj     = grammar.parse(tokens, ref);
 				AnyNode wrapper = new AnyNode(obj);
-				wrapper.setType(grammar.getName());
-				wrapper.setParsingExceptions(obj.getParsingExceptions());
+				wrapper.setParsingException(obj.getParsingException());
 				return wrapper;
 			} catch (ParsingException e) {
 				fails.put(grammar.toString(), e);

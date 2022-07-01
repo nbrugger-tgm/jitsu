@@ -2,6 +2,8 @@ package com.niton.parser.ast;
 
 import com.niton.parser.grammar.types.MultiGrammar;
 import com.niton.parser.token.Tokenizer;
+import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.List;
@@ -15,7 +17,6 @@ import java.util.List;
  */
 public class AnyNode extends AstNode {
 	private final AstNode res;
-	private       String  type;
 
 	public AnyNode(AstNode res) {
 		this.res = res;
@@ -25,14 +26,7 @@ public class AnyNode extends AstNode {
 	 * @return the type
 	 */
 	public String getType() {
-		return type;
-	}
-
-	/**
-	 * @param type the type to set
-	 */
-	public void setType(String type) {
-		this.type = type;
+		return res.getOriginGrammarName();
 	}
 
 	@Override
@@ -41,10 +35,10 @@ public class AnyNode extends AstNode {
 	}
 
 	@Override
-	public ReducedNode reduce(String name) {
-		if(type != null) {
+	public ReducedNode reduce(@NonNull String name) {
+		if(getType() != null) {
 			return ReducedNode.node(name, List.of(
-					ReducedNode.leaf("type", type),
+					ReducedNode.leaf("type", getType()),
 					res.reduce("value")
 			));
 		}else{

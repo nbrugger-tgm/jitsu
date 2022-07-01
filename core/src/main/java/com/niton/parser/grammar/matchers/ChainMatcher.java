@@ -62,7 +62,7 @@ public class ChainMatcher extends GrammarMatcher<SuperNode> {
 				} else {
 					gObject.add(res);
 				}
-				exitStates.put(grammar.toString(), res.getParsingExceptions());
+				exitStates.put(grammar.toString(), res.getParsingException());
 			} catch (ParsingException e) {
 				throw new ParsingException(format(
 						"Chain entry '%s' of '%s' can't be parsed :%n %s",
@@ -73,7 +73,7 @@ public class ChainMatcher extends GrammarMatcher<SuperNode> {
 						      .collect(Collectors.joining("\n"))
 				), e);
 			}
-			gObject.setParsingExceptions(new ParsingException(format(
+			gObject.setParsingException(new ParsingException(format(
 					"'%s' chain elements ended : %n%s",
 					chain,
 					exitStates.entrySet()

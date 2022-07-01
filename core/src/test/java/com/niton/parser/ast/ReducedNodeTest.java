@@ -131,5 +131,4 @@ class ReducedNodeTest {
 				"  `-test2: value2\n";
 		assertThat(node.format()).isEqualTo(expetedHtml);
 	}
-
 }

@@ -11,6 +11,7 @@ import com.niton.parser.token.GenericToken;
 import com.niton.parser.token.TokenPattern;
 import com.niton.parser.token.Tokenable;
 import com.niton.parser.token.Tokenizer;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Optional;
@@ -39,7 +40,7 @@ public class GrammarFileParser extends Parser<GrammarFileContent> {
 	 * @see com.niton.parser.Parser#convert(AstNode)
 	 */
 	@Override
-	public GrammarFileContent convert(AstNode o) throws ParsingException {
+	public @NotNull GrammarFileContent convert(@NotNull AstNode o) throws ParsingException {
 		var root   = o.reduce("GrammarFile");
 		var head   = root.getSubNode(HEAD.id());
 		var result = new GrammarFileContent();

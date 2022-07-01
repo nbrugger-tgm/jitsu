@@ -46,7 +46,7 @@ public abstract class GrammarMatcher<T extends AstNode> {
 		if (root && tokens.index() + 1 < tokens.size()) {
 			throw new ParsingException(
 					"Not all tokens consumed at the end of parsing",
-					res.getParsingExceptions()
+					res.getParsingException()
 			);
 		}
 		return res;

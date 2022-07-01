@@ -2,6 +2,7 @@ package com.niton.parser.ast;
 
 import com.niton.parser.grammar.types.ChainGrammar;
 import com.niton.parser.token.Tokenizer.AssignedToken;
+import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -50,7 +51,7 @@ public class SuperNode extends AstNode {
 	}
 
 	@Override
-	public ReducedNode reduce(String name) {
+	public ReducedNode reduce(@NonNull String name) {
 		//When the children do not have a name, get children of the children
 		var subNodes = naming.size() > 0 ? getNamedProperties() : getDeepProperties();
 		if(subNodes.isEmpty() && naming.size()==0){
