@@ -5,7 +5,6 @@ import com.niton.parser.grammar.matchers.RepeatMatcher;
 import com.niton.parser.ast.ListNode;
 import lombok.Getter;
 import lombok.Setter;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Checks the grammar as often as is occurs
@@ -29,11 +28,6 @@ public class RepeatGrammar extends Grammar<RepeatMatcher, ListNode> {
 	@Override
 	public RepeatMatcher createExecutor() {
 		return new RepeatMatcher(check);
-	}
-
-	@Override
-	public void reconfigMatcher(@NotNull RepeatMatcher repeatMatcher) {
-		repeatMatcher.setCheck(check);
 	}
 
 }

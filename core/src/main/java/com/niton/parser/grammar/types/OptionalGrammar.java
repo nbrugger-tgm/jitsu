@@ -5,7 +5,6 @@ import com.niton.parser.grammar.matchers.OptionalMatcher;
 import com.niton.parser.ast.OptionalNode;
 import lombok.Getter;
 import lombok.Setter;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Cheks if the grammar is right if yes it adds the element to the output if not
@@ -32,8 +31,4 @@ public class OptionalGrammar extends Grammar<OptionalMatcher, OptionalNode> {
 		return new OptionalMatcher(check);
 	}
 
-	@Override
-	public void reconfigMatcher(@NotNull OptionalMatcher optionalMatcher) {
-		optionalMatcher.setCheck(check);
-	}
 }

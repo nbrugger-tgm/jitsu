@@ -5,7 +5,6 @@ import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.matchers.AnyExceptMatcher;
 import lombok.Getter;
 import lombok.Setter;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * This grammar accepts any token except the one given in the Constructor<br>
@@ -33,8 +32,4 @@ public class AnyExceptGrammar extends Grammar<AnyExceptMatcher, TokenNode> {
 		return new AnyExceptMatcher(except);
 	}
 
-	@Override
-	public void reconfigMatcher(@NotNull AnyExceptMatcher anyExceptMatcher) {
-		anyExceptMatcher.setDunnoaccept(except);
-	}
 }

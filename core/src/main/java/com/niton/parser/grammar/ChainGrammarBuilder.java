@@ -194,6 +194,10 @@ public class ChainGrammarBuilder {
 		return new MultiRuleApplier(new TokenNameGrammarConverter(), g);
 	}
 
+	public RuleApplier keyword(String keyword) {
+		return new RuleApplier(Grammar.keyword(keyword));
+	}
+
 	public ChainGrammar get() {
 		return chain;
 	}
