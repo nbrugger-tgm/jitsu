@@ -5,7 +5,6 @@ import com.niton.parser.grammar.matchers.AnyOfMatcher;
 import com.niton.parser.ast.AnyNode;
 import lombok.Getter;
 import lombok.Setter;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Checks agains all given Grammars syncron and returns the first matching
@@ -28,11 +27,6 @@ public class MultiGrammar extends Grammar<AnyOfMatcher, AnyNode> {
 	@Override
 	public AnyOfMatcher createExecutor() {
 		return new AnyOfMatcher(this);
-	}
-
-	@Override
-	public void reconfigMatcher(@NotNull AnyOfMatcher multiMatcher) {
-		multiMatcher.setGrammars(this);
 	}
 
 	@Override

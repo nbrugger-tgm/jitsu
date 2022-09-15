@@ -6,7 +6,6 @@ import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.matchers.ReferenceGrammarMatcher;
 import lombok.Getter;
 import lombok.Setter;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * This is the GrammarMatchGrammar Class
@@ -50,12 +49,7 @@ public class GrammarReferenceGrammar extends Grammar<ReferenceGrammarMatcher, As
 		return new ReferenceGrammarMatcher(grammar);
 	}
 
-	@Override
-	public void reconfigMatcher(@NotNull ReferenceGrammarMatcher referenceGrammarMatcher) {
-		referenceGrammarMatcher.setGrammar(grammar);
-	}
-
-	@Override
+    @Override
 	public String getName() {
 		return getGrammar();
 	}

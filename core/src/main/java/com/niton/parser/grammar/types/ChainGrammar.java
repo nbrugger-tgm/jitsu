@@ -5,7 +5,6 @@ import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.matchers.ChainMatcher;
 import com.niton.parser.ast.SuperNode;
 import lombok.Getter;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,12 +41,7 @@ public class ChainGrammar extends Grammar<ChainMatcher, SuperNode>
 		return new ChainMatcher(this);
 	}
 
-	@Override
-	public void reconfigMatcher(@NotNull ChainMatcher chainMatcher) {
-		chainMatcher.setOriginGrammarName(getName());
-	}
-
-	@Override
+    @Override
 	public Grammar<?,?> get(String key) {
 		if (getName().equals(key)) return this;
 		for (Grammar<?,?> g : chain) {

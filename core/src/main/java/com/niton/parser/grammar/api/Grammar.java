@@ -64,6 +64,10 @@ public abstract class Grammar<M extends GrammarMatcher<R>, R extends AstNode> {
 		return new TokenGrammar(token);
 	}
 
+	public static KeywordGrammar keyword(String keyword) {
+		return new KeywordGrammar(keyword);
+	}
+
 	public static TokenGrammar tokenReference(Tokenable token) {
 		return tokenReference(token.name());
 	}
@@ -94,11 +98,11 @@ public abstract class Grammar<M extends GrammarMatcher<R>, R extends AstNode> {
 			M matcher = createExecutor();
 			matcher.setOriginGrammarName(getName());
 			matcher.parse(tokens, ref);
-			tokens.rollback();
 			return true;
 		} catch (ParsingException pex) {
-			tokens.rollback();
 			return false;
+		}finally {
+			tokens.rollback();
 		}
 	}
 
@@ -131,8 +135,6 @@ public abstract class Grammar<M extends GrammarMatcher<R>, R extends AstNode> {
 		matcher.setOriginGrammarName(getName());
 		return matcher.parse(tokens, ref);
 	}
-
-	public abstract void reconfigMatcher(@NonNull M m);
 
 	@Override
 	public String toString() {

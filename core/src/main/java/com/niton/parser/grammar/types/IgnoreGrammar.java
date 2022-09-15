@@ -5,7 +5,6 @@ import com.niton.parser.grammar.matchers.IgnoreMatcher;
 import com.niton.parser.ast.IgnoredNode;
 import lombok.Getter;
 import lombok.Setter;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * This Grammar ignores the given grammar
@@ -31,8 +30,4 @@ public class IgnoreGrammar extends Grammar<IgnoreMatcher, IgnoredNode> {
 		return new IgnoreMatcher(grammar);
 	}
 
-	@Override
-	public void reconfigMatcher(@NotNull IgnoreMatcher ignoreMatcher) {
-		ignoreMatcher.setGrammar(grammar);
-	}
 }

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,7 +38,7 @@ abstract class AbstractMatcherTest {
 	Stream<DynamicTest> parsingTest() throws ParsingException {
 		final var ref = getGrammarReference();
 		return getTestCases().map(testCase -> DynamicTest.dynamicTest(
-				"Test: " + testCase.inputTokens,
+				"Test: " + testCase.inputTokens.stream().map(Tokenizer.AssignedToken::getValue).collect(Collectors.joining()),
 				() -> {
 					TokenStream tokenStream = new TokenStream(testCase.inputTokens);
 					tokenStream.index(testCase.parseFrom);
