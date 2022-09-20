@@ -16,11 +16,11 @@ public enum DefaultToken implements Tokenable {
 	PLUS("\\+"),
 	MINUS("-"),
 
-	STRING_DELIMITER("\""),
-
 	STAR("\\*"),
 	SEMICOLON(";"),
 	COLON(":"),
+	QUOTE("'"),
+	DOUBLEQUOTE("\""),
 	QUESTIONMARK("\\?"),
 	UNDERSCORE("_"),
 	EQUAL("="),

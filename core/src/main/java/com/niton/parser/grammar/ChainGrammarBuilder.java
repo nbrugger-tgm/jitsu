@@ -74,6 +74,11 @@ public class ChainGrammarBuilder {
 			return ChainGrammarBuilder.this;
 		}
 
+		public ChainGrammarBuilder not() {
+			chain.addGrammar(g.not());
+			return ChainGrammarBuilder.this;
+		}
+
 		public ChainGrammarBuilder add(String message) {
 			return name(message);
 		}

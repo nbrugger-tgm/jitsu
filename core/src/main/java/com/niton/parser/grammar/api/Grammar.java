@@ -93,7 +93,11 @@ public abstract class Grammar<M extends GrammarMatcher<R>, R extends AstNode> {
 	}
 
 	public boolean parsable(@NonNull TokenStream tokens,@NonNull GrammarReference ref) {
-		tokens.elevate();
+		try {
+			tokens.elevate();
+		}catch (Exception e) {
+			throw new RuntimeException("Evaluating "+name+" failed", e);
+		}
 		try {
 			M matcher = createExecutor();
 			matcher.setOriginGrammarName(getName());
@@ -146,6 +150,10 @@ public abstract class Grammar<M extends GrammarMatcher<R>, R extends AstNode> {
 		combined[0] = this;
 		System.arraycopy(alternatives,0,combined,1,alternatives.length);
 		return new MultiGrammar(combined);
+	}
+
+	public NoMatchGrammer not() {
+		return new NoMatchGrammer(this);
 	}
 
 	public ChainGrammar then(Grammar<?, ?> tokenDefiner) {
