@@ -43,11 +43,10 @@ public class ReferenceGrammarMatcher extends GrammarMatcher<AstNode> {
 	protected @NotNull AstNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref)
 			throws ParsingException {
 		if (ref.get(grammar) == null) {
-			throw new ParsingException(format(
-					"Unknown reference! The Grammar \"%s\" needed in %s was not found in reference",
-					grammar,
-					getOriginGrammarName()
-			));
+			throw new ParsingException(getIdentifier(), format(
+					"Unknown reference! The Grammar \"%s\" was not found in reference",
+					grammar
+			),tokens);
 		}
 		Grammar<?, ?> g = ref.get(grammar);
 		return g.parse(tokens, ref);

@@ -6,6 +6,7 @@ import com.niton.parser.grammar.GrammarReferenceMap;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarName;
 import com.niton.parser.grammar.api.GrammarReference;
+import com.niton.parser.token.ListTokenStream;
 import com.niton.parser.token.TokenSource;
 import com.niton.parser.token.TokenStream;
 import com.niton.parser.token.Tokenizer;
@@ -86,7 +87,7 @@ public abstract class Parser<R> {
 
 	@NotNull
 	public AstNode parsePlain(@NonNull String content) throws ParsingException {
-		return parsePlain(new TokenStream(tokenizer.tokenize(content)));
+		return parsePlain(new ListTokenStream(tokenizer.tokenize(content)));
 	}
 
 	@NotNull
@@ -111,7 +112,7 @@ public abstract class Parser<R> {
 
 	@NotNull
 	public AstNode parsePlain(@NonNull TokenSource tokens) throws ParsingException {
-		return parsePlain(new TokenStream(tokens));
+		return parsePlain(new ListTokenStream(tokens));
 	}
 
 	@NotNull
@@ -127,7 +128,7 @@ public abstract class Parser<R> {
 	@NotNull
 	public AstNode parsePlain(@NonNull List<Tokenizer.AssignedToken> content)
 			throws ParsingException {
-		return parsePlain(new TokenStream(content));
+		return parsePlain(new ListTokenStream(content));
 	}
 
 	@NotNull

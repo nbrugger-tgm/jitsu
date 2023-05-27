@@ -146,7 +146,7 @@ public class ChainGrammarBuilder {
 
 	public RuleApplier grammar(String g) {
 		if (!directRecursion && chain.getName().equals(g)) {
-			throw new IllegalArgumentException("directRecursion forbidden! (" + g + " grammar in " + g + " grammar)\nThis can be enabled using 'setDirectRecursion(boolean)'");
+			throw new IllegalArgumentException("directRecursion forbidden! (" + g + " grammar in " + g + " grammar). This can be enabled using 'setDirectRecursion(boolean)'");
 		}
 		return new RuleApplier(g, new ReferenceGrammarConverter());
 	}
@@ -175,7 +175,7 @@ public class ChainGrammarBuilder {
 		for (String s : g) {
 			if (s.equals(chain.getName()) && !directRecursion) {
 				throw new IllegalArgumentException(String.format(
-						"directRecursion forbidden! (%s grammar in %s grammar)\n" +
+						"directRecursion forbidden! (%s grammar in %s grammar). " +
 								"This can be enabled using 'setDirectRecursion(boolean)'",
 						chain.getName(),
 						chain.getName()

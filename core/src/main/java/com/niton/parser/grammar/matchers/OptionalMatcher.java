@@ -41,7 +41,9 @@ public class OptionalMatcher extends GrammarMatcher<OptionalNode> {
 			obj.setValue(check.parse(tokens, ref));
 			return obj;
 		} catch (ParsingException e) {
-			return new OptionalNode();
+			var node = new OptionalNode();
+			node.setParsingException(e);
+			return node;
 		}
 	}
 

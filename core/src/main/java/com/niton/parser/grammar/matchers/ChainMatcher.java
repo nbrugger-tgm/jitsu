@@ -10,11 +10,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
 
 import static java.lang.String.format;
 
@@ -29,68 +26,66 @@ import static java.lang.String.format;
 @Setter
 public class ChainMatcher extends GrammarMatcher<SuperNode> {
 
-	private ChainGrammar chain;
+    private ChainGrammar chain;
 
-	/**
-	 * Creates an Instance of ChainExecutor.java
-	 *
-	 * @param chain
-	 *
-	 * @author Nils Brugger
-	 * @version 2019-06-08
-	 */
-	public ChainMatcher(ChainGrammar chain) {
-		this.chain = chain;
-		setOriginGrammarName(chain.getName());
-	}
+    /**
+     * Creates an Instance of ChainExecutor.java
+     *
+     * @param chain
+     * @author Nils Brugger
+     * @version 2019-06-08
+     */
+    public ChainMatcher(ChainGrammar chain) {
+        this.chain = chain;
+        setOriginGrammarName(chain.getName());
+        setIdentifier(chain.getIdentifier());
+    }
 
-	@Override
-	public @NotNull SuperNode process(
-			@NotNull TokenStream tokens,
-			@NotNull GrammarReference reference
-	)
-			throws ParsingException {
-		SuperNode              gObject    = new SuperNode();
-		Map<String, Exception> exitStates = new HashMap<>();
-		int                    i          = 0;
-		for (var grammar : chain.getChain()) {
-			try {
-				var    res = grammar.parse(tokens, reference);
-				String name;
-				if ((name = chain.getNaming().get(i++)) != null) {
-					gObject.name(name, res);
-				} else {
-					gObject.add(res);
-				}
-				exitStates.put(grammar.toString(), res.getParsingException());
-			} catch (ParsingException e) {
-				throw new ParsingException(format(
-						"Chain entry '%s' of '%s' can't be parsed :%n %s",
-						grammar,
-						chain,
-						Arrays.stream(e.getMessage().split("\n"))
-						      .map(l -> "\t" + l)
-						      .collect(Collectors.joining("\n"))
-				), e);
-			}
-			gObject.setParsingException(new ParsingException(format(
-					"'%s' chain elements ended : %n%s",
-					chain,
-					exitStates.entrySet()
-					          .stream()
-					          .filter(Objects::nonNull)
-					          .map(e -> format(
-							          "\t%s -> %s",
-							          e.getKey(),
-							          e.getValue() == null ? "success" :
-									          Arrays.stream(e.getValue().getMessage().split("\n"))
-									                .map(l -> "\t" + l)
-									                .collect(Collectors.joining("\n"))
-					          )).collect(Collectors.joining("\n"))
-			)));
-		}
-		return gObject;
-	}
+    @Override
+    public @NotNull SuperNode process(
+            @NotNull TokenStream tokens,
+            @NotNull GrammarReference reference
+    )
+            throws ParsingException {
+        SuperNode gObject = new SuperNode();
+        List<ParsingException> exitStates = new ArrayList<>(chain.getChain().size());
+        int i = 0;
+        for (var grammar : chain.getChain()) {
+            try {
+                var res = grammar.parse(tokens, reference);
+                String name;
+                if ((name = chain.getNaming().get(i++)) != null) {
+                    gObject.name(name, res);
+                } else {
+                    gObject.add(res);
+                }
+                if (res.getParsingException() != null)
+                    exitStates.add(softChainElementException(name != null ? name : grammar.getIdentifier(), res.getParsingException()));
+//                else
+//                    exitStates.add(new ParsingException(getIdentifier(), format("Chain element '%s' parsed successfully", name != null ? name : grammar.getIdentifier()), tokens));
+            } catch (ParsingException e) {
+                var crashingException = new ParsingException(
+                        getIdentifier(),
+                        format("Chain entry '%s' can't be parsed!", grammar),
+                        e
+                );
+                exitStates.add(crashingException);
+                throw new ParsingException(getIdentifier(), "Chain could not be parsed!", exitStates.toArray(ParsingException[]::new));
+            }
+            if (exitStates.size() > 0)
+                gObject.setParsingException(new ParsingException(getIdentifier(), format(
+                        "Chain parsed successful with allowed exceptions"
+                ), exitStates.toArray(ParsingException[]::new)));
+        }
+        return gObject;
+    }
+
+    private ParsingException softChainElementException(String elementName, ParsingException parsingException) {
+        return new ParsingException(getIdentifier(), format(
+                "Chain element '%s' parsed successfully with allowed exception",
+                elementName
+        ), parsingException);
+    }
 
 
 }

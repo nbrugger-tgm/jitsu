@@ -40,7 +40,7 @@ public class IgnoreMatcher extends GrammarMatcher<IgnoredNode> {
 			AstNode res = grammar.parse(tokens, ref);
 			thisRes.getIgnored().addAll(res.join());
 		} catch (ParsingException e) {
-			thisRes.setParsingException(new ParsingException("Nothing to ignore", e));
+			thisRes.setParsingException(new ParsingException(getIdentifier(), "Nothing to ignore", e));
 		}
 		return thisRes;
 	}

@@ -20,7 +20,7 @@ class ReferenceGrammarMatcherTest extends AbstractMatcherTest {
 	public GrammarReference getGrammarReference() throws ParsingException {
 		var mocked1 = mock(Grammar.class);
 		var mocked3 = mock(Grammar.class);
-		when(mocked3.parse(any(),any())).thenThrow(new ParsingException(""));
+		when(mocked3.parse(any(),any())).thenThrow(new ParsingException("","",0,0,0));
 		when(mocked1.parse(any(),any())).thenReturn(newNode);
 		GrammarReferenceMap map = new GrammarReferenceMap();
 		map.map(mocked1, "test");

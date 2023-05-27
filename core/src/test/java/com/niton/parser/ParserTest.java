@@ -4,6 +4,7 @@ import com.niton.parser.ast.AstNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarReference;
+import com.niton.parser.token.ListTokenStream;
 import com.niton.parser.token.TokenSource;
 import com.niton.parser.token.TokenStream;
 import com.niton.parser.token.Tokenizer;
@@ -115,7 +116,7 @@ class ParserTest {
 				.extracting(AstNode::getOriginGrammarName)
 				.isEqualTo(ORIG_GRAMMAR_NAME);
 
-		assertThat(parser.parsePlain(mock(TokenStream.class)))
+		assertThat(parser.parsePlain(mock(ListTokenStream.class)))
 				.isNotNull()
 				.as("should return the grammar parsing result")
 				.extracting(AstNode::getOriginGrammarName)
@@ -152,7 +153,7 @@ class ParserTest {
 				.as("should return the grammar parsing result")
 				.isEqualTo(ORIG_GRAMMAR_NAME);
 
-		assertThat(parser.parse(mock(TokenStream.class)))
+		assertThat(parser.parse(mock(ListTokenStream.class)))
 				.isNotNull()
 				.as("should return the grammar parsing result")
 				.isEqualTo(ORIG_GRAMMAR_NAME);

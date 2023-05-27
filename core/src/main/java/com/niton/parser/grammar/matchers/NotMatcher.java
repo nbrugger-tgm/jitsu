@@ -11,14 +11,14 @@ import org.jetbrains.annotations.NotNull;
 
 @AllArgsConstructor
 public class NotMatcher extends GrammarMatcher<IgnoredNode> {
-    private final Grammar<?,?> grammar;
+    private final Grammar<?, ?> grammar;
 
     @Override
     protected @NotNull IgnoredNode process(@NotNull TokenStream tokens, @NotNull GrammarReference reference) throws ParsingException {
         try {
             var result = grammar.parse(tokens, reference);
-            throw new ParsingException(String.format("Expected not to match '%s'",result.joinTokens()));
-        } catch (ParsingException e){
+            throw new ParsingException(getIdentifier(), String.format("Expected not to match '%s'", result.joinTokens()), tokens);
+        } catch (ParsingException e) {
             return new IgnoredNode();
         }
     }

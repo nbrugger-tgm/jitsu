@@ -11,6 +11,8 @@ import org.jetbrains.annotations.NotNull;
 import java.util.LinkedList;
 import java.util.List;
 
+import static java.lang.String.format;
+
 public class KeywordMatcher extends GrammarMatcher<TokenNode> {
     private final String keyword;
 
@@ -28,12 +30,12 @@ public class KeywordMatcher extends GrammarMatcher<TokenNode> {
                 collected.add(tkn);
                 collectedKeyword.append(tkn.getValue());
             } else {
-                throw new ParsingException("Tokens ended unexpected!");
+                throw new ParsingException(getIdentifier(), format("Expected keyword '%s', got EOF", keyword), tokens);
             }
             if (collectedKeyword.toString().equals(keyword)) {
                 return new TokenNode(collected);
             }
         }
-        throw new ParsingException(String.format("Expected keyword '%s', got '%s'", keyword, collectedKeyword));
+        throw new ParsingException(getIdentifier(), format("Expected keyword '%s', got '%s'", keyword, collectedKeyword), tokens);
     }
 }

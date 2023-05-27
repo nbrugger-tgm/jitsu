@@ -101,6 +101,7 @@ public abstract class Grammar<M extends GrammarMatcher<R>, R extends AstNode> {
 		try {
 			M matcher = createExecutor();
 			matcher.setOriginGrammarName(getName());
+			matcher.setIdentifier(getIdentifier());
 			matcher.parse(tokens, ref);
 			return true;
 		} catch (ParsingException pex) {
@@ -137,6 +138,7 @@ public abstract class Grammar<M extends GrammarMatcher<R>, R extends AstNode> {
 			throws ParsingException {
 		M matcher = createExecutor();
 		matcher.setOriginGrammarName(getName());
+		matcher.setIdentifier(getIdentifier());
 		return matcher.parse(tokens, ref);
 	}
 
@@ -173,5 +175,10 @@ public abstract class Grammar<M extends GrammarMatcher<R>, R extends AstNode> {
 		return this;
 	}
 
+	public String getIdentifier() {
+		if(getName() != null)
+			return getName();
+		return this.getClass().getSimpleName();
+	}
 }
 

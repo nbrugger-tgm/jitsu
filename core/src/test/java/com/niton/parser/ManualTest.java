@@ -172,7 +172,7 @@ public class ManualTest {
 				expressionVal = calculateNoCalcExpression(expression);
 				break;
 			default:
-				throw new ParsingException("No operation type " + type + " known");
+				throw new ParsingException("No operation type " + type + " known","",0,0,0);
 		}
 		startValue = applyOperation(startValue, operator, expressionVal);
 		return startValue;
@@ -194,7 +194,7 @@ public class ManualTest {
 				startValue /= expressionVal;
 				break;
 			default:
-				throw new ParsingException("No operator " + operator + " known");
+				throw new ParsingException("No operator " + operator + " known","",0,0,0);
 		}
 		return startValue;
 	}

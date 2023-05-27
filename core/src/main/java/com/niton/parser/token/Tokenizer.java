@@ -8,8 +8,6 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.lang.Math.*;
-
 /**
  * The tokenizer is the first step of parsing and devides the string into classified chunks ({@link
  * AssignedToken}s
@@ -99,7 +97,7 @@ public class Tokenizer {
 	 */
 	public List<AssignedToken> tokenize(String content) throws ParsingException {
 		List<AssignedToken> assignedTokens = parseTokens(content);
-		verifyNoOverlap(content, assignedTokens);
+		verifyNoOverlap(assignedTokens);
 		fillGaps(content, assignedTokens);
 		return assignedTokens;
 	}
@@ -125,18 +123,27 @@ public class Tokenizer {
 		return parsed;
 	}
 
-	private void verifyNoOverlap(String content, List<AssignedToken> tokens)
+	private void verifyNoOverlap(List<AssignedToken> tokens)
 			throws ParsingException {
 		int           last      = 0;
 		AssignedToken lastToken = null;
+		var line = 1;
+		var col = 1;
+
 		for (var assignedToken : tokens) {
 			if (assignedToken.start > last) {
 				last = assignedToken.start;
 			} else if (last > assignedToken.start) {
-				throw overlapException(content, last, assignedToken, lastToken);
+				throw overlapException(assignedToken, lastToken,line,col);
 			}
 			last += assignedToken.value.length();
 			lastToken = assignedToken;
+			if(assignedToken.value.contains("\n")) {
+				line++;
+				col = 1;
+			}else{
+				col += assignedToken.value.length();
+			}
 		}
 	}
 
@@ -166,20 +173,16 @@ public class Tokenizer {
 	}
 
 	private ParsingException overlapException(
-			String content,
-			int last,
 			AssignedToken assignedToken,
-			AssignedToken overlapedWith
+			AssignedToken overlapedWith,
+			int line,
+			int col
 	) {
-		return new ParsingException(String.format(
-				"Tokens overlapping: %s overlaps previous Token %s!" +
-						" Last token ended at %d and this token startet at %d (%s)",
+		return new ParsingException("[Tokenizer]", String.format(
+				"Tokens overlapping: %s overlaps previous Token %s!",
 				assignedToken,
-				overlapedWith,
-				last,
-				assignedToken.start,
-				content.substring(max(0, last - 5), min(last + 5, content.length()))
-		));
+				overlapedWith
+		),line,col, overlapedWith.getStart());
 	}
 
 	/**

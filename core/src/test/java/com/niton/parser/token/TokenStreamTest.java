@@ -18,14 +18,14 @@ class TokenStreamTest {
 
 	@Test
 	void nextReturnsCorrect() {
-		var         token  = new AssignedToken();
+		var         token  = new AssignedToken("Some text", "TEXT");
 		TokenStream stream = new ListTokenStream(List.of(token));
 		assertThat(stream.next()).isEqualTo(token);
 	}
 
 	@Test
 	void nextOverflowException1() {
-		var         token  = new AssignedToken();
+		var         token  = new AssignedToken("Some text", "TEXT");
 		TokenStream stream = new ListTokenStream(List.of(token));
 		stream.next();
 
@@ -70,7 +70,7 @@ class TokenStreamTest {
 	@Test
 	void nextAffectsIndex() {
 		var token1 = new AssignedToken("1", "test");
-		var stream = new ListTokenStream(List.of(token1));
+		var stream = new ListTokenStream(List.of(token1,token1));
 		assertThat(stream.index()).isZero();
 		stream.next();
 		assertThat(stream.index()).isEqualTo(1);

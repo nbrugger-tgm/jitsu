@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 
 /**
@@ -24,64 +23,63 @@ import static java.util.stream.Collectors.joining;
  * @version 2019-05-29
  */
 public class AnyOfMatcher extends GrammarMatcher<AnyNode> {
-	private MultiGrammar grammars;
+    private MultiGrammar grammars;
 
-	public AnyOfMatcher(MultiGrammar grammers) {
-		this.grammars = grammers;
-	}
+    public AnyOfMatcher(MultiGrammar grammers) {
+        this.grammars = grammers;
+    }
 
-	/**
-	 * @param tokens
-	 * @param ref
-	 *
-	 * @see GrammarMatcher#process(TokenStream, GrammarReference)
-	 */
-	@Override
-	public @NotNull AnyNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref)
-			throws ParsingException {
-		Map<String, Exception> fails = new HashMap<>();
-		for (var grammar : this.grammars.getGrammars()) {
-			try {
-				AstNode obj     = grammar.parse(tokens, ref);
-				AnyNode wrapper = new AnyNode(obj);
-				wrapper.setParsingException(obj.getParsingException());
-				return wrapper;
-			} catch (ParsingException e) {
-				fails.put(grammar.toString(), e);
-			}
-		}
-		throw new ParsingException(String.format(
-				"Expected one of : [%s] but none of them was parsable due to  (at: %s): %n%s",
-				Arrays.stream(this.grammars.getGrammars()).map(e -> {
-					String n;
-					if ((n = e.getName()) != null) return n;
-					return e.getClass().getSimpleName();
-				}).collect(joining(", ")),
-				tokens.hasNext()?tokens.get(tokens.index()).getStart():"EOF",
-				formatFails(fails)
-		));
-	}
+    /**
+     * @param tokens
+     * @param ref
+     * @see GrammarMatcher#process(TokenStream, GrammarReference)
+     */
+    @Override
+    public @NotNull AnyNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref)
+            throws ParsingException {
+        Map<String, ParsingException> fails = new HashMap<>();
+        for (var grammar : this.grammars.getGrammars()) {
+            try {
+                AstNode obj = grammar.parse(tokens, ref);
+                AnyNode wrapper = new AnyNode(obj);
+                if (obj.getParsingException() != null)
+                    fails.put(grammar.getIdentifier(), obj.getParsingException());
+                if(fails.size() > 0){
+                    wrapper.setParsingException(new ParsingException(getIdentifier(), String.format(
+                            "Expected one of : [%s] and some were not parsable",
+                            Arrays.stream(this.grammars.getGrammars()).map(Grammar::getIdentifier).collect(joining(", "))
+                    ), formatFails(fails)));
+                }
+                return wrapper;
+            } catch (ParsingException e) {
+                fails.put(grammar.getIdentifier(), e);
+            }
+        }
+        throw new ParsingException(getIdentifier(), String.format(
+                "Expected one of : [%s] but none of them was parsable",
+                Arrays.stream(this.grammars.getGrammars()).map(Grammar::getIdentifier).collect(joining(", "))
+        ), formatFails(fails));
+    }
 
-	private String formatFails(Map<String, Exception> fails) {
-		return fails.entrySet()
-		            .stream()
-		            .map(e -> format(
-				            "\t%s --> %s",
-				            e.getKey(),
-				            Arrays.stream(e.getValue().getMessage().split("\n"))
-				                  .map(l -> "\t" + l)
-				                  .collect(joining("\n"))
-		            )).collect(joining("\n"));
-	}
+    private ParsingException[] formatFails(Map<String, ParsingException> fails) {
+        return fails.entrySet().stream().map(e -> {
+            return new ParsingException(getIdentifier(), String.format(
+                    "%s: %s",
+                    e.getKey(),
+                    e.getValue().getMessage()
+            ), e.getValue());
+        }).toArray(ParsingException[]::new);
+    }
 
-	/**
-	 * @return the tokens
-	 */
-	public Grammar<?, ?>[] getGrammars() {
-		return grammars.getGrammars();
-	}
 
-	public void setGrammars(MultiGrammar grammars) {
-		this.grammars = grammars;
-	}
+    /**
+     * @return the tokens
+     */
+    public Grammar<?, ?>[] getGrammars() {
+        return grammars.getGrammars();
+    }
+
+    public void setGrammars(MultiGrammar grammars) {
+        this.grammars = grammars;
+    }
 }
