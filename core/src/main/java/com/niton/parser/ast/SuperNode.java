@@ -68,7 +68,7 @@ public class SuperNode extends AstNode {
 		return subNodes.stream()
 		               .map(node -> node.reduce("no-name"))
 		               .filter(Objects::nonNull)
-		               .filter(not(ReducedNode::isLeaf))
+		               .filter(e -> !e.isLeaf())
 		               .map(ReducedNode::getChildren)
 		               .flatMap(List::stream)
 		               .collect(Collectors.toList());

@@ -5,6 +5,7 @@ import com.niton.parser.token.Tokenizer;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 
@@ -75,6 +76,6 @@ public abstract class AstNode {
 	 *
 	 * @return a reduced form of this node or {@code null} when the node has no content worth interpreting
 	 */
-	public abstract ReducedNode reduce(@NonNull String name);
+	@Nullable public abstract ReducedNode reduce(@NonNull String name);
 }
 

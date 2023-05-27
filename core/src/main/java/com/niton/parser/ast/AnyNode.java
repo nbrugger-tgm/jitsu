@@ -36,10 +36,13 @@ public class AnyNode extends AstNode {
 
 	@Override
 	public ReducedNode reduce(@NonNull String name) {
+		var innerNode = res.reduce("value");
+		if(innerNode == null)
+			return null;
 		if(getType() != null) {
 			return ReducedNode.node(name, List.of(
 					ReducedNode.leaf("type", getType()),
-					res.reduce("value")
+					innerNode
 			));
 		}else{
 			return res.reduce(name);
