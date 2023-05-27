@@ -1,111 +1,31 @@
 package com.niton.parser.token;
 
-import com.niton.parser.exceptions.ParsingException;
-import com.niton.parser.token.Tokenizer.AssignedToken;
-import lombok.Getter;
-import lombok.Setter;
+public interface TokenStream {
+    Tokenizer.AssignedToken next();
 
-import java.util.LinkedList;
-import java.util.List;
+    int index();
 
-/**
- * A Stream of tokens that supports stack based navigation
- */
-public class TokenStream {
-	private final LinkedList<Integer> levelIndexes        = new LinkedList<>();
-	private final List<AssignedToken> tokens;
-	@Getter
-	@Setter
-	private int recursionLevelLimit = 500;
+    void elevate();
 
-	public TokenStream(List<AssignedToken> tokens) {
-		this.tokens = tokens;
-		levelIndexes.push(0);
-	}
+    void commit();
 
-	/**
-	 * Returns the current marked assigned token and jumps one further
-	 */
-	public AssignedToken next() {
-		try {
-			var tkn = tokens.get(index());
-			increase();
-			return tkn;
-		} catch (IndexOutOfBoundsException e) {
-			throw new IndexOutOfBoundsException("No more tokens available");
-		}
-	}
+    void rollback();
 
-	/**
-	 * @return the index of the token you are at
-	 */
-	public int index() {
-		return levelIndexes.get(0);
-	}
+    int level();
 
-	/**
-	 * Marks the next token as consumed, <b>does not check, if there are more tokens</b>
-	 */
-	protected final void increase() {
-		levelIndexes.set(0, index() + 1);
-	}
+    int size();
 
-	/**
-	 * Create a new stack frame. The index is set to the current index
-	 */
-	public void elevate() {
-		levelIndexes.push(index());
-		if (levelIndexes.size() >= recursionLevelLimit) {
-			throw new IllegalStateException("Max Recursions reached (" + recursionLevelLimit + ") ["+index()+"]");
-		}
-	}
+    String getPreviousTokens(int count);
 
-	/**
-	 * Removes the current stack frame and applies the index to  the previous stack frame
-	 */
-	public void commit() {
-		int val = levelIndexes.pop();
-		index(val);
-	}
+    boolean hasNext();
 
+    /**
+     * @param startIndex inclusive will also be the starting index of the new stream
+     * @param endIndex  exclusive
+     * @return a new TokenStream with the given range. The new stream will be independent from the old one.
+     */
+    TokenStream subStream(int startIndex, int endIndex);
 
-	public void index(int index) {
-		levelIndexes.set(0, index);
-	}
-
-	/**
-	 * removes the current stack frame and rolls the index back to the previous stack frame
-	 */
-	public void rollback() {
-		levelIndexes.pop();
-	}
-
-	public AssignedToken get(int index) {
-		return tokens.get(index);
-	}
-
-	public int level() {
-		return levelIndexes.size()-1;
-	}
-
-	public int size() {
-		return tokens.size();
-	}
-
-	public String getPreviousTokens(int count) {
-		StringBuilder builder = new StringBuilder();
-		for (int i = 0; i < count; i++) {
-			builder.append(tokens.get(index()-i).getValue());
-		}
-		return builder.toString();
-	}
-
-	@Override
-	public String toString() {
-		return levelIndexes.toString();
-	}
-
-	public boolean hasNext() {
-		return index() < size();
-	}
+    int getLine();
+    int getColumn();
 }

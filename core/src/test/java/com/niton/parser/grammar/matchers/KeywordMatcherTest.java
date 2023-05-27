@@ -5,7 +5,7 @@ import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.GrammarReferenceMap;
 import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.token.DefaultToken;
-import com.niton.parser.token.TokenStream;
+import com.niton.parser.token.ListTokenStream;
 import com.niton.parser.token.Tokenizer;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -46,8 +46,8 @@ class KeywordMatcherTest extends AbstractMatcherTest {
         var tokenizer = new Tokenizer();
         var matcher = new KeywordMatcher("while");
         Assertions.assertThatThrownBy(
-                () -> matcher.process(new TokenStream(tokenizer.tokenize("if(true)")), new GrammarReferenceMap())
-        ).hasMessageContaining("while", "if");
+                () -> matcher.process(new ListTokenStream(tokenizer.tokenize("if(true)")), new GrammarReferenceMap())
+        ).hasMessageContaining("while").hasMessageContaining("if");
     }
 
     @Test
@@ -55,7 +55,7 @@ class KeywordMatcherTest extends AbstractMatcherTest {
         var tokenizer = new Tokenizer();
         var matcher = new KeywordMatcher("while_true");
         Assertions.assertThatThrownBy(
-                () -> matcher.process(new TokenStream(tokenizer.tokenize("while(true)")), new GrammarReferenceMap())
+                () -> matcher.process(new ListTokenStream(tokenizer.tokenize("while(true)")), new GrammarReferenceMap())
         ).hasMessageContaining("while_true", "while(");
     }
 
@@ -64,7 +64,7 @@ class KeywordMatcherTest extends AbstractMatcherTest {
         var tokenizer = new Tokenizer();
         var matcher = new KeywordMatcher("while_true");
         Assertions.assertThatThrownBy(
-                () -> matcher.process(new TokenStream(tokenizer.tokenize("if(true)")), new GrammarReferenceMap())
+                () -> matcher.process(new ListTokenStream(tokenizer.tokenize("if(true)")), new GrammarReferenceMap())
         ).hasMessageContaining("while_true", "if");
     }
 }

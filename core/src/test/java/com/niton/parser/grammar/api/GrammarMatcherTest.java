@@ -3,6 +3,7 @@ package com.niton.parser.grammar.api;
 import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.IgnoredNode;
 import com.niton.parser.exceptions.ParsingException;
+import com.niton.parser.token.ListTokenStream;
 import com.niton.parser.token.TokenStream;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +35,7 @@ class GrammarMatcherTest {
 	@Test
 	void parseElevatesStack() throws ParsingException {
 		var ref = mock(GrammarReference.class);
-		var tokens = spy(new TokenStream(List.of()));
+		var tokens = spy(new ListTokenStream(List.of()));
 
 		matcher.parse(tokens, ref);
 
@@ -44,7 +45,7 @@ class GrammarMatcherTest {
 	@Test
 	void parseCommitsStack() throws ParsingException {
 		var ref = mock(GrammarReference.class);
-		var tokens = spy(new TokenStream(List.of()));
+		var tokens = spy(new ListTokenStream(List.of()));
 
 		matcher.parse(tokens, ref);
 
@@ -54,7 +55,7 @@ class GrammarMatcherTest {
 	@Test
 	void parseNamesResult() throws ParsingException {
 		var ref = mock(GrammarReference.class);
-		var tokens = spy(new TokenStream(List.of()));
+		var tokens = spy(new ListTokenStream(List.of()));
 
 		var result = matcher.parse(tokens, ref);
 
@@ -69,11 +70,11 @@ class GrammarMatcherTest {
 			protected AstNode process(
 					@NotNull TokenStream tokens, @NotNull GrammarReference reference
 			) throws ParsingException {
-				throw new ParsingException("test");
+				throw new ParsingException("test","",tokens);
 			}
 		};
 		var ref = mock(GrammarReference.class);
-		var tokens = spy(new TokenStream(List.of()));
+		var tokens = spy(new ListTokenStream(List.of()));
 
 		assertThatCode(()->matcher.parse(tokens, ref)).isInstanceOf(ParsingException.class);
 		verify(tokens).rollback();
@@ -82,7 +83,7 @@ class GrammarMatcherTest {
 	@Test
 	void onElevateFail(){
 		var ref = mock(GrammarReference.class);
-		var tokens = spy(new TokenStream(List.of()));
+		var tokens = spy(new ListTokenStream(List.of()));
 		doThrow(new IllegalStateException("test")).when(tokens).elevate();
 		assertThatCode(()->matcher.parse(tokens, ref))
 				.isInstanceOf(ParsingException.class)
@@ -92,7 +93,7 @@ class GrammarMatcherTest {
 	@Test
 	void remainOnRoot(){
 		var ref = mock(GrammarReference.class);
-		var tokens = spy(new TokenStream(List.of()));
+		var tokens = spy(new ListTokenStream(List.of()));
 		when(tokens.level()).thenReturn(0);
 		when(tokens.size()).thenReturn(10);
 		when(tokens.index()).thenReturn(5);
@@ -103,7 +104,7 @@ class GrammarMatcherTest {
 	@Test
 	void remainOnNonRoot(){
 		var ref = mock(GrammarReference.class);
-		var tokens = spy(new TokenStream(List.of()));
+		var tokens = spy(new ListTokenStream(List.of()));
 		when(tokens.level()).thenReturn(0);
 		when(tokens.size()).thenReturn(10);
 		when(tokens.index()).thenReturn(10);

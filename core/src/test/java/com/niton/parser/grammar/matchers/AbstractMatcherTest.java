@@ -4,6 +4,7 @@ import com.niton.parser.ast.AstNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.GrammarMatcher;
 import com.niton.parser.grammar.api.GrammarReference;
+import com.niton.parser.token.ListTokenStream;
 import com.niton.parser.token.TokenStream;
 import com.niton.parser.token.Tokenizer;
 import lombok.AllArgsConstructor;
@@ -40,8 +41,8 @@ abstract class AbstractMatcherTest {
 		return getTestCases().map(testCase -> DynamicTest.dynamicTest(
 				"Test: " + testCase.inputTokens.stream().map(Tokenizer.AssignedToken::getValue).collect(Collectors.joining()),
 				() -> {
-					TokenStream tokenStream = new TokenStream(testCase.inputTokens);
-					tokenStream.index(testCase.parseFrom);
+					TokenStream tokenStream = new ListTokenStream(testCase.inputTokens);
+					for (int i = 0; i < testCase.parseFrom; i++) tokenStream.next();
 					tokenStream.elevate();//To prevent "unprocessed tokens" error
 					if (testCase.expectedResult == null) {
 						assertThatCode(() -> testCase.matcher.parse(tokenStream, ref))
