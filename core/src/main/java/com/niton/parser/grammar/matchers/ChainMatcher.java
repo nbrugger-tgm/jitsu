@@ -1,5 +1,6 @@
 package com.niton.parser.grammar.matchers;
 
+import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.SequenceNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.GrammarMatcher;
@@ -45,8 +46,7 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
     public @NotNull SequenceNode process(
             @NotNull TokenStream tokens,
             @NotNull GrammarReference reference
-    )
-            throws ParsingException {
+    ) throws ParsingException {
         SequenceNode gObject = new SequenceNode();
         List<ParsingException> exitStates = new ArrayList<>(chain.getChain().size());
         int i = 0;
@@ -54,7 +54,7 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
             try {
                 var res = grammar.parse(tokens, reference);
                 String name;
-                if ((name = chain.getNaming().get(i++)) != null) {
+                if ((name = chain.getNaming().get(i)) != null) {
                     gObject.name(name, res);
                 } else {
                     gObject.add(res);
@@ -64,18 +64,24 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
 //                else
 //                    exitStates.add(new ParsingException(getIdentifier(), format("Chain element '%s' parsed successfully", name != null ? name : grammar.getIdentifier()), tokens));
             } catch (ParsingException e) {
+                var elementName =  chain.getNaming().get(i);
                 var crashingException = new ParsingException(
                         getIdentifier(),
-                        format("Chain entry '%s' can't be parsed!", grammar),
+                        format("Chain entry '%s' can't be parsed!",elementName != null ? elementName : grammar),
                         e
                 );
                 exitStates.add(crashingException);
                 throw new ParsingException(getIdentifier(), "Chain could not be parsed!", exitStates.toArray(ParsingException[]::new));
+            }finally {
+                i++;
             }
             if (exitStates.size() > 0)
                 gObject.setParsingException(new ParsingException(getIdentifier(), format(
                         "Chain parsed successful with allowed exceptions"
                 ), exitStates.toArray(ParsingException[]::new)));
+        }
+        if(gObject.subNodes.size() == 0) {
+            gObject.setExplicitLocation(AstNode.Location.oneChar(tokens.getLine(), tokens.getColumn()));
         }
         return gObject;
     }

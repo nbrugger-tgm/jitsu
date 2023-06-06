@@ -6,7 +6,7 @@ import java.util.Optional;
 
 public class IgnoredNode extends OptionalNode{
     @Override
-    public Optional<ReducedNode> reduce(@NonNull String name) {
+    public Optional<LocatableReducedNode> reduce(@NonNull String name) {
         return Optional.empty();
     }
 }

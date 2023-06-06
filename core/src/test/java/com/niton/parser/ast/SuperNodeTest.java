@@ -9,29 +9,29 @@ class SuperNodeTest extends AstNodeTest<SequenceNode> {
 
 	@Override
 	Stream<AstNodeTest<SequenceNode>.AstNodeProbe> getProbes(String reduceName) {
-		var empty       = new SequenceNode();
-		var onlyUnnamed = new SequenceNode();
+		var empty       = new SequenceNode(explicitLocation);
+		var onlyUnnamed = new SequenceNode(explicitLocation);
 		onlyUnnamed.add(AstNodeMocker.getTokenNode("numbas", "NAME", "123"));
 		onlyUnnamed.add(AstNodeMocker.getMockNode("ignored", null, ""));
 		onlyUnnamed.add(AstNodeMocker.getTokenNode("numbas", "NAME", "456"));
-		var onlyEmpty = new SequenceNode();
+		var onlyEmpty = new SequenceNode(explicitLocation);
 		onlyEmpty.add(AstNodeMocker.getMockNode("ignored", null, ""));
 		onlyEmpty.add(AstNodeMocker.getMockNode("ignored2", null, ""));
-		var nested = new SequenceNode();
+		var nested = new SequenceNode(explicitLocation);
 		nested.add(AstNodeMocker.getMockNode("ignored", null, ""));
 		nested.add(AstNodeMocker.getListNode(
 				"ignored2",
 				AstNodeMocker.getTokenNode("gram1", "tok1", "abc"),
 				AstNodeMocker.getTokenNode("gram1", "tok1", "def")
 		));
-		var nestedNamed = new SequenceNode();
+		var nestedNamed = new SequenceNode(explicitLocation);
 		nestedNamed.name("ignored", AstNodeMocker.getTokenNode("ignored", "yeet", "yeet"));
 		nestedNamed.add(AstNodeMocker.getListNode(
 				"ignored2",
 				AstNodeMocker.getTokenNode("gram1", "tok1", "abc"),
 				AstNodeMocker.getTokenNode("gram1", "tok1", "def")
 		));
-		var normal = new SequenceNode();
+		var normal = new SequenceNode(explicitLocation);
 		normal.name("ignored", AstNodeMocker.getTokenNode("ignored", "yeet", "yeet2"));
 		normal.name("list", AstNodeMocker.getListNode(
 				"ignored2",

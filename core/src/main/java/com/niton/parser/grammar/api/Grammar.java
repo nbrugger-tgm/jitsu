@@ -8,6 +8,7 @@ import com.niton.parser.grammar.types.*;
 import com.niton.parser.token.TokenReference;
 import com.niton.parser.token.TokenStream;
 import com.niton.parser.token.Tokenable;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -105,7 +106,7 @@ public abstract class Grammar<R extends AstNode> {
         ref.map(this);
     }
 
-    public boolean parsable(@NonNull TokenStream tokens, @NonNull GrammarReference ref) {
+    public ParsingProbe parsable(@NonNull TokenStream tokens, @NonNull GrammarReference ref) {
         try {
             tokens.elevate();
         } catch (Exception e) {
@@ -115,13 +116,19 @@ public abstract class Grammar<R extends AstNode> {
             GrammarMatcher<R> matcher = createExecutor();
             matcher.setOriginGrammarName(getName());
             matcher.setIdentifier(getIdentifier());
-            matcher.parse(tokens, ref);
-            return true;
+            var result = matcher.parse(tokens, ref);
+            return new ParsingProbe(true, result.getParsingException());
         } catch (ParsingException pex) {
-            return false;
+            return new ParsingProbe(false, pex);
         } finally {
             tokens.rollback();
         }
+    }
+
+    @Data
+    public static class ParsingProbe{
+        private final boolean parsable;
+        private final ParsingException exception;
     }
 
     /**

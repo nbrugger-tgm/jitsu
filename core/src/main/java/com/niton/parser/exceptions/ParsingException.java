@@ -6,8 +6,8 @@ import lombok.Getter;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * An exception that happens during parsing
@@ -52,7 +52,7 @@ public class ParsingException extends Exception {
     public ParsingException(String grammarName, String message, ParsingException[] lastExceptions) {
         super(message);
         this.grammarName = grammarName;
-        var lastException = getMostProminentException(lastExceptions);
+        var lastException = Arrays.stream(lastExceptions).max(Comparator.comparingInt(ParsingException::getIndex)).orElseThrow();
         this.line = lastException.line;
         this.column = lastException.column;
         this.index = lastException.index;
@@ -68,29 +68,12 @@ public class ParsingException extends Exception {
         causes = List.of();
     }
 
-    private ParsingException getMostProminentException(ParsingException[] lastExceptions) {
-        return Arrays.stream(lastExceptions)
-                .filter(Objects::nonNull)
-                .max(Comparator.comparingInt(ParsingException::getIndex))
-                .orElseThrow(() -> new IllegalArgumentException("No exceptions given"));
-    }
-
-    public ParsingException getMostProminentException() {
-        if (causes.size() == 0)
-            return this;
-        return getMostProminentException(causes.toArray(new ParsingException[0]));
-    }
-
-    public ParsingException getMostProminentDeepException() {
-        var mostProminent = getMostProminentException();
-        if (mostProminent.getCauses().size() == 0)
-            return mostProminent;
-        return mostProminent.getMostProminentDeepException();
-    }
-
     @Override
     public String getMessage() {
-        return super.getMessage()+" ["+grammarName+":"+line+":"+column+"]";
+        return super.getMessage() + " [" + grammarName + ":" + line + ":" + column + "]";
+    }
+    public String getRawMessage(){
+        return super.getMessage();
     }
 
     public String getFullExceptionTree() {
@@ -98,8 +81,23 @@ public class ParsingException extends Exception {
             return getMessage();
         return getMessage() + ":\n" + causes.stream().map(ParsingException::getFullExceptionTree)
                 .map(bloc -> {
-            return bloc.replace("\n", "\n\t");
-        }).collect(Collectors.joining("\n"));
+                    return bloc.replace("\n", "\n\t");
+                }).collect(Collectors.joining("\n"));
+    }
+
+    private Stream<ParsingException> getMostProminentDeepExceptionStream() {
+        if (causes.size() == 0)
+            return Stream.of(this);
+        return causes.stream().flatMap(ParsingException::getMostProminentDeepExceptionStream).filter(e -> e.index == this.index);
+    }
+
+    public ParsingException getMostProminentDeepException() {
+        ParsingException[] deepCauses = getMostProminentDeepExceptionStream().toArray(ParsingException[]::new);
+        return new ParsingException(grammarName, getMessage() + ":\n\t" + Arrays.stream(deepCauses)
+                .map(ParsingException::getMessage)
+                .distinct()
+                .collect(Collectors.joining(" or,\n\t"))
+                , deepCauses);
     }
 }
 

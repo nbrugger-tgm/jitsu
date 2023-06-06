@@ -1,5 +1,6 @@
 package com.niton.parser.grammar.matchers;
 
+import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.TokenNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.GrammarMatcher;
@@ -42,9 +43,13 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
                     tokens
             );
         }
+        int startLine = tokens.getLine();
+        int startColumn = tokens.getColumn();
+        int startIndex = tokens.index();
         AssignedToken token = tokens.next();
         if (token.getName().equals(tokenName.getTokenName())) {
-            TokenNode obj = new TokenNode();
+            AstNode.Location location = AstNode.Location.of(startLine, startColumn, tokens.getLine(), tokens.getColumn());
+            TokenNode obj = new TokenNode(location);
             obj.tokens.add(token);
             return obj;
         }
@@ -52,7 +57,7 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
                 "expected \"%s\" but got  \"%s\"",
                 tokenName.getTokenName(),
                 token.getName()
-        ),tokens);
+        ),startLine,startColumn,startIndex);
     }
 
     /**

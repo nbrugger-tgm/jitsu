@@ -5,7 +5,6 @@ import lombok.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -16,9 +15,15 @@ import java.util.stream.Stream;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @AllArgsConstructor
-@NoArgsConstructor
+@RequiredArgsConstructor
 public class TokenNode extends AstNode {
 	public List<AssignedToken> tokens = new ArrayList<>();
+	private final Location loc;
+
+	@Override
+	public Location getLocation() {
+		return loc;
+	}
 
 	/**
 	 * Joins the values of the tokens together eventualy reproducing the source 1:1
@@ -51,7 +56,7 @@ public class TokenNode extends AstNode {
 	}
 
 	@Override
-	public Optional<ReducedNode> reduce(@NotNull String name) {
-		return Optional.of(ReducedNode.leaf(name, joinTokens()));
+	public Optional<LocatableReducedNode> reduce(@NotNull String name) {
+		return Optional.of(LocatableReducedNode.leaf(name, joinTokens(),getLocation()));
 	}
 }

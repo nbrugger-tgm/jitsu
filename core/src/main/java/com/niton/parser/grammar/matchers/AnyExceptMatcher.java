@@ -1,5 +1,6 @@
 package com.niton.parser.grammar.matchers;
 
+import com.niton.parser.ast.AstNode;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarMatcher;
 import com.niton.parser.grammar.api.GrammarReference;
@@ -10,6 +11,9 @@ import com.niton.parser.token.Tokenizer.AssignedToken;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * This grammar accepts any token except the one given in the Constructor<br>
@@ -36,12 +40,16 @@ public class AnyExceptMatcher extends GrammarMatcher<TokenNode> {
 	@Override
 	public @NotNull TokenNode process(@NotNull TokenStream tokens, @NotNull GrammarReference reference)
 	throws ParsingException {
-		TokenNode obj = new TokenNode();
-		while (!dunnoaccept.parsable(tokens, reference) && tokens.hasNext()) {
+		List<AssignedToken> matchedTokens = new LinkedList<>();
+		int startLine = tokens.getLine();
+		int startColumn = tokens.getColumn();
+		while (!dunnoaccept.parsable(tokens, reference).isParsable() && tokens.hasNext()) {
 			AssignedToken token = tokens.next();
-			obj.tokens.add(token);
+			matchedTokens.add(token);
 		}
-		return obj;
+		int endLine = tokens.getLine();
+		int endColumn = tokens.getColumn();
+		return new TokenNode(matchedTokens, AstNode.Location.of(startLine, startColumn, endLine, endColumn));
 	}
 
 }

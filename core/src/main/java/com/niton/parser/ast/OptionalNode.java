@@ -1,14 +1,10 @@
 package com.niton.parser.ast;
 
 import com.niton.parser.token.Tokenizer;
-import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.LinkedList;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -43,12 +39,37 @@ public class OptionalNode extends AstNode {
     }
 
     @Override
+    public Location getLocation() {
+        return new Location() {
+            @Override
+            public int getFromLine() {
+                return value == null ? 0 : value.getLocation().getFromLine();
+            }
+
+            @Override
+            public int getFromColumn() {
+                return value == null ? 0 : value.getLocation().getFromColumn();
+            }
+
+            @Override
+            public int getToLine() {
+                return value == null ? 0 : value.getLocation().getToLine();
+            }
+
+            @Override
+            public int getToColumn() {
+                return value == null ? 0 : value.getLocation().getToColumn();
+            }
+        };
+    }
+
+    @Override
     public Stream<Tokenizer.AssignedToken> join() {
         return Optional.ofNullable(value).stream().flatMap(AstNode::join);
     }
 
     @Override
-    public Optional<ReducedNode> reduce(@NonNull String name) {
+    public Optional<LocatableReducedNode> reduce(@NonNull String name) {
         if(value != null)
             return value.reduce(name);
         else

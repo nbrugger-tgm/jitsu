@@ -1,10 +1,9 @@
 package com.niton.parser.ast;
 
 import com.niton.parser.token.Tokenizer.AssignedToken;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
+import lombok.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -17,7 +16,7 @@ import java.util.stream.Stream;
  * <p>
  * When a node is named, it indicates the importance of interpretation and identification when processing the AST.
  */
-@NoArgsConstructor
+@RequiredArgsConstructor
 @AllArgsConstructor
 public class SequenceNode extends AstNode {
     /**
@@ -28,6 +27,12 @@ public class SequenceNode extends AstNode {
      * The names of the sub nodes. Where the value is the index of the sub node in the list.
      */
     public Map<String, Integer> naming = new LinkedHashMap<>();
+    /**
+     * The location of the node in the source code. Only required if the node has no sub nodes.
+     */
+    @Setter
+    private @Nullable Location explicitLocation;
+
 
     /**
      * Appends a node to the end of the sub-node list and names it.
@@ -50,34 +55,61 @@ public class SequenceNode extends AstNode {
         return subNodes.add(node);
     }
 
+    @Override
+    public Location getLocation() {
+        if (explicitLocation != null)
+            return explicitLocation;
+        return new Location() {
+            @Override
+            public int getFromLine() {
+                return subNodes.get(0).getLocation().getFromLine();
+            }
+
+            @Override
+            public int getFromColumn() {
+                return subNodes.get(0).getLocation().getFromColumn();
+            }
+
+            @Override
+            public int getToLine() {
+                return subNodes.get(subNodes.size() - 1).getLocation().getToLine();
+            }
+
+            @Override
+            public int getToColumn() {
+                return subNodes.get(subNodes.size() - 1).getLocation().getToColumn();
+            }
+        };
+    }
+
     public Stream<AssignedToken> join() {
         return subNodes.stream()
                 .flatMap(AstNode::join);
     }
 
     @Override
-    public Optional<ReducedNode> reduce(@NonNull String name) {
+    public Optional<LocatableReducedNode> reduce(@NonNull String name) {
         if(subNodes.size() == 0)
-            return Optional.of(ReducedNode.node(name, List.of()));
+            return Optional.of(LocatableReducedNode.node(name, List.of(), getLocation()));
         //When the children do not have a name, get children of the children to remove this layer of nesting,
         //since it holds no useful information (more than its children do)
         var namedSubnodes = !naming.isEmpty() ? getNamedProperties() : getDeepProperties();
         //when there are neither named nor deep (named) properties, create a leaf node
         if (namedSubnodes.isEmpty() && naming.size() == 0) {
-            namedSubnodes = List.of(ReducedNode.leaf("value", joinTokens()));
+            namedSubnodes = List.of(LocatableReducedNode.leaf("value", joinTokens(), getLocation()));
         }
-        return Optional.of(ReducedNode.node(name, namedSubnodes));
+        return Optional.of(LocatableReducedNode.node(name, namedSubnodes,getLocation()));
     }
 
     /**
      * @return a list that contains all named children of the (direct) children from this node
      */
     @NotNull
-    private List<ReducedNode> getDeepProperties() {
+    private List<LocatableReducedNode> getDeepProperties() {
         return subNodes.stream()
                 .flatMap(node -> node.reduce("no-name").stream())
                 .filter(e -> !e.isLeaf())
-                .map(ReducedNode::getChildren)
+                .map(LocatableReducedNode::getChildren)
                 .flatMap(List::stream)
                 .collect(Collectors.toList());
     }
@@ -86,7 +118,7 @@ public class SequenceNode extends AstNode {
      * @return a list that contains all named children
      */
     @NotNull
-    private List<ReducedNode> getNamedProperties() {
+    private List<LocatableReducedNode> getNamedProperties() {
         return naming.keySet().stream()
                 .flatMap(key -> this.getNode(key).reduce(key).stream())
                 .collect(Collectors.toList());

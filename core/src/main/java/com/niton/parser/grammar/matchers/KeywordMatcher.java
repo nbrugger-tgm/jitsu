@@ -1,5 +1,6 @@
 package com.niton.parser.grammar.matchers;
 
+import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.TokenNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.GrammarMatcher;
@@ -24,6 +25,8 @@ public class KeywordMatcher extends GrammarMatcher<TokenNode> {
     protected @NotNull TokenNode process(@NotNull TokenStream tokens, @NotNull GrammarReference reference) throws ParsingException {
         List<Tokenizer.AssignedToken> collected = new LinkedList<>();
         StringBuilder collectedKeyword = new StringBuilder();
+        int startLine = tokens.getLine();
+        int startColumn = tokens.getColumn();
         while (keyword.startsWith(collectedKeyword.toString())) {
             if (tokens.hasNext()) {
                 var tkn = tokens.next();
@@ -33,7 +36,8 @@ public class KeywordMatcher extends GrammarMatcher<TokenNode> {
                 throw new ParsingException(getIdentifier(), format("Expected keyword '%s', got EOF", keyword), tokens);
             }
             if (collectedKeyword.toString().equals(keyword)) {
-                return new TokenNode(collected);
+                AstNode.Location location = AstNode.Location.of(startLine, startColumn, tokens.getLine(), tokens.getColumn());
+                return new TokenNode(collected, location);
             }
         }
         throw new ParsingException(getIdentifier(), format("Expected keyword '%s', got '%s'", keyword, collectedKeyword), tokens);

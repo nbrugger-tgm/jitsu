@@ -2,10 +2,12 @@ package com.niton.parser.ast;
 
 import lombok.Data;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 
@@ -22,16 +24,21 @@ public class ReducedNode {
     private final String name;
     private ReducedNode parent;
 
-    private ReducedNode(
-            List<ReducedNode> children,
-            @Nullable String value,
-            boolean isLeaf,
-            String name
+    protected ReducedNode(
+            String name, List<ReducedNode> children
     ) {
         children.forEach(n -> n.setParent(this));
         this.children = children;
+        this.value = null;
+        this.isLeaf = false;
+        this.name = name;
+    }
+    protected ReducedNode(
+            String name, @Nullable String value
+    ) {
+        this.children = List.of();
         this.value = value;
-        this.isLeaf = isLeaf;
+        this.isLeaf = true;
         this.name = name;
     }
 
@@ -43,7 +50,7 @@ public class ReducedNode {
      * @return the leaf node
      */
     public static ReducedNode leaf(String name, String value) {
-        return new ReducedNode(List.of(), value, true, name);
+        return new ReducedNode(name, value);
     }
 
     /**
@@ -54,7 +61,7 @@ public class ReducedNode {
      * @return a node with children
      */
     public static ReducedNode node(String name, List<ReducedNode> children) {
-        return new ReducedNode(children, null, false, name);
+        return new ReducedNode(name, children);
     }
 
     private void setParent(ReducedNode parent) {
@@ -68,7 +75,7 @@ public class ReducedNode {
      * @return the node when a node with the regarding name exists, empty otherwise
      * @throws UnsupportedOperationException when using on a leaf
      */
-    public Optional<ReducedNode> getSubNode(String name) {
+    public Optional<? extends ReducedNode> getSubNode(String name) {
         verifyNode();
         return children.stream().filter(n -> n.name.equals(name)).findFirst();
     }
@@ -102,7 +109,7 @@ public class ReducedNode {
      * @return the list of sub-nodes
      * @throws UnsupportedOperationException when using on a leaf
      */
-    public List<ReducedNode> getChildren() {
+    public @Unmodifiable List<? extends ReducedNode> getChildren() {
         verifyNode();
         return children;
     }
@@ -113,7 +120,7 @@ public class ReducedNode {
      * @return the names of this nodes sub-nodes
      * @throws UnsupportedOperationException when using on a leaf
      */
-    public List<String> getChildNames() {
+    public @Unmodifiable List<String> getChildNames() {
         verifyNode();
         return children.stream().map(n -> n.name).collect(toList());
     }
@@ -206,5 +213,12 @@ public class ReducedNode {
     @Override
     public int hashCode() {
         return 17 * (isLeaf ? 5 : 13) * name.hashCode() * Objects.hashCode(children) * Objects.hashCode(value);
+    }
+
+    public String join() {
+        if(isLeaf()) {
+            return value;
+        }
+        return children.stream().map(ReducedNode::join).collect(Collectors.joining());
     }
 }

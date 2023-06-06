@@ -18,6 +18,11 @@ public class SwitchNode extends AstNode {
         this.result = res;
     }
 
+    @Override
+    public Location getLocation() {
+        return result.getLocation();
+    }
+
     /**
      * @return the type which shows which grammar of the options was matched. Can be used to determine how to interpret the {@link #getResult()}.
      */
@@ -31,13 +36,13 @@ public class SwitchNode extends AstNode {
     }
 
     @Override
-    public Optional<ReducedNode> reduce(@NonNull String name) {
+    public Optional<LocatableReducedNode> reduce(@NonNull String name) {
         if (getType() != null) {
             var innerNode = result.reduce("value");
-            return innerNode.map(node -> ReducedNode.node(name, List.of(
-                    ReducedNode.leaf("type", getType()),
+            return innerNode.map(node -> LocatableReducedNode.node(name, List.of(
+                    LocatableReducedNode.leaf("type", getType(), node.getLocation()),
                     node
-            )));
+            ), node.getLocation()));
         } else {
             return result.reduce(name);
         }
