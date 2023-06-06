@@ -1,6 +1,7 @@
 package com.niton.parser.grammar.types;
 
 import com.niton.parser.grammar.api.Grammar;
+import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.matchers.OptionalMatcher;
 import com.niton.parser.ast.OptionalNode;
 import lombok.Getter;
@@ -15,10 +16,10 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class OptionalGrammar extends Grammar<OptionalMatcher, OptionalNode> {
-	private Grammar<?,?> check;
+public class OptionalGrammar extends Grammar<OptionalNode> implements GrammarReference.Single {
+	private Grammar<?> check;
 
-	public OptionalGrammar(Grammar<?,?> grammarReferenceGrammar) {
+	public OptionalGrammar(Grammar<?> grammarReferenceGrammar) {
 		check = grammarReferenceGrammar;
 	}
 
@@ -31,4 +32,8 @@ public class OptionalGrammar extends Grammar<OptionalMatcher, OptionalNode> {
 		return new OptionalMatcher(check);
 	}
 
+	@Override
+	public Grammar<?> getGrammar() {
+		return check;
+	}
 }

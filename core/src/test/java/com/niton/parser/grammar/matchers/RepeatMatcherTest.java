@@ -2,7 +2,7 @@ package com.niton.parser.grammar.matchers;
 
 import com.niton.parser.ast.TokenNode;
 import com.niton.parser.exceptions.ParsingException;
-import com.niton.parser.grammar.GrammarReferenceMap;
+import com.niton.parser.grammar.api.GrammarReferenceMap;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.token.ListTokenStream;
 import com.niton.parser.token.TokenStream;
@@ -22,7 +22,7 @@ class RepeatMatcherTest {
 		var matcher    = new RepeatMatcher(subGrammar);
 		when(subGrammar.parse(any(), any())).thenThrow(new ParsingException("","",0,0,0));
 		var result = matcher.parse(new ListTokenStream(List.of()), new GrammarReferenceMap());
-		assertEquals(0, result.getList().size());
+		assertEquals(0, result.subNodes.size());
 	}
 
 	@Test
@@ -38,9 +38,11 @@ class RepeatMatcherTest {
 				.thenReturn(tokenResult, tokenResult2)
 				.thenThrow(new ParsingException("","", 0, 0, 0));
 		var result = matcher.parse(streamMock, new GrammarReferenceMap());
-		System.out.println(result);
-		assertEquals(2, result.getList().size());
-		assertThat(result.getList())
+		assertEquals(2, result.subNodes.size());
+		assertThat(result.subNodes)
 				.containsExactly(tokenResult, tokenResult2);
+		assertThat(result.naming)
+				.as("indexes should be used as names")
+				.containsKeys("0", "1");
 	}
 }

@@ -2,19 +2,16 @@ package com.niton.parsers.grammar.test;
 
 import com.niton.parser.DefaultParser;
 import com.niton.parser.exceptions.ParsingException;
-import com.niton.parser.grammar.GrammarReferenceMap;
+import com.niton.parser.grammar.api.GrammarReferenceMap;
+import com.niton.parser.grammar.matchers.ReferenceGrammarMatcher;
 import com.niton.parser.token.Tokenable;
 import com.niton.parser.token.Tokenizer;
-import com.niton.parsers.grammar.GrammarFileContent;
 import com.niton.parsers.grammar.GrammarFileGrammar;
 import com.niton.parsers.grammar.GrammarFileParser;
 import com.niton.parsers.grammar.GrammarFileTokens;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -170,6 +167,7 @@ class GrammarFileParserTest {
 
 	public static void main(String[] args) throws ParsingException {
 		DefaultParser p = new DefaultParser(
+				new GrammarReferenceMap().deepMap(GrammarFileGrammar.GRAMMAR_FILE_GRAMMAR),
 				GrammarFileGrammar.GRAMMAR_FILE_GRAMMAR
 		);
 		p.setTokenizer(new Tokenizer(GrammarFileTokens.values()));
@@ -191,7 +189,7 @@ class GrammarFileParserTest {
 						"    #EQUAL\n" +
 						"    String > value\n" +
 						"    #SEMICOLON\n"
-		).reduce("GRAMMAR_FILE").format());
+		).reduce("GRAMMAR_FILE").get().format());
 	}
 }
 

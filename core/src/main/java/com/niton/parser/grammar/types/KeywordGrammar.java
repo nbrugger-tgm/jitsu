@@ -6,7 +6,7 @@ import com.niton.parser.grammar.matchers.KeywordMatcher;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
-public class KeywordGrammar extends Grammar<KeywordMatcher, TokenNode> {
+public class KeywordGrammar extends Grammar<TokenNode> {
     private final String keyword;
     @Override
     protected KeywordMatcher createExecutor() {

@@ -1,27 +1,25 @@
 package com.niton.parser.ast;
 
 import com.niton.parser.token.Tokenizer.AssignedToken;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.niton.parser.ast.AstNodeMocker.*;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class AnyNodeTest extends AstNodeTest<AstNode> {
 
 	@Test
 	void join() {
 		var subNode = mock(AstNode.class);
-		var node    = new AnyNode(subNode);
+		var node    = new SwitchNode(subNode);
 
-		var subNodeToken = Set.of(new AssignedToken("a", "b"));
+		var subNodeToken = Stream.of(new AssignedToken("a", "b"));
 		when(subNode.join()).thenReturn(subNodeToken);
 		var joined = node.join();
 
@@ -32,10 +30,10 @@ class AnyNodeTest extends AstNodeTest<AstNode> {
 	void reduceWithTypeLeaf() {
 		var subNode = mock(AstNode.class);
 		when(subNode.getOriginGrammarName()).thenReturn("grammar-a");
-		when(subNode.reduce("value")).thenReturn(ReducedNode.leaf("value", "leaf val"));
-		var node = new AnyNode(subNode);
+		when(subNode.reduce("value")).thenReturn(Optional.of(ReducedNode.leaf("value", "leaf val")));
+		var node = new SwitchNode(subNode);
 
-		var joined = node.reduce("the name");
+		var joined = node.reduce("the name").orElseThrow();
 
 		assertThat(joined.getName()).isEqualTo("the name");
 		assertThat(joined.isLeaf()).isFalse();
@@ -63,10 +61,10 @@ class AnyNodeTest extends AstNodeTest<AstNode> {
 	void reduceWithTypeNode() {
 		var subNode = mock(AstNode.class);
 		when(subNode.getOriginGrammarName()).thenReturn("grammar-a");
-		when(subNode.reduce("value")).thenReturn(ReducedNode.node("value", List.of()));
-		var node = new AnyNode(subNode);
+		when(subNode.reduce("value")).thenReturn(Optional.of(ReducedNode.node("value", List.of())));
+		var node = new SwitchNode(subNode);
 
-		var joined = node.reduce("the name");
+		var joined = node.reduce("the name").orElseThrow();
 
 		assertThat(joined.getName()).isEqualTo("the name");
 		assertThat(joined.isLeaf()).isFalse();
@@ -94,10 +92,10 @@ class AnyNodeTest extends AstNodeTest<AstNode> {
 	void reduceWithoutType() {
 		var subNode = mock(AstNode.class);
 		when(subNode.getOriginGrammarName()).thenReturn(null);
-		when(subNode.reduce("the name")).thenReturn(ReducedNode.leaf("fake", "hello"));
-		var node = new AnyNode(subNode);
+		when(subNode.reduce("the name")).thenReturn(Optional.of(ReducedNode.leaf("fake", "hello")));
+		var node = new SwitchNode(subNode);
 
-		var joined = node.reduce("the name");
+		var joined = node.reduce("the name").orElseThrow();
 
 		assertThat(joined.getName())
 				.as("the node returned from the subnode should be used")
@@ -119,7 +117,7 @@ class AnyNodeTest extends AstNodeTest<AstNode> {
 		);
 		return Stream.of(
 				new AstNodeProbe(
-						new AnyNode(tokenMock),
+						new SwitchNode(tokenMock),
 						ReducedNode.node(reduceName,List.of(
 								ReducedNode.leaf("type","variable_name"),
 								ReducedNode.leaf("value","appContext")
@@ -127,7 +125,7 @@ class AnyNodeTest extends AstNodeTest<AstNode> {
 						"appContext"
 				),
 				new AstNodeProbe(
-						new AnyNode(listMock),
+						new SwitchNode(listMock),
 						ReducedNode.node(reduceName,List.of(
 								ReducedNode.leaf("type","array_items"),
 								ReducedNode.node("value",List.of())
@@ -135,7 +133,7 @@ class AnyNodeTest extends AstNodeTest<AstNode> {
 						""
 				),
 				new AstNodeProbe(
-						new AnyNode(listMock2),
+						new SwitchNode(listMock2),
 						ReducedNode.node(reduceName,List.of(
 								ReducedNode.leaf("type","array_items"),
 								ReducedNode.node("value",List.of(
@@ -146,7 +144,7 @@ class AnyNodeTest extends AstNodeTest<AstNode> {
 						"appContextappContext2"
 				),
 				new AstNodeProbe(
-						new AnyNode(mockNode),
+						new SwitchNode(mockNode),
 						ReducedNode.node(reduceName,List.of(
 								ReducedNode.leaf("type","grammar_name"),
 								ReducedNode.leaf("value","someValue")

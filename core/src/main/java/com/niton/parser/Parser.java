@@ -2,7 +2,7 @@ package com.niton.parser;
 
 import com.niton.parser.ast.AstNode;
 import com.niton.parser.exceptions.ParsingException;
-import com.niton.parser.grammar.GrammarReferenceMap;
+import com.niton.parser.grammar.api.GrammarReferenceMap;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarName;
 import com.niton.parser.grammar.api.GrammarReference;
@@ -43,7 +43,7 @@ public abstract class Parser<R> {
 	 * @param root       the grammar to be used as root
 	 */
 
-	protected Parser(@NonNull GrammarReference references, @NonNull Grammar<?, ?> root) {
+	protected Parser(@NonNull GrammarReference references, @NonNull Grammar<?> root) {
 		this(references, root.getName());
 	}
 
@@ -65,7 +65,7 @@ public abstract class Parser<R> {
 		this(references, root.getName());
 	}
 
-	protected Parser(@NonNull Grammar<?, ?> rootGrammar) {
+	protected Parser(@NonNull Grammar<?> rootGrammar) {
 		setReference(new GrammarReferenceMap().map(rootGrammar));
 		this.root = rootGrammar.getName();
 	}

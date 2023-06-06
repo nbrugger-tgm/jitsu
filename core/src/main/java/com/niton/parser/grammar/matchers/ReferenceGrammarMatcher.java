@@ -48,7 +48,7 @@ public class ReferenceGrammarMatcher extends GrammarMatcher<AstNode> {
 					grammar
 			),tokens);
 		}
-		Grammar<?, ?> g = ref.get(grammar);
+		Grammar<?> g = ref.get(grammar);
 		return g.parse(tokens, ref);
 	}
 }

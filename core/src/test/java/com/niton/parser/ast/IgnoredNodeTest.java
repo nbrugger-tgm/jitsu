@@ -7,22 +7,17 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class IgnoredNodeTest extends AstNodeTest<IgnoredNode> {
+class IgnoredNodeTest extends AstNodeTest<OptionalNode> {
 
 	@Override
-	Stream<AstNodeTest<IgnoredNode>.AstNodeProbe> getProbes(String reduceName) {
+	Stream<AstNodeTest<OptionalNode>.AstNodeProbe> getProbes(String reduceName) {
 		var subed = new IgnoredNode();
-		subed.setIgnored(List.of(new Tokenizer.AssignedToken("1a2b3c", "name", 2)));
-		subed.saveRAM = false;
+		subed.setValue(new TokenNode(List.of(new Tokenizer.AssignedToken("1a2b3c", "name", 2))));
 
-		var subed2 = new IgnoredNode();
-		subed2.setIgnored(List.of(new Tokenizer.AssignedToken("333221", "name", 2)));
-		subed2.saveRAM = true;
 
 		return Stream.of(
 				new AstNodeProbe(new IgnoredNode(), null, ""),
-				new AstNodeProbe(subed, null, "1a2b3c"),
-				new AstNodeProbe(subed2, null, "")
+				new AstNodeProbe(subed, null, "1a2b3c")
 		);
 	}
 }

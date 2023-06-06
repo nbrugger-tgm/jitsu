@@ -2,6 +2,7 @@ package com.niton.parser.grammar.types;
 
 import com.niton.parser.ast.TokenNode;
 import com.niton.parser.grammar.api.Grammar;
+import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.matchers.AnyExceptMatcher;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,11 +16,11 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class AnyExceptGrammar extends Grammar<AnyExceptMatcher, TokenNode> {
+public class AnyExceptGrammar extends Grammar<TokenNode> implements GrammarReference.Single {
 
-	private Grammar<?, ?> except;
+	private Grammar<?> except;
 
-	public AnyExceptGrammar(Grammar<?, ?> grammarNotToAccept) {
+	public AnyExceptGrammar(Grammar<?> grammarNotToAccept) {
 		this.except = grammarNotToAccept;
 	}
 
@@ -30,6 +31,11 @@ public class AnyExceptGrammar extends Grammar<AnyExceptMatcher, TokenNode> {
 	@Override
 	protected AnyExceptMatcher createExecutor() {
 		return new AnyExceptMatcher(except);
+	}
+
+	@Override
+	public Grammar<?> getGrammar() {
+		return except;
 	}
 
 }

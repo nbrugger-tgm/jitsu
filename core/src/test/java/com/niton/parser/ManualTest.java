@@ -2,7 +2,7 @@ package com.niton.parser;
 
 import com.niton.parser.ast.ReducedNode;
 import com.niton.parser.exceptions.ParsingException;
-import com.niton.parser.grammar.GrammarReferenceMap;
+import com.niton.parser.grammar.api.GrammarReferenceMap;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
@@ -58,7 +58,7 @@ public class ManualTest {
 		   );
 		DefaultParser parser  = new DefaultParser(ref, "Expression");
 		var           result  = parser.parse("(10*10)/5+24/-12-2");
-		var           reduced = result.reduce("expression");
+		var           reduced = result.reduce("expression").orElseThrow();
 		serveAstHtml(reduced);
 		System.out.println(reduced.format());
 		System.out.println(result.joinTokens() + " = " + calculateExpression(reduced));

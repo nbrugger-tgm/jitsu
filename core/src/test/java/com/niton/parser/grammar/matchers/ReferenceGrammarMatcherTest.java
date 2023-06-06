@@ -3,7 +3,7 @@ package com.niton.parser.grammar.matchers;
 import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.TokenNode;
 import com.niton.parser.exceptions.ParsingException;
-import com.niton.parser.grammar.GrammarReferenceMap;
+import com.niton.parser.grammar.api.GrammarReferenceMap;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarReference;
 

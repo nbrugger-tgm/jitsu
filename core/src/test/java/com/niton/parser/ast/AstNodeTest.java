@@ -6,6 +6,7 @@ import org.junit.jupiter.api.TestFactory;
 import org.junit.platform.commons.util.StringUtils;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.*;
@@ -40,7 +41,7 @@ abstract class AstNodeTest<T extends AstNode> {
 		return getProbes("my special name").map(probe -> DynamicTest.dynamicTest(
 				Objects.toString(probe.expectedReducedResult),
 				() -> assertThat(probe.node.reduce("my special name"))
-						.isEqualTo(probe.expectedReducedResult)
+						.isEqualTo(Optional.ofNullable(probe.expectedReducedResult))
 		));
 	}
 

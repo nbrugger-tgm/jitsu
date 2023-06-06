@@ -32,7 +32,7 @@ class ParserTest {
 	@Mock
 	AstNode             node;
 	@Mock
-	Grammar<?, AstNode> grammar;
+	Grammar<AstNode> grammar;
 	Parser<String> parser;
 	@Mock
 	Tokenizer tokenizer;

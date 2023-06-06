@@ -1,6 +1,5 @@
 package com.niton.parser.ast;
 
-import com.niton.parser.grammar.types.TokenGrammar;
 import com.niton.parser.token.Tokenizer.AssignedToken;
 import lombok.*;
 import org.jetbrains.annotations.NotNull;
@@ -8,13 +7,11 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
- * The result of the {@link TokenGrammar}
- * A very raw type only containing matching tokens
- *
- * @author Nils
- * @version 2019-05-29
+ * A node that represents a sequence of tokens that were matched
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -49,12 +46,12 @@ public class TokenNode extends AstNode {
 	}
 
 	@Override
-	public Collection<AssignedToken> join() {
-		return tokens;
+	public Stream<AssignedToken> join() {
+		return tokens.stream();
 	}
 
 	@Override
-	public ReducedNode reduce(@NotNull String name) {
-		return ReducedNode.leaf(name, joinTokens());
+	public Optional<ReducedNode> reduce(@NotNull String name) {
+		return Optional.of(ReducedNode.leaf(name, joinTokens()));
 	}
 }

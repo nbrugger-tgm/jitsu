@@ -1,7 +1,7 @@
 package com.niton.parser.grammar.matchers;
 
 import com.niton.parser.ast.AstNode;
-import com.niton.parser.ast.ListNode;
+import com.niton.parser.ast.SequenceNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarMatcher;
@@ -19,11 +19,11 @@ import org.jetbrains.annotations.NotNull;
  */
 @Getter
 @Setter
-public class RepeatMatcher extends GrammarMatcher<ListNode> {
+public class RepeatMatcher extends GrammarMatcher<SequenceNode> {
 
-    private Grammar<?, ?> check;
+    private Grammar<?> check;
 
-    public RepeatMatcher(Grammar<?, ?> expression) {
+    public RepeatMatcher(Grammar<?> expression) {
         this.check = expression;
     }
 
@@ -34,13 +34,14 @@ public class RepeatMatcher extends GrammarMatcher<ListNode> {
      * @see GrammarMatcher#process(TokenStream, GrammarReference)
      */
     @Override
-    public @NotNull ListNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) throws ParsingException {
-        ListNode obj = new ListNode();
+    public @NotNull SequenceNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) throws ParsingException {
+        SequenceNode obj = new SequenceNode();
+        int resultIndex = 0;
         while (true) {
             try {
                 var oldPos = tokens.index();
                 AstNode gr = check.parse(tokens, ref);
-                obj.add(gr);
+                obj.name(String.valueOf(resultIndex++),gr);
                 if (oldPos == tokens.index()) {
                     //Since the position did not change, the grammar did an empty match and the stream did not continue!
                     //This would lead to an infinite loop since it is a stalemate

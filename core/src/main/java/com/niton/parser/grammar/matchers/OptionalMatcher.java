@@ -21,9 +21,9 @@ import org.jetbrains.annotations.NotNull;
 @Setter
 public class OptionalMatcher extends GrammarMatcher<OptionalNode> {
 
-	private Grammar<?, ?> check;
+	private Grammar<?> check;
 
-	public OptionalMatcher(Grammar<?, ?> value) {
+	public OptionalMatcher(Grammar<?> value) {
 		this.check = value;
 	}
 

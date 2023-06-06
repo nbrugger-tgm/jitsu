@@ -1,7 +1,7 @@
 package com.niton.parser.grammar.api;
 
 import com.niton.parser.ast.AstNode;
-import com.niton.parser.ast.IgnoredNode;
+import com.niton.parser.ast.OptionalNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.token.ListTokenStream;
 import com.niton.parser.token.TokenStream;
@@ -11,22 +11,23 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.assertj.core.api.AssertionsForClassTypes.*;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatCode;
 import static org.mockito.Mockito.*;
 
 class GrammarMatcherTest {
 
-	private GrammarMatcher matcher;
+	private GrammarMatcher<?> matcher;
 
 	@BeforeEach
 	void setUp() throws Exception {
-		matcher = new GrammarMatcher() {
+		matcher = new GrammarMatcher<>() {
 			@NotNull
 			@Override
 			protected AstNode process(
 					@NotNull TokenStream tokens, @NotNull GrammarReference reference
 			) {
-				return new IgnoredNode();
+				return new OptionalNode();
 			}
 		};
 		matcher.setOriginGrammarName("test_grammar");
@@ -64,7 +65,7 @@ class GrammarMatcherTest {
 
 	@Test
 	void parseRevertOnError() {
-		matcher = new GrammarMatcher() {
+		matcher = new GrammarMatcher<>() {
 			@NotNull
 			@Override
 			protected AstNode process(

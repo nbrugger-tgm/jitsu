@@ -15,11 +15,11 @@ import org.jetbrains.annotations.NotNull;
  */
 public class DefaultParser extends Parser<AstNode> {
 
-	public DefaultParser(GrammarReference reference, Grammar<?,?> root) {
+	public DefaultParser(GrammarReference reference, Grammar<?> root) {
 		super(reference, root);
 	}
 
-	public DefaultParser(ChainGrammar root) {
+	public <T extends Grammar<?> & GrammarReference>DefaultParser(T root) {
 		super(root, root);
 	}
 

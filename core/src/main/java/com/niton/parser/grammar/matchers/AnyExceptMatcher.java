@@ -22,9 +22,9 @@ import org.jetbrains.annotations.NotNull;
 @Setter
 public class AnyExceptMatcher extends GrammarMatcher<TokenNode> {
 
-	private Grammar<?,?> dunnoaccept;
+	private Grammar<?> dunnoaccept;
 
-	public AnyExceptMatcher(Grammar<?,?> grammar) {
+	public AnyExceptMatcher(Grammar<?> grammar) {
 		this.dunnoaccept = grammar;
 	}
 

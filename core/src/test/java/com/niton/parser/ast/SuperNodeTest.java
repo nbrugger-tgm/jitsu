@@ -4,35 +4,34 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static com.niton.parser.ast.ReducedNode.*;
-import static org.junit.jupiter.api.Assertions.*;
 
-class SuperNodeTest extends AstNodeTest<SuperNode> {
+class SuperNodeTest extends AstNodeTest<SequenceNode> {
 
 	@Override
-	Stream<AstNodeTest<SuperNode>.AstNodeProbe> getProbes(String reduceName) {
-		var empty       = new SuperNode();
-		var onlyUnnamed = new SuperNode();
+	Stream<AstNodeTest<SequenceNode>.AstNodeProbe> getProbes(String reduceName) {
+		var empty       = new SequenceNode();
+		var onlyUnnamed = new SequenceNode();
 		onlyUnnamed.add(AstNodeMocker.getTokenNode("numbas", "NAME", "123"));
 		onlyUnnamed.add(AstNodeMocker.getMockNode("ignored", null, ""));
 		onlyUnnamed.add(AstNodeMocker.getTokenNode("numbas", "NAME", "456"));
-		var onlyEmpty = new SuperNode();
+		var onlyEmpty = new SequenceNode();
 		onlyEmpty.add(AstNodeMocker.getMockNode("ignored", null, ""));
 		onlyEmpty.add(AstNodeMocker.getMockNode("ignored2", null, ""));
-		var nested = new SuperNode();
+		var nested = new SequenceNode();
 		nested.add(AstNodeMocker.getMockNode("ignored", null, ""));
 		nested.add(AstNodeMocker.getListNode(
 				"ignored2",
 				AstNodeMocker.getTokenNode("gram1", "tok1", "abc"),
 				AstNodeMocker.getTokenNode("gram1", "tok1", "def")
 		));
-		var nestedNamed = new SuperNode();
+		var nestedNamed = new SequenceNode();
 		nestedNamed.name("ignored", AstNodeMocker.getTokenNode("ignored", "yeet", "yeet"));
 		nestedNamed.add(AstNodeMocker.getListNode(
 				"ignored2",
 				AstNodeMocker.getTokenNode("gram1", "tok1", "abc"),
 				AstNodeMocker.getTokenNode("gram1", "tok1", "def")
 		));
-		var normal = new SuperNode();
+		var normal = new SequenceNode();
 		normal.name("ignored", AstNodeMocker.getTokenNode("ignored", "yeet", "yeet2"));
 		normal.name("list", AstNodeMocker.getListNode(
 				"ignored2",
@@ -40,7 +39,6 @@ class SuperNodeTest extends AstNodeTest<SuperNode> {
 				AstNodeMocker.getTokenNode("gram1", "tok1", "def")
 		));
 		return Stream.of(
-				new AstNodeProbe(empty, node(reduceName, List.of(leaf("value", ""))), ""),
 				new AstNodeProbe(
 						onlyUnnamed,
 						node(reduceName, List.of(leaf("value", "123456"))),

@@ -8,7 +8,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class TokenGrammar extends Grammar<TokenMatcher, TokenNode> {
+public class TokenGrammar extends Grammar<TokenNode> {
 	private String tokenName;
 
 	public TokenGrammar(String tokenName, String name) {

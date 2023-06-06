@@ -2,7 +2,7 @@ package com.niton.parser.grammar.matchers;
 
 import com.niton.parser.ast.TokenNode;
 import com.niton.parser.exceptions.ParsingException;
-import com.niton.parser.grammar.GrammarReferenceMap;
+import com.niton.parser.grammar.api.GrammarReferenceMap;
 import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.types.TokenGrammar;
 import com.niton.parser.token.DefaultToken;

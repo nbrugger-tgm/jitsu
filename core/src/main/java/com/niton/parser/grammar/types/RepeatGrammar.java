@@ -1,8 +1,9 @@
 package com.niton.parser.grammar.types;
 
+import com.niton.parser.ast.SequenceNode;
 import com.niton.parser.grammar.api.Grammar;
+import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.matchers.RepeatMatcher;
-import com.niton.parser.ast.ListNode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,10 +15,10 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class RepeatGrammar extends Grammar<RepeatMatcher, ListNode> {
-	private Grammar<?,?> check;
+public class RepeatGrammar extends Grammar<SequenceNode> implements GrammarReference.Single {
+	private Grammar<?> check;
 
-	public RepeatGrammar(Grammar<?,?> gramarReference) {
+	public RepeatGrammar(Grammar<?> gramarReference) {
 		this.check = gramarReference;
 	}
 
@@ -30,4 +31,8 @@ public class RepeatGrammar extends Grammar<RepeatMatcher, ListNode> {
 		return new RepeatMatcher(check);
 	}
 
+	@Override
+	public Grammar<?> getGrammar() {
+		return check;
+	}
 }

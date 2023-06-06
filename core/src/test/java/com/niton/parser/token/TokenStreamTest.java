@@ -14,8 +14,6 @@ import static java.util.stream.IntStream.range;
 import static org.assertj.core.api.Assertions.*;
 
 class TokenStreamTest {
-
-
 	@Test
 	void nextReturnsCorrect() {
 		var         token  = new AssignedToken("Some text", "TEXT");
@@ -103,16 +101,16 @@ class TokenStreamTest {
 
 	@ParameterizedTest
 	@ValueSource(ints = {0, 5, 7})
-	void commitFailOnLowestLevel(int deep) {
+	public void commitFailOnLowestLevel(int deep) {
 		failOnLowestLevel(deep, TokenStream::commit);
 	}
 
 	private void failOnLowestLevel(int deep, Consumer<TokenStream> consumer) {
 		var stream = new ListTokenStream(List.of());
-		range(0, deep).forEach(i -> silence(stream::elevate));
+		range(0, deep).forEach(i -> stream.elevate());
 		assertThatCode(() -> range(0, deep).forEach(i -> consumer.accept(stream)))
 				.doesNotThrowAnyException();
-		assertThatCode(() -> consumer.accept(stream)).isInstanceOf(IndexOutOfBoundsException.class);
+		assertThatThrownBy(() -> consumer.accept(stream)).isInstanceOf(IndexOutOfBoundsException.class);
 	}
 
 	private void silence(ThrowingRunnable elevate) {

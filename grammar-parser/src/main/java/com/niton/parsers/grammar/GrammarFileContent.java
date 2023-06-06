@@ -1,6 +1,6 @@
 package com.niton.parsers.grammar;
 
-import com.niton.parser.grammar.GrammarReferenceMap;
+import com.niton.parser.grammar.api.GrammarReferenceMap;
 import com.niton.parser.token.Tokenable;
 
 import java.util.Set;

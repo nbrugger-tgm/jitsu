@@ -1,6 +1,6 @@
 package com.niton.parser.grammar.matchers;
 
-import com.niton.parser.ast.AnyNode;
+import com.niton.parser.ast.SwitchNode;
 import com.niton.parser.ast.AstNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.Grammar;
@@ -22,7 +22,7 @@ import static java.util.stream.Collectors.joining;
  * @author Nils
  * @version 2019-05-29
  */
-public class AnyOfMatcher extends GrammarMatcher<AnyNode> {
+public class AnyOfMatcher extends GrammarMatcher<SwitchNode> {
     private MultiGrammar grammars;
 
     public AnyOfMatcher(MultiGrammar grammers) {
@@ -35,13 +35,13 @@ public class AnyOfMatcher extends GrammarMatcher<AnyNode> {
      * @see GrammarMatcher#process(TokenStream, GrammarReference)
      */
     @Override
-    public @NotNull AnyNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref)
+    public @NotNull SwitchNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref)
             throws ParsingException {
         Map<String, ParsingException> fails = new HashMap<>();
         for (var grammar : this.grammars.getGrammars()) {
             try {
                 AstNode obj = grammar.parse(tokens, ref);
-                AnyNode wrapper = new AnyNode(obj);
+                SwitchNode wrapper = new SwitchNode(obj);
                 if (obj.getParsingException() != null)
                     fails.put(grammar.getIdentifier(), obj.getParsingException());
                 if(fails.size() > 0){
@@ -75,7 +75,7 @@ public class AnyOfMatcher extends GrammarMatcher<AnyNode> {
     /**
      * @return the tokens
      */
-    public Grammar<?, ?>[] getGrammars() {
+    public Grammar<?>[] getGrammars() {
         return grammars.getGrammars();
     }
 

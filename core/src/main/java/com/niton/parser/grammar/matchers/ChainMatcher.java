@@ -1,6 +1,6 @@
 package com.niton.parser.grammar.matchers;
 
-import com.niton.parser.ast.SuperNode;
+import com.niton.parser.ast.SequenceNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.GrammarMatcher;
 import com.niton.parser.grammar.api.GrammarReference;
@@ -24,7 +24,7 @@ import static java.lang.String.format;
  */
 @Getter
 @Setter
-public class ChainMatcher extends GrammarMatcher<SuperNode> {
+public class ChainMatcher extends GrammarMatcher<SequenceNode> {
 
     private ChainGrammar chain;
 
@@ -42,12 +42,12 @@ public class ChainMatcher extends GrammarMatcher<SuperNode> {
     }
 
     @Override
-    public @NotNull SuperNode process(
+    public @NotNull SequenceNode process(
             @NotNull TokenStream tokens,
             @NotNull GrammarReference reference
     )
             throws ParsingException {
-        SuperNode gObject = new SuperNode();
+        SequenceNode gObject = new SequenceNode();
         List<ParsingException> exitStates = new ArrayList<>(chain.getChain().size());
         int i = 0;
         for (var grammar : chain.getChain()) {

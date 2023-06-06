@@ -72,6 +72,9 @@ public class ListTokenStream implements TokenStream {
      */
     @Override
     public void commit() {
+        if(levelIndexes.size() == 1) {
+            throw new IndexOutOfBoundsException("No stack frame to commit");
+        }
         int val = levelIndexes.pop();
         index(val);
         levelColumns.set(0, levelColumns.pop());
@@ -90,6 +93,9 @@ public class ListTokenStream implements TokenStream {
      */
     @Override
     public void rollback() {
+        if(levelIndexes.size() == 1) {
+            throw new IndexOutOfBoundsException("No stack frame to rollback");
+        }
         levelIndexes.pop();
         levelColumns.pop();
         levelLines.pop();
