@@ -1,6 +1,7 @@
 package com.niton.parser.ast;
 
 import lombok.Data;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
@@ -34,7 +35,7 @@ public class ReducedNode {
         this.name = name;
     }
     protected ReducedNode(
-            String name, @Nullable String value
+            String name, @NotNull String value
     ) {
         this.children = List.of();
         this.value = value;
@@ -49,7 +50,8 @@ public class ReducedNode {
      * @param value the value of the node
      * @return the leaf node
      */
-    public static ReducedNode leaf(String name, String value) {
+    public static ReducedNode leaf(String name, @NotNull String value) {
+        if(value == null) throw new IllegalArgumentException("Value of a leaf node can not be null");
         return new ReducedNode(name, value);
     }
 
@@ -92,7 +94,7 @@ public class ReducedNode {
      * @return the value stored in this node
      * @throws UnsupportedOperationException when not a leaf
      */
-    public @Nullable String getValue() {
+    public String getValue() {
         verifyLeaf();
         return value;
     }

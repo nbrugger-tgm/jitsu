@@ -80,9 +80,8 @@ public class ParsingException extends Exception {
         if (causes.size() == 0)
             return getMessage();
         return getMessage() + ":\n" + causes.stream().map(ParsingException::getFullExceptionTree)
-                .map(bloc -> {
-                    return bloc.replace("\n", "\n\t");
-                }).collect(Collectors.joining("\n"));
+                .map(bloc -> bloc.replace("\n", "\n\t"))
+                .collect(Collectors.joining("\n"));
     }
 
     private Stream<ParsingException> getMostProminentDeepExceptionStream() {

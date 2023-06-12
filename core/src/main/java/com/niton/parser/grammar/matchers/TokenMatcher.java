@@ -54,7 +54,7 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
             return obj;
         }
         throw new ParsingException(getIdentifier(), String.format(
-                "expected \"%s\" but got  \"%s\"",
+                "expected \"%s\" but got \"%s\"",
                 tokenName.getTokenName(),
                 token.getName()
         ),startLine,startColumn,startIndex);
