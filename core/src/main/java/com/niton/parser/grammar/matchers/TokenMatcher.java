@@ -10,6 +10,8 @@ import com.niton.parser.token.TokenStream;
 import com.niton.parser.token.Tokenizer.AssignedToken;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
+
 /**
  * Simply matches a token
  *
@@ -49,15 +51,13 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
         AssignedToken token = tokens.next();
         if (token.getName().equals(tokenName.getTokenName())) {
             AstNode.Location location = AstNode.Location.of(startLine, startColumn, tokens.getLine(), tokens.getColumn());
-            TokenNode obj = new TokenNode(location);
-            obj.tokens.add(token);
-            return obj;
+            return new TokenNode(List.of(token), location);
         }
         throw new ParsingException(getIdentifier(), String.format(
                 "expected \"%s\" but got \"%s\"",
                 tokenName.getTokenName(),
                 token.getName()
-        ),startLine,startColumn,startIndex);
+        ), startLine, startColumn, startIndex);
     }
 
     /**

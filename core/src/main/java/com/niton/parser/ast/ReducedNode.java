@@ -29,7 +29,7 @@ public class ReducedNode {
             String name, List<ReducedNode> children
     ) {
         children.forEach(n -> n.setParent(this));
-        this.children = children;
+        this.children = List.copyOf(children);
         this.value = null;
         this.isLeaf = false;
         this.name = name;

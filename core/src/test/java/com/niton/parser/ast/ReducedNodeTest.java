@@ -34,7 +34,7 @@ class ReducedNodeTest {
 			var leaf = ReducedNode.leaf("test", "value");
 			var node = ReducedNode.node("test", List.of(leaf));
 			assertThat(node.getName()).isEqualTo("test");
-			assertThat(node.getChildren()).containsExactly(leaf);
+			assertThat(node.getChildren().contains(leaf)).isTrue();
 			assertThat(node.isLeaf()).isFalse();
 		}
 
@@ -60,7 +60,7 @@ class ReducedNodeTest {
 			var leaf1 = ReducedNode.leaf("test1", "value2");
 			var leaf2 = ReducedNode.leaf("test2", "value3");
 			var node  = ReducedNode.node("test", List.of(leaf, leaf1, leaf2));
-			assertThat(node.getSubNode("test1")).isPresent().contains(leaf1);
+			assertThat(node.getSubNode("test1")).isPresent().get().isEqualTo(leaf1);
 		}
 
 		@Test

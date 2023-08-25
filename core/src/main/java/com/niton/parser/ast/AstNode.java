@@ -142,6 +142,11 @@ public abstract class AstNode {
             };
         }
 
+        @NotNull
+        static AstNode.Location range(Location from, Location to) {
+            return of(from.getFromLine(), from.getFromColumn(), to.getToLine(), to.getToColumn());
+        }
+
         static Location oneChar(int line, int column) {
            return of(line, column, line, column);
         }

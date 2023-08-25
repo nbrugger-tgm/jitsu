@@ -1,9 +1,10 @@
 package com.niton.parser.ast;
 
 import com.niton.parser.token.Tokenizer.AssignedToken;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -16,23 +17,33 @@ import java.util.stream.Stream;
  * <p>
  * When a node is named, it indicates the importance of interpretation and identification when processing the AST.
  */
-@RequiredArgsConstructor
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class SequenceNode extends AstNode {
+    private final Location explicitLocation;
     /**
      * The sub nodes of this node.
      */
-    public List<AstNode> subNodes = new ArrayList<>();
+    public List<AstNode> subNodes;
     /**
      * The names of the sub nodes. Where the value is the index of the sub node in the list.
      */
-    public Map<String, Integer> naming = new LinkedHashMap<>();
-    /**
-     * The location of the node in the source code. Only required if the node has no sub nodes.
-     */
-    @Setter
-    private @Nullable Location explicitLocation;
+    public Map<String, Integer> naming;
 
+    public SequenceNode(List<AstNode> subNodes, Map<String, Integer> naming) {
+        this(getLocation(subNodes), Collections.unmodifiableList(subNodes), Collections.unmodifiableMap(naming));
+    }
+
+    public SequenceNode(Location explicitLocation) {
+        this(explicitLocation, new ArrayList<>(), new LinkedHashMap<>());
+    }
+
+    @NotNull
+    private static Location getLocation(List<AstNode> subNodes) {
+        if (subNodes.isEmpty()) {
+            throw new IllegalArgumentException("A sequence node must have at least one sub node or use the one arg constructor");
+        }
+        return Location.range(subNodes.get(0).getLocation(), subNodes.get(subNodes.size() - 1).getLocation());
+    }
 
     /**
      * Appends a node to the end of the sub-node list and names it.
@@ -57,29 +68,7 @@ public class SequenceNode extends AstNode {
 
     @Override
     public Location getLocation() {
-        if (explicitLocation != null)
-            return explicitLocation;
-        return new Location() {
-            @Override
-            public int getFromLine() {
-                return subNodes.get(0).getLocation().getFromLine();
-            }
-
-            @Override
-            public int getFromColumn() {
-                return subNodes.get(0).getLocation().getFromColumn();
-            }
-
-            @Override
-            public int getToLine() {
-                return subNodes.get(subNodes.size() - 1).getLocation().getToLine();
-            }
-
-            @Override
-            public int getToColumn() {
-                return subNodes.get(subNodes.size() - 1).getLocation().getToColumn();
-            }
-        };
+        return explicitLocation;
     }
 
     public Stream<AssignedToken> join() {
@@ -89,16 +78,16 @@ public class SequenceNode extends AstNode {
 
     @Override
     public Optional<LocatableReducedNode> reduce(@NonNull String name) {
-        if(subNodes.size() == 0)
+        if (subNodes.isEmpty())
             return Optional.of(LocatableReducedNode.node(name, List.of(), getLocation()));
         //When the children do not have a name, get children of the children to remove this layer of nesting,
         //since it holds no useful information (more than its children do)
         var namedSubnodes = !naming.isEmpty() ? getNamedProperties() : getDeepProperties();
         //when there are neither named nor deep (named) properties, create a leaf node
-        if (namedSubnodes.isEmpty() && naming.size() == 0) {
+        if (namedSubnodes.isEmpty() && naming.isEmpty()) {
             namedSubnodes = List.of(LocatableReducedNode.leaf("value", joinTokens(), getLocation()));
         }
-        return Optional.of(LocatableReducedNode.node(name, namedSubnodes,getLocation()));
+        return Optional.of(LocatableReducedNode.node(name, namedSubnodes, getLocation()));
     }
 
     /**

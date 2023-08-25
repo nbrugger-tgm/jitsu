@@ -19,10 +19,13 @@ public class AstNodeMocker {
         var tokenMock = mock(AstNode.class);
         when(tokenMock.getOriginGrammarName()).thenReturn(grammarName);
         when(tokenMock.join()).thenAnswer(i -> Stream.of(new Tokenizer.AssignedToken(tokenValue, tokenName)));
-        when(tokenMock.reduce(any())).thenAnswer(invocation -> Optional.of(ReducedNode.leaf(
+        when(tokenMock.joinTokens()).thenReturn(tokenValue);
+        when(tokenMock.reduce(any())).thenAnswer(invocation -> Optional.of(LocatableReducedNode.leaf(
                 invocation.getArguments()[0].toString(),
-                tokenValue
+                tokenValue,
+                AstNode.Location.oneChar(0, tokenValue.length())
         )));
+        when(tokenMock.getLocation()).thenReturn(AstNode.Location.oneChar(0, tokenValue.length()));
         return tokenMock;
     }
 
@@ -33,21 +36,28 @@ public class AstNodeMocker {
                 .flatMap(AstNode::join)
                 .collect(Collectors.toList());
         when(node.join()).thenAnswer(i -> joinedTokens.stream());
+        when(node.joinTokens()).thenAnswer(i -> Arrays.stream(subTokens).map(AstNode::joinTokens).collect(Collectors.joining()));
         AtomicInteger i = new AtomicInteger();
-        when(node.reduce(any())).thenAnswer(invocation -> Optional.of(ReducedNode.node(
+        when(node.reduce(any())).thenAnswer(invocation -> Optional.of(LocatableReducedNode.node(
                 invocation.getArguments()[0].toString(),
                 Arrays.stream(subTokens)
                         .flatMap((sub) -> sub.reduce(Integer.toString(i.getAndIncrement())).stream())
-                        .collect(Collectors.toList())
+                        .collect(Collectors.toList()),
+                AstNode.Location.oneChar(
+                        0,
+                        Arrays.stream(subTokens)
+                                .map(tok -> tok.joinTokens().length()).reduce(0, Integer::sum)
+                )
         )));
         return node;
     }
 
-    public static AstNode getMockNode(String grammarName, ReducedNode someValue, String s) {
+    public static AstNode getMockNode(String grammarName, LocatableReducedNode reduced, String s) {
         var tokenMock = mock(AstNode.class);
         when(tokenMock.getOriginGrammarName()).thenReturn(grammarName);
-        when(tokenMock.join()).thenAnswer(i ->Stream.of(new Tokenizer.AssignedToken(s, "MOCKED")));
-        when(tokenMock.reduce(any())).thenReturn(Optional.ofNullable(someValue));
+        when(tokenMock.join()).thenAnswer(i -> Stream.of(new Tokenizer.AssignedToken(s, "MOCKED")));
+        when(tokenMock.joinTokens()).thenReturn(s);
+        when(tokenMock.reduce(any())).thenReturn(Optional.ofNullable(reduced));
         return tokenMock;
     }
 }

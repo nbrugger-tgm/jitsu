@@ -13,7 +13,7 @@ class ListNodeTest extends AstNodeTest<SequenceNode> {
 		var tok2 = AstNodeMocker.getTokenNode("grammar2","NUMBERS","333");
 		return Stream.of(
 				new AstNodeProbe(
-						new SequenceNode(explicitLocation),
+						new SequenceNode(AstNode.Location.oneChar(0,0)),
 						ReducedNode.node(reduceName, List.of()),
 						""
 				),

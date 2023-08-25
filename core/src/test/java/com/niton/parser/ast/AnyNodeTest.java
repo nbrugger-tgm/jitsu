@@ -30,7 +30,9 @@ class AnyNodeTest extends AstNodeTest<AstNode> {
 	void reduceWithTypeLeaf() {
 		var subNode = mock(AstNode.class);
 		when(subNode.getOriginGrammarName()).thenReturn("grammar-a");
-		when(subNode.reduce("value")).thenReturn(Optional.of(ReducedNode.leaf("value", "leaf val")));
+		when(subNode.reduce("value")).thenReturn(
+				Optional.of(LocatableReducedNode.leaf("value", "leaf val", ANY_LOCATION))
+		);
 		var node = new SwitchNode(subNode);
 
 		var joined = node.reduce("the name").orElseThrow();
@@ -61,7 +63,7 @@ class AnyNodeTest extends AstNodeTest<AstNode> {
 	void reduceWithTypeNode() {
 		var subNode = mock(AstNode.class);
 		when(subNode.getOriginGrammarName()).thenReturn("grammar-a");
-		when(subNode.reduce("value")).thenReturn(Optional.of(ReducedNode.node("value", List.of())));
+		when(subNode.reduce("value")).thenReturn(Optional.of(LocatableReducedNode.node("value", List.of(), ANY_LOCATION )));
 		var node = new SwitchNode(subNode);
 
 		var joined = node.reduce("the name").orElseThrow();
@@ -92,7 +94,7 @@ class AnyNodeTest extends AstNodeTest<AstNode> {
 	void reduceWithoutType() {
 		var subNode = mock(AstNode.class);
 		when(subNode.getOriginGrammarName()).thenReturn(null);
-		when(subNode.reduce("the name")).thenReturn(Optional.of(ReducedNode.leaf("fake", "hello")));
+		when(subNode.reduce("the name")).thenReturn(Optional.of(LocatableReducedNode.leaf("fake", "hello", ANY_LOCATION)));
 		var node = new SwitchNode(subNode);
 
 		var joined = node.reduce("the name").orElseThrow();
@@ -112,7 +114,7 @@ class AnyNodeTest extends AstNodeTest<AstNode> {
 		AstNode listMock2 = getListNode("array_items",tokenMock,tokenMock2);
 		AstNode mockNode = getMockNode(
 				"grammar_name",
-				ReducedNode.leaf("value","someValue"),
+				LocatableReducedNode.leaf("value","someValue", AstNode.Location.of(0,0,0,0)),
 				"def someValue()"
 		);
 		return Stream.of(

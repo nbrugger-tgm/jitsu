@@ -1,5 +1,6 @@
 package com.niton.parser.grammar.matchers;
 
+import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.TokenNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.GrammarReferenceMap;
@@ -27,7 +28,10 @@ class KeywordMatcherTest extends AbstractMatcherTest {
                 new TestCase(
                         tokenizer.tokenize("if()"),
                         new KeywordMatcher("if"),
-                        new TokenNode(List.of(new Tokenizer.AssignedToken("if", DefaultToken.LETTERS.name(), 0)))
+                        new TokenNode(
+                                List.of(new Tokenizer.AssignedToken("if", DefaultToken.LETTERS.name(), 0)),
+                                AstNode.Location.of(0, 0, 0, 2)
+                        )
                 ),
                 new TestCase(
                         tokenizer.tokenize("if_then()"),
@@ -36,7 +40,7 @@ class KeywordMatcherTest extends AbstractMatcherTest {
                                 new Tokenizer.AssignedToken("if", DefaultToken.LETTERS.name(), 0),
                                 new Tokenizer.AssignedToken("_", DefaultToken.UNDERSCORE.name(), 2),
                                 new Tokenizer.AssignedToken("then", DefaultToken.LETTERS.name(), 3)
-                        ))
+                        ), AstNode.Location.of(0, 0, 0, 8))
                 )
         );
     }

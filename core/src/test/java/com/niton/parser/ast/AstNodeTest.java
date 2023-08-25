@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.*;
 
 abstract class AstNodeTest<T extends AstNode> {
+	protected static final AstNode.Location ANY_LOCATION = AstNode.Location.of(0, 0, 0, 0);
 	@Data
 	class AstNodeProbe {
 		private final T           node;

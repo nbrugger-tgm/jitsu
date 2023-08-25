@@ -14,10 +14,9 @@ import java.util.stream.Stream;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@AllArgsConstructor
 @RequiredArgsConstructor
 public class TokenNode extends AstNode {
-	public List<AssignedToken> tokens = new ArrayList<>();
+	private final List<AssignedToken> tokens;
 	private final Location loc;
 
 	@Override
