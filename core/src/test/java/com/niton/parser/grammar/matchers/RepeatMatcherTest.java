@@ -34,7 +34,6 @@ class RepeatMatcherTest {
         var matcher = new RepeatMatcher(subGrammar);
         var tokenResult = new TokenNode(List.of(new AssignedToken("NUMBER", "1")), ANY_LOCATION);
         var tokenResult2 = new TokenNode(List.of(new AssignedToken("LETTERS", "ABC")), ANY_LOCATION);
-        var i = 0;
         var streamMock = mock(TokenStream.class);
         when(streamMock.index()).thenReturn(1, 2, 3, 4);
         when(subGrammar.parse(any(), any()))

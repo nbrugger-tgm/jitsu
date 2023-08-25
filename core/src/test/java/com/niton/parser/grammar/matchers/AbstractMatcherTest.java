@@ -57,7 +57,7 @@ abstract class AbstractMatcherTest {
 		));
 	}
 
-	public abstract GrammarReference getGrammarReference() throws ParsingException;
+	protected abstract GrammarReference getGrammarReference() throws ParsingException;
 
-	public abstract Stream<TestCase> getTestCases() throws ParsingException;
+	protected abstract Stream<TestCase> getTestCases() throws ParsingException;
 }

@@ -31,13 +31,6 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
 
     private ChainGrammar chain;
 
-    /**
-     * Creates an Instance of ChainExecutor.java
-     *
-     * @param chain
-     * @author Nils Brugger
-     * @version 2019-06-08
-     */
     public ChainMatcher(ChainGrammar chain) {
         this.chain = chain;
         setOriginGrammarName(chain.getName());
@@ -51,14 +44,14 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
     ) throws ParsingException {
         List<ParsingException> exitStates = new ArrayList<>(chain.getChain().size());
         Map<String, Integer> naming = new HashMap<>();
-        List<AstNode> subnodes = new ArrayList<>();
+        List<AstNode> subNodes = new ArrayList<>();
         int i = 0;
         for (var grammar : chain.getChain()) {
             try {
                 var res = grammar.parse(tokens, reference);
 
-                subnodes.add(res);
-                String name = null;
+                subNodes.add(res);
+                String name;
                 if ((name = chain.getNaming().get(i)) != null) {
                     naming.put(name, i);
                 }
@@ -79,10 +72,10 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
                 i++;
             }
         }
-        if (subnodes.isEmpty()) {
+        if (subNodes.isEmpty()) {
             return new SequenceNode(AstNode.Location.oneChar(tokens.getLine(), tokens.getColumn()));
         } else {
-            var astNode = new SequenceNode(subnodes, naming);
+            var astNode = new SequenceNode(subNodes, naming);
             if (!exitStates.isEmpty()) {
                 astNode.setParsingException(new ParsingException(
                         getIdentifier(),

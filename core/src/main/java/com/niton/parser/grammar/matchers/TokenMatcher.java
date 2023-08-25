@@ -19,17 +19,10 @@ import java.util.List;
  * @version 2019-05-28
  */
 public class TokenMatcher extends GrammarMatcher<TokenNode> {
-    private TokenGrammar tokenName;
+    private final TokenGrammar grammar;
 
-    /**
-     * Creates an Instance of TokenGrammar.java
-     *
-     * @param tokenName
-     * @author Nils
-     * @version 2019-05-28
-     */
-    public TokenMatcher(TokenGrammar tokenName) {
-        this.tokenName = tokenName;
+    public TokenMatcher(TokenGrammar grammar) {
+        this.grammar = grammar;
     }
 
     @Override
@@ -40,7 +33,7 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
                     getIdentifier(),
                     String.format(
                             "Expected \"%s\" but found nothing (whole file parsed already)",
-                            tokenName.getTokenName()
+                            grammar.getTokenName()
                     ),
                     tokens
             );
@@ -49,13 +42,13 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
         int startColumn = tokens.getColumn();
         int startIndex = tokens.index();
         AssignedToken token = tokens.next();
-        if (token.getName().equals(tokenName.getTokenName())) {
+        if (token.getName().equals(grammar.getTokenName())) {
             AstNode.Location location = AstNode.Location.of(startLine, startColumn, tokens.getLine(), tokens.getColumn());
             return new TokenNode(List.of(token), location);
         }
         throw new ParsingException(getIdentifier(), String.format(
                 "expected \"%s\" but got \"%s\"",
-                tokenName.getTokenName(),
+                grammar.getTokenName(),
                 token.getName()
         ), startLine, startColumn, startIndex);
     }
@@ -63,14 +56,8 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
     /**
      * @return the tokenName
      */
-    public String getTokenName() {
-        return tokenName.getTokenName();
+    public String getGrammar() {
+        return grammar.getTokenName();
     }
 
-    /**
-     * @param tokenName the tokenName to set
-     */
-    public void setTokenName(TokenGrammar tokenName) {
-        this.tokenName = tokenName;
-    }
 }

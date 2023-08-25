@@ -29,6 +29,7 @@ abstract class AstNodeTest<T extends AstNode> {
 
 	@TestFactory
 	Stream<DynamicTest> reduceNullName() {
+		//noinspection DataFlowIssue
 		return getProbes("coffee").map(probe -> DynamicTest.dynamicTest(
 				probe.toString(),
 				() -> assertThatThrownBy(() -> probe.node.reduce(null))

@@ -10,7 +10,6 @@ class SuperNodeTest extends AstNodeTest<SequenceNode> {
 	@Override
 	Stream<AstNodeTest<SequenceNode>.AstNodeProbe> getProbes(String reduceName) {
 		var SOME_LOCATION = AstNode.Location.oneChar(0, 0);
-		var empty       = new SequenceNode(SOME_LOCATION);
 		var onlyUnnamed = new SequenceNode(SOME_LOCATION);
 		onlyUnnamed.add(AstNodeMocker.getTokenNode("numbas", "NAME", "123"));
 		onlyUnnamed.add(AstNodeMocker.getMockNode("ignored", null, ""));

@@ -60,7 +60,7 @@ public class SequenceNode extends AstNode {
      * Appends an unnamed node to the end of the sub-node list. Retrieving an unnamed node is harder than a named one.
      *
      * @param node the node to be added
-     * @return
+     * @return true if the node was added
      */
     public boolean add(AstNode node) {
         return subNodes.add(node);

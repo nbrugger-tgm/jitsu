@@ -7,7 +7,6 @@ import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarMatcher;
 import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.token.TokenStream;
-import com.niton.parser.token.Tokenizer;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
@@ -37,11 +36,6 @@ public class RepeatMatcher extends GrammarMatcher<SequenceNode> {
     }
 
 
-    /**
-     * @param tokens
-     * @param ref
-     * @see GrammarMatcher#process(TokenStream, GrammarReference)
-     */
     @Override
     public @NotNull SequenceNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) throws ParsingException {
         List<ParsingException> exitStates = new LinkedList<>();

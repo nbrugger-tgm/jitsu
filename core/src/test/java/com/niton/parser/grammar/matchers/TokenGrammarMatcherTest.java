@@ -20,7 +20,7 @@ public class TokenGrammarMatcherTest extends AbstractMatcherTest {
     }
 
     @Override
-    public Stream<TestCase> getTestCases() throws ParsingException {
+    protected Stream<TestCase> getTestCases() throws ParsingException {
         var number = new TokenMatcher(new TokenGrammar(DefaultToken.NUMBER.name()));
         var letters = new TokenMatcher(new TokenGrammar(DefaultToken.LETTERS.name()));
         var minus = new TokenMatcher(new TokenGrammar(DefaultToken.MINUS.name()));
@@ -32,28 +32,28 @@ public class TokenGrammarMatcherTest extends AbstractMatcherTest {
                         tokenizer.tokenize("1"),
                         number,
                         new TokenNode(
-                                List.of(new AssignedToken("1", number.getTokenName(), 0)),
+                                List.of(new AssignedToken("1", number.getGrammar(), 0)),
                                 AstNode.Location.of(0, 0, 0, 1)
                         )
                 ),
                 new TestCase(
                         tokenizer.tokenize("123"),
                         number,
-                        new TokenNode(List.of(new AssignedToken("123", number.getTokenName(), 0)),
+                        new TokenNode(List.of(new AssignedToken("123", number.getGrammar(), 0)),
                                 AstNode.Location.of(0, 0, 0, 3)
                         )
                 ),
                 new TestCase(
                         tokenizer.tokenize("123.456"),
                         number,
-                        new TokenNode(List.of(new AssignedToken("123", number.getTokenName(), 0)),
+                        new TokenNode(List.of(new AssignedToken("123", number.getGrammar(), 0)),
                                 AstNode.Location.of(0, 0, 0, 3)
                         )
                 ),
                 new TestCase(
                         tokenizer.tokenize("1.456"),
                         number,
-                        new TokenNode(List.of(new AssignedToken("1", number.getTokenName(), 0)),
+                        new TokenNode(List.of(new AssignedToken("1", number.getGrammar(), 0)),
                                 AstNode.Location.of(0, 0, 0, 1)
                         )
                 ),
@@ -65,14 +65,14 @@ public class TokenGrammarMatcherTest extends AbstractMatcherTest {
                 new TestCase(
                         tokenizer.tokenize(".456"),
                         dot,
-                        new TokenNode(List.of(new AssignedToken(".", dot.getTokenName(), 0)),
+                        new TokenNode(List.of(new AssignedToken(".", dot.getGrammar(), 0)),
                                 AstNode.Location.of(0, 0, 0, 1)
                         )
                 ),
                 new TestCase(
                         tokenizer.tokenize("..456"),
                         dot,
-                        new TokenNode(List.of(new AssignedToken(".", dot.getTokenName(), 0)),
+                        new TokenNode(List.of(new AssignedToken(".", dot.getGrammar(), 0)),
                                 AstNode.Location.of(0, 0, 0, 1)
                         )
                 ),
@@ -85,14 +85,14 @@ public class TokenGrammarMatcherTest extends AbstractMatcherTest {
                         tokenizer.tokenize("AABBCC"),
                         letters,
                         new TokenNode(
-                                List.of(new AssignedToken("AABBCC", letters.getTokenName(), 0)),
+                                List.of(new AssignedToken("AABBCC", letters.getGrammar(), 0)),
                                 AstNode.Location.of(0, 0, 0, 6)
                         )
                 ),
                 new TestCase(
                         tokenizer.tokenize("AaBbCc"),
                         letters,
-                        new TokenNode(List.of(new AssignedToken("AaBbCc", letters.getTokenName(), 0)),
+                        new TokenNode(List.of(new AssignedToken("AaBbCc", letters.getGrammar(), 0)),
                                 AstNode.Location.of(0, 0, 0, 6)
                         )
                 ),
@@ -104,7 +104,7 @@ public class TokenGrammarMatcherTest extends AbstractMatcherTest {
                 new TestCase(
                         tokenizer.tokenize("123-45"),
                         minus,
-                        new TokenNode(List.of(new AssignedToken("-", minus.getTokenName(), 3)),
+                        new TokenNode(List.of(new AssignedToken("-", minus.getGrammar(), 3)),
                                 AstNode.Location.of(0, 0, 3, 4)
                         ),
                         1

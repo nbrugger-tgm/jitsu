@@ -1,10 +1,11 @@
 package com.niton.parser.ast;
 
 import com.niton.parser.token.Tokenizer.AssignedToken;
-import lombok.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
