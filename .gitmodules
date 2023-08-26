@@ -1,0 +1,3 @@
+[submodule "libs/jainparse"]
+	path = libs/jainparse
+	url = git@github.com:nbrugger-tgm/JainParse.git
