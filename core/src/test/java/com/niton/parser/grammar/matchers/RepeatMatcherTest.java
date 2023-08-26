@@ -22,7 +22,7 @@ class RepeatMatcherTest {
     @Test
     void testInstantFail() throws ParsingException {
         var subGrammar = mock(Grammar.class);
-        var matcher = new RepeatMatcher(subGrammar);
+        var matcher = new RepeatMatcher(subGrammar, minimum);
         when(subGrammar.parse(any(), any())).thenThrow(new ParsingException("", "", 0, 0, 0));
         var result = matcher.parse(new ListTokenStream(List.of()), new GrammarReferenceMap());
         assertEquals(0, result.subNodes.size());
@@ -31,7 +31,7 @@ class RepeatMatcherTest {
     @Test
     void testWorking() throws ParsingException {
         var subGrammar = mock(Grammar.class);
-        var matcher = new RepeatMatcher(subGrammar);
+        var matcher = new RepeatMatcher(subGrammar, minimum);
         var tokenResult = new TokenNode(List.of(new AssignedToken("NUMBER", "1")), ANY_LOCATION);
         var tokenResult2 = new TokenNode(List.of(new AssignedToken("LETTERS", "ABC")), ANY_LOCATION);
         var streamMock = mock(TokenStream.class);

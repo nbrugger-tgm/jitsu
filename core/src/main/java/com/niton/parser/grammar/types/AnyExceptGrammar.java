@@ -3,9 +3,14 @@ package com.niton.parser.grammar.types;
 import com.niton.parser.ast.TokenNode;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarReference;
+import com.niton.parser.grammar.api.WrapperGrammar;
 import com.niton.parser.grammar.matchers.AnyExceptMatcher;
 import lombok.Getter;
 import lombok.Setter;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 /**
  * This grammar accepts any token except the one given in the Constructor<br>
@@ -16,7 +21,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class AnyExceptGrammar extends Grammar<TokenNode> implements GrammarReference.Single {
+public class AnyExceptGrammar extends WrapperGrammar<TokenNode>  {
 
 	private Grammar<?> except;
 
@@ -24,6 +29,11 @@ public class AnyExceptGrammar extends Grammar<TokenNode> implements GrammarRefer
 		this.except = grammarNotToAccept;
 	}
 
+
+	@Override
+	protected Grammar<?> copy() {
+		return new AnyExceptGrammar(except);
+	}
 
 	/**
 	 * @see Grammar#createExecutor()
@@ -33,9 +43,9 @@ public class AnyExceptGrammar extends Grammar<TokenNode> implements GrammarRefer
 		return new AnyExceptMatcher(except);
 	}
 
-	@Override
-	public Grammar<?> getGrammar() {
-		return except;
-	}
 
+	@Override
+	protected Stream<Grammar<?>> getWrapped() {
+		return Stream.of(except);
+	}
 }

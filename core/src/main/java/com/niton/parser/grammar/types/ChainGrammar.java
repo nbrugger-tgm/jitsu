@@ -1,13 +1,18 @@
 package com.niton.parser.grammar.types;
 
+import com.niton.parser.ast.SequenceNode;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarReference;
+import com.niton.parser.grammar.api.WrapperGrammar;
 import com.niton.parser.grammar.matchers.ChainMatcher;
-import com.niton.parser.ast.SequenceNode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.val;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Used to build a grammar<br>
@@ -16,58 +21,59 @@ import java.util.stream.Collectors;
  * @author Nils
  * @version 2019-05-28
  */
-public class ChainGrammar extends Grammar<SequenceNode>
-		implements GrammarReference {
-	private final List<Grammar<?>>        chain           = new LinkedList<>();
-	@Getter
-	private final Map<Integer, String> naming          = new HashMap<>();
+@Getter
+@NoArgsConstructor
+public class ChainGrammar extends WrapperGrammar<SequenceNode>
+        implements GrammarReference {
+    private final List<Grammar<?>> chain = new LinkedList<>();
+    private final Map<Integer, String> naming = new HashMap<>();
 
-	public List<Grammar<?>> getChain() {
-		return chain;
-	}
-	public void addGrammar(Grammar<?> grammar) {
-		chain.add(grammar);
-	}
-	public void addGrammar(Grammar<?> grammar, String name) {
-		chain.add(grammar);
-		naming.put(chain.size()-1,name);
-	}
+    public ChainGrammar(List<Grammar<?>> chain, Map<Integer, String> naming) {
+        this.chain.addAll(chain);
+        this.naming.putAll(naming);
+    }
 
-	/**
-	 * @see Grammar#createExecutor()
-	 */
-	@Override
-	public ChainMatcher createExecutor() {
-		return new ChainMatcher(this);
-	}
+    public void addGrammar(Grammar<?> grammar) {
+        chain.add(grammar);
+    }
+
+    public void addGrammar(Grammar<?> grammar, String name) {
+        chain.add(grammar);
+        naming.put(chain.size() - 1, name);
+    }
 
     @Override
-	public Grammar<?> get(String key) {
-		if (getName().equals(key)) return this;
-		for (Grammar<?> g : chain) {
-			if (g.getName().equals(key)) {
-				return g;
-			}
-		}
-		return null;
-	}
+    protected Grammar<?> copy() {
+        return new ChainGrammar(chain, naming);
+    }
 
-	/**
-	 * Returns the names of all the grammars in the chain including itself
-	 */
-	@Override
-	public Set<String> grammarNames() {
-		Set<String> s = chain.stream()
-		                     .map(Grammar::getName)
-		                     .filter(Objects::nonNull)
-		                     .collect(Collectors.toSet());
-		s.add(this.getName());
-		return s;
-	}
+    /**
+     * @see Grammar#createExecutor()
+     */
+    @Override
+    public ChainMatcher createExecutor() {
+        return new ChainMatcher(this);
+    }
 
-	@Override
-	public ChainGrammar then(Grammar<?> tokenDefiner) {
-		addGrammar(tokenDefiner);
-		return this;
-	}
+    @Override
+    protected Stream<Grammar<?>> getWrapped() {
+        return chain.stream();
+    }
+    @Override
+    public Grammar<?> then(Grammar<?> grammar) {
+        if(getName() != null) return super.then(grammar);
+        val newGram = new ChainGrammar(chain, naming);
+        newGram.addGrammar(grammar);
+        return newGram;
+    }
+
+    @Override
+    public Grammar<?> then(String name, Grammar<?> grammar) {
+        if(getName() != null) return super.then(grammar);
+        val newGram = new ChainGrammar(chain, naming);
+        newGram.addGrammar(grammar, name);
+
+        return newGram;
+    }
+
 }

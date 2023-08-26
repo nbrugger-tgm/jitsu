@@ -2,7 +2,6 @@ package com.niton.parser.grammar.api;
 
 import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.SequenceNode;
-import com.niton.parser.ast.SwitchNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.types.*;
 import com.niton.parser.token.TokenReference;
@@ -16,8 +15,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.SortedMap;
 
 /**
  * A Grammar is a rule how to collect tokens together and handle them
@@ -48,6 +45,10 @@ public abstract class Grammar<R extends AstNode> {
         return new GrammarReferenceGrammar(name.getName());
     }
 
+    public static Grammar<?> reference(Grammar name) {
+        return new GrammarReferenceGrammar(name.getName());
+    }
+
     public static Grammar<?> ignore(Grammar<?> g) {
         return new IgnoreGrammar(g);
     }
@@ -61,14 +62,14 @@ public abstract class Grammar<R extends AstNode> {
     }
 
     public static Grammar<?> repeat(Grammar<?> g) {
-        return new RepeatGrammar(g);
+        return new RepeatGrammar(g, 0);
     }
 
-    public static Grammar<?> tokenReference(TokenReference token) {
-        return tokenReference(token.getName());
+    public static Grammar<?> token(TokenReference token) {
+        return token(token.getName());
     }
 
-    public static Grammar<?> tokenReference(String token) {
+    public static Grammar<?> token(String token) {
         return new TokenGrammar(token);
     }
 
@@ -76,8 +77,8 @@ public abstract class Grammar<R extends AstNode> {
         return new KeywordGrammar(keyword);
     }
 
-    public static Grammar<?> tokenReference(Tokenable token) {
-        return tokenReference(token.name());
+    public static Grammar<?> token(Tokenable token) {
+        return token(token.name());
     }
 
     public static Grammar<?> object(LinkedHashMap<String, ? extends Grammar<?>> properties) {
@@ -99,7 +100,10 @@ public abstract class Grammar<R extends AstNode> {
     }
 
     public Grammar<?> repeat() {
-        return new RepeatGrammar(this);
+        return repeat(0);
+    }
+    public Grammar<?> repeat(int minimum) {
+        return new RepeatGrammar(this,minimum);
     }
 
     public void map(GrammarReferenceMap ref) {
@@ -124,6 +128,26 @@ public abstract class Grammar<R extends AstNode> {
             tokens.rollback();
         }
     }
+
+    public static Grammar<?> first(String name, Grammar<?> grammar) {
+        var chainGrammar = new ChainGrammar();
+        chainGrammar.addGrammar(grammar, name);
+        return chainGrammar;
+    }
+
+    @NotNull
+    public Grammar<?> namedCopy(@NotNull GrammarName variable) {
+        var copy = copy();
+        copy.setName(variable.getName());
+        return copy;
+    }
+    @NotNull
+    public Grammar<?> namedCopy(@NotNull String variable) {
+        var copy = copy();
+        copy.setName(variable);
+        return copy;
+    }
+    protected abstract Grammar<?> copy();
 
     @Data
     public static class ParsingProbe{
@@ -179,6 +203,9 @@ public abstract class Grammar<R extends AstNode> {
         chain.addGrammar(tokenDefiner);
         return chain;
     }
+    public Grammar<?> then(Tokenable tokenDefiner) {
+        return then(token(tokenDefiner));
+    }
     public Grammar<?> then(String name, Grammar<?> tokenDefiner) {
         var chain = new ChainGrammar();
         chain.addGrammar(this);
@@ -191,6 +218,7 @@ public abstract class Grammar<R extends AstNode> {
         return this;
     }
 
+    @NotNull
     public Grammar<R> named(GrammarName name) {
         this.name = name.getName();
         return this;
@@ -345,7 +373,7 @@ public abstract class Grammar<R extends AstNode> {
              * @see RepeatGrammar
              */
             public RuleApplier repeat() {
-                g = new RepeatGrammar(g);
+                g = new RepeatGrammar(g, 0);
                 return this;
             }
 

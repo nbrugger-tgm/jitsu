@@ -24,19 +24,5 @@ public interface GrammarReference {
 	 * @return the name of all contained Grammars
 	 */
 	Set<String> grammarNames();
-	interface Single extends GrammarReference {
-		Grammar<?> getGrammar();
-
-		@Override
-		default Set<String> grammarNames() {
-			return Set.of(getGrammar().getName());
-		}
-
-		@Override
-		default Grammar<?> get(String key) {
-			if (getGrammar().getName().equals(key)) return getGrammar();
-			return null;
-		}
-	}
 }
 

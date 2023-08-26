@@ -30,9 +30,11 @@ import static java.util.stream.Collectors.toMap;
 public class RepeatMatcher extends GrammarMatcher<SequenceNode> {
 
     private Grammar<?> check;
+    private final int minimum;
 
-    public RepeatMatcher(Grammar<?> expression) {
+    public RepeatMatcher(Grammar<?> expression, int minimum) {
         this.check = expression;
+        this.minimum = minimum;
     }
 
 
@@ -58,6 +60,10 @@ public class RepeatMatcher extends GrammarMatcher<SequenceNode> {
                 exitStates.add(new ParsingException(getIdentifier(), format("The %s element failed and stopped parsing the repetition",englishify(resultIndex)), e));
                 break;
             }
+            resultIndex++;
+        }
+        if(resultIndex < minimum) {
+            throw new ParsingException(getIdentifier(), format("The repetition only matched %d from the minimum of %d elements", resultIndex, minimum), exitStates.toArray(ParsingException[]::new));
         }
         SequenceNode astNode;
         if(subNodes.isEmpty()) {

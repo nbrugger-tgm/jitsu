@@ -5,6 +5,7 @@ import com.niton.parser.grammar.matchers.TokenMatcher;
 import com.niton.parser.ast.TokenNode;
 import lombok.Getter;
 import lombok.Setter;
+import org.jetbrains.annotations.NotNull;
 
 @Getter
 @Setter
@@ -23,6 +24,11 @@ public class TokenGrammar extends Grammar<TokenNode> {
 	}
 
 
+	@Override
+	protected Grammar<?> copy() {
+		return new TokenGrammar(tokenName, getName());
+	}
+
 	/**
 	 * @see Grammar#createExecutor()
 	 */
@@ -30,5 +36,6 @@ public class TokenGrammar extends Grammar<TokenNode> {
 	public TokenMatcher createExecutor() {
 		return new TokenMatcher(this);
 	}
+
 
 }

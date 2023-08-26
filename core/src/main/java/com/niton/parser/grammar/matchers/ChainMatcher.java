@@ -3,6 +3,7 @@ package com.niton.parser.grammar.matchers;
 import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.SequenceNode;
 import com.niton.parser.exceptions.ParsingException;
+import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarMatcher;
 import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.types.ChainGrammar;
@@ -11,10 +12,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static java.lang.String.format;
 
@@ -28,7 +26,7 @@ import static java.lang.String.format;
 @Getter
 @Setter
 public class ChainMatcher extends GrammarMatcher<SequenceNode> {
-
+    private static final Deque<Grammar<?>> blocked = new ArrayDeque<>();
     private ChainGrammar chain;
 
     public ChainMatcher(ChainGrammar chain) {
@@ -48,8 +46,11 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
         int i = 0;
         for (var grammar : chain.getChain()) {
             try {
+                var isBlocked = i == 0 && !blocked.isEmpty() && blocked.peekFirst() == chain;
+                if(isBlocked){ continue;}
+                else blocked.push(chain);
                 var res = grammar.parse(tokens, reference);
-
+                if(!isBlocked) blocked.removeFirst();
                 subNodes.add(res);
                 String name;
                 if ((name = chain.getNaming().get(i)) != null) {

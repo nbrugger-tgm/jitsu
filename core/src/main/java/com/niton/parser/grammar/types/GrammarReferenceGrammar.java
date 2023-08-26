@@ -7,6 +7,7 @@ import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.matchers.ReferenceGrammarMatcher;
 import lombok.Getter;
 import lombok.Setter;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -18,17 +19,16 @@ import org.jetbrains.annotations.Nullable;
 @Getter
 @Setter
 public class GrammarReferenceGrammar extends Grammar<AstNode> {
-    private String grammar;
-
-    public GrammarReferenceGrammar(String g) {
-        this.grammar = g;
-    }
-
     /**
+     * -- GETTER --
+     *
      * @return the grammar
      */
-    public String getGrammar() {
-        return grammar;
+    @Getter
+    private String grammar;
+    private @Nullable String explicitName = null;
+    public GrammarReferenceGrammar(String g) {
+        this.grammar = g;
     }
 
     /**
@@ -42,32 +42,36 @@ public class GrammarReferenceGrammar extends Grammar<AstNode> {
         return ref.get(grammar);
     }
 
-    /**
-     * @return
-     * @see Grammar#createExecutor()
-     */
+    @Override
+    protected Grammar<?> copy() {
+        return new GrammarReferenceGrammar(grammar);
+    }
+
     @Override
     public ReferenceGrammarMatcher createExecutor() {
+        if(grammar == null)
+            throw new NullPointerException();
         return new ReferenceGrammarMatcher(grammar);
     }
 
     @Override
     public String getName() {
-        return getGrammar();
+        return explicitName != null ? explicitName : getGrammar();
     }
 
 	@Override
 	public Grammar<AstNode> named(GrammarName name) {
-		return setName(null);
+		return setName(name.getName());
 	}
 
-	@Override
+    @Override
 	public Grammar<AstNode> named(String name) {
-		return setName(null);
+		return setName(name);
 	}
 
 	@Override
     public Grammar<AstNode> setName(@Nullable String name) {
-        throw new UnsupportedOperationException("Naming a GrammarReferenceGrammar is not useful. Instead name the referenced grammar!");
+        this.explicitName = name;
+        return this;
     }
 }

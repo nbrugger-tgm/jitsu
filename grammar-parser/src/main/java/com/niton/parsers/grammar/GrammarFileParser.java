@@ -146,7 +146,7 @@ public class GrammarFileParser extends Parser<GrammarFileContent> {
     }
 
     private Grammar<?> parseTokenReference(ReducedNode value) {
-        return Grammar.tokenReference(value.getSubNode(TOKEN_NAME.id()).orElseThrow().getValue());
+        return Grammar.token(value.getSubNode(TOKEN_NAME.id()).orElseThrow().getValue());
     }
 
     private Tokenable parseTokenDefiner(ReducedNode reducedNode) {

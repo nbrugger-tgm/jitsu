@@ -31,8 +31,8 @@ public class GrammarFileGrammar {
 	}
 
 	private static final Grammar<?> whitespace = anyOf(
-			tokenReference(SPACE),
-			tokenReference(LINE_END)
+			token(SPACE),
+			token(LINE_END)
 	).named("whitespace");
 
 	private static final Grammar<?> comment = build(COMMENT)
@@ -63,7 +63,7 @@ public class GrammarFileGrammar {
 					        .repeat()
 			).add("token_definers")
 			.get();
-	private static final Grammar<?> grammarReference     = tokenReference(IDENTIFIER)
+	private static final Grammar<?> grammarReference     = token(IDENTIFIER)
 			.named(GRAMMAR_REFERENCE.name());
 	private static final Grammar<?> tokenReference       = build(TOKEN_REFERENCE)
 			.token(TOKEN_SIGN).add()

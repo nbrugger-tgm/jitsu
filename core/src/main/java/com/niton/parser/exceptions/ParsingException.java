@@ -77,15 +77,15 @@ public class ParsingException extends Exception {
     }
 
     public String getFullExceptionTree() {
-        if (causes.size() == 0)
+        if (causes.isEmpty())
             return getMessage();
         return getMessage() + ":\n" + causes.stream().map(ParsingException::getFullExceptionTree)
-                .map(bloc -> bloc.replace("\n", "\n\t"))
+                .map(bloc -> bloc.replace("\n", "\n  "))
                 .collect(Collectors.joining("\n"));
     }
 
     private Stream<ParsingException> getMostProminentDeepExceptionStream() {
-        if (causes.size() == 0)
+        if (causes.isEmpty())
             return Stream.of(this);
         return causes.stream().flatMap(ParsingException::getMostProminentDeepExceptionStream).filter(e -> e.index == this.index);
     }

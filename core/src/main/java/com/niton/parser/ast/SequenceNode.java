@@ -85,7 +85,7 @@ public class SequenceNode extends AstNode {
         var namedSubnodes = !naming.isEmpty() ? getNamedProperties() : getDeepProperties();
         //when there are neither named nor deep (named) properties, create a leaf node
         if (namedSubnodes.isEmpty() && naming.isEmpty()) {
-            namedSubnodes = List.of(LocatableReducedNode.leaf("value", joinTokens(), getLocation()));
+            return Optional.of(LocatableReducedNode.leaf(name, joinTokens(), getLocation()));
         }
         return Optional.of(LocatableReducedNode.node(name, namedSubnodes, getLocation()));
     }
