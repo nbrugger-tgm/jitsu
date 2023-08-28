@@ -1,5 +1,6 @@
 package com.niton.parser.ast;
 
+import com.niton.parser.token.Location;
 import com.niton.parser.token.Tokenizer;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,9 +24,9 @@ public class AstNodeMocker {
         when(tokenMock.reduce(any())).thenAnswer(invocation -> Optional.of(LocatableReducedNode.leaf(
                 invocation.getArguments()[0].toString(),
                 tokenValue,
-                AstNode.Location.oneChar(0, tokenValue.length())
+                Location.oneChar(0, tokenValue.length())
         )));
-        when(tokenMock.getLocation()).thenReturn(AstNode.Location.oneChar(0, tokenValue.length()));
+        when(tokenMock.getLocation()).thenReturn(Location.oneChar(0, tokenValue.length()));
         return tokenMock;
     }
 
@@ -43,7 +44,7 @@ public class AstNodeMocker {
                 Arrays.stream(subTokens)
                         .flatMap((sub) -> sub.reduce(Integer.toString(i.getAndIncrement())).stream())
                         .collect(Collectors.toList()),
-                AstNode.Location.oneChar(
+                Location.oneChar(
                         0,
                         Arrays.stream(subTokens)
                                 .map(tok -> tok.joinTokens().length()).reduce(0, Integer::sum)

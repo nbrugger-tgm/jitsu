@@ -1,11 +1,11 @@
 package com.niton.parser.grammar.matchers;
 
-import com.niton.parser.ast.AstNode;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarMatcher;
 import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.ast.TokenNode;
+import com.niton.parser.token.Location;
 import com.niton.parser.token.TokenStream;
 import com.niton.parser.token.Tokenizer.AssignedToken;
 import lombok.Getter;
@@ -49,7 +49,7 @@ public class AnyExceptMatcher extends GrammarMatcher<TokenNode> {
 		}
 		int endLine = tokens.getLine();
 		int endColumn = tokens.getColumn();
-		return new TokenNode(matchedTokens, AstNode.Location.of(startLine, startColumn, endLine, endColumn));
+		return new TokenNode(matchedTokens, Location.of(startLine, startColumn, endLine, endColumn));
 	}
 
 }

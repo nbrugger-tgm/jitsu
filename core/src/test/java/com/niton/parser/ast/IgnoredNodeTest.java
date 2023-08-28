@@ -1,5 +1,6 @@
 package com.niton.parser.ast;
 
+import com.niton.parser.token.Location;
 import com.niton.parser.token.Tokenizer;
 
 import java.util.List;
@@ -12,7 +13,7 @@ class IgnoredNodeTest extends AstNodeTest<OptionalNode> {
         var subed = new IgnoredNode();
         subed.setValue(new TokenNode(
                 List.of(new Tokenizer.AssignedToken("1a2b3c", "name", 2)),
-                AstNode.Location.of(0, 0, 0, 6)
+                Location.of(0, 0, 0, 6)
         ));
 
 

@@ -46,7 +46,7 @@ public class ReferenceGrammarMatcher extends GrammarMatcher<AstNode> {
 			throw new ParsingException(getIdentifier(), format(
 					"Unknown reference! The Grammar \"%s\" was not found in reference",
 					grammar
-			),tokens);
+			),tokens.currentLocation());
 		}
 		Grammar<?> g = ref.get(grammar);
 		return g.parse(tokens, ref);

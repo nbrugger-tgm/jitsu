@@ -1,5 +1,6 @@
 package com.niton.parser.ast;
 
+import com.niton.parser.token.Location;
 import com.niton.parser.token.Tokenizer;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -32,6 +33,7 @@ public class OptionalNode extends AstNode {
 
     public void setValue(@Nullable AstNode value) {
         this.value = value;
+        this.setParsingException(value == null ? null : value.getParsingException());
     }
 
     public boolean isPresent() {

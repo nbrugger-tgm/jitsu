@@ -1,10 +1,10 @@
 package com.niton.parser.ast;
 
+import com.niton.parser.token.Location;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.stream.Collectors.toList;
@@ -13,14 +13,14 @@ public class LocatableReducedNode extends ReducedNode{//This is a union type -> 
     /**
      * only available if the node is a leaf
      */
-    private final AstNode.Location location;
+    private final Location location;
     /**
      * @param location must be non-null if children is empty
      */
     LocatableReducedNode(
             String name,
             List<LocatableReducedNode> children,
-            @Nullable AstNode.Location location
+            @Nullable Location location
     ) {
         super(name, new ArrayList<>(children));
         if(location == null && children.isEmpty())
@@ -30,14 +30,14 @@ public class LocatableReducedNode extends ReducedNode{//This is a union type -> 
         } else {
             var firstChildLocation = children.get(0).getLocation();
             var lastChildLocation = children.get(children.size() - 1).getLocation();
-            this.location = AstNode.Location.of(
+            this.location = Location.of(
                     firstChildLocation.getFromLine(), firstChildLocation.getFromColumn(),
                     lastChildLocation.getToLine(), lastChildLocation.getToColumn()
             );
         }
     }
 
-    LocatableReducedNode(String value, String name, AstNode.Location location) {
+    LocatableReducedNode(String value, String name, Location location) {
         super(name, value);
         this.location = location;
     }
@@ -49,7 +49,7 @@ public class LocatableReducedNode extends ReducedNode{//This is a union type -> 
      * @param value the value of the node
      * @return the leaf node
      */
-    public static LocatableReducedNode leaf(String name, String value, AstNode.Location location) {
+    public static LocatableReducedNode leaf(String name, String value, Location location) {
         if (value == null)
             throw new NullPointerException("Value of a leaf node can not be null");
         return new LocatableReducedNode(value, name, location);
@@ -62,11 +62,11 @@ public class LocatableReducedNode extends ReducedNode{//This is a union type -> 
      * @param children the sub-nodes of this node 0..n
      * @return a node with children
      */
-    public static LocatableReducedNode node(String name, List<LocatableReducedNode> children, @Nullable AstNode.Location location) {
+    public static LocatableReducedNode node(String name, List<LocatableReducedNode> children, @Nullable Location location) {
         return new LocatableReducedNode(name, children, location);
     }
 
-    public AstNode.Location getLocation() {
+    public Location getLocation() {
         return location;
     }
 

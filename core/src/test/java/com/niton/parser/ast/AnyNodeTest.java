@@ -1,5 +1,6 @@
 package com.niton.parser.ast;
 
+import com.niton.parser.token.Location;
 import com.niton.parser.token.Tokenizer.AssignedToken;
 import org.junit.jupiter.api.Test;
 
@@ -114,7 +115,7 @@ class AnyNodeTest extends AstNodeTest<AstNode> {
 		AstNode listMock2 = getListNode("array_items",tokenMock,tokenMock2);
 		AstNode mockNode = getMockNode(
 				"grammar_name",
-				LocatableReducedNode.leaf("value","someValue", AstNode.Location.of(0,0,0,0)),
+				LocatableReducedNode.leaf("value","someValue", Location.of(0,0,0,0)),
 				"def someValue()"
 		);
 		return Stream.of(

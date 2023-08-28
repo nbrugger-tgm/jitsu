@@ -6,6 +6,7 @@ import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarMatcher;
 import com.niton.parser.grammar.api.GrammarReference;
+import com.niton.parser.token.Location;
 import com.niton.parser.token.TokenStream;
 import lombok.Getter;
 import lombok.Setter;
@@ -67,7 +68,7 @@ public class RepeatMatcher extends GrammarMatcher<SequenceNode> {
         }
         SequenceNode astNode;
         if(subNodes.isEmpty()) {
-            astNode = new SequenceNode(AstNode.Location.oneChar(tokens.getLine(), tokens.getColumn()));
+            astNode = new SequenceNode(Location.oneChar(tokens.getLine(), tokens.getColumn()));
         } else {
             astNode = new SequenceNode(subNodes, IntStream.range(0, subNodes.size()).boxed().collect(toMap(Object::toString, i -> i)));
         }

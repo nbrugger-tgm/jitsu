@@ -1,10 +1,10 @@
 package com.niton.parser.exceptions;
 
-import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.LocatableReducedNode;
+import com.niton.parser.token.Location;
 
 public class InterpretationException extends RuntimeException {
-    private final AstNode.Location location;
+    private final Location location;
     private final int context;
     public InterpretationException(String message, LocatableReducedNode nodeValue, int context) {
         super(message);

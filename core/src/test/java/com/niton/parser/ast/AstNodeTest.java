@@ -1,5 +1,6 @@
 package com.niton.parser.ast;
 
+import com.niton.parser.token.Location;
 import lombok.Data;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
@@ -12,7 +13,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.*;
 
 abstract class AstNodeTest<T extends AstNode> {
-	protected static final AstNode.Location ANY_LOCATION = AstNode.Location.of(0, 0, 0, 0);
+	protected static final Location ANY_LOCATION = Location.of(0, 0, 0, 0);
 	@Data
 	class AstNodeProbe {
 		private final T           node;

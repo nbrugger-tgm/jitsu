@@ -152,4 +152,9 @@ public class ListTokenStream implements TokenStream {
     public int getColumn() {
         return levelColumns.get(0);
     }
+
+    @Override
+    public Location currentLocation() {
+        return Location.oneChar(getLine(), getColumn());
+    }
 }

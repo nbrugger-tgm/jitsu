@@ -1,6 +1,7 @@
 package com.niton.parser.ast;
 
 import com.niton.parser.exceptions.ParsingException;
+import com.niton.parser.token.Location;
 import com.niton.parser.token.Tokenizer;
 import lombok.Getter;
 import lombok.NonNull;
@@ -8,7 +9,6 @@ import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -105,110 +105,5 @@ public abstract class AstNode {
      */
     public abstract Optional<LocatableReducedNode> reduce(@NonNull String name);
 
-    public interface Location {
-        default String format(){
-            if(getFromLine() == getToLine()) {
-                if (getFromColumn() == getToColumn())
-                    return String.format("%d:%d", getFromLine(), getFromColumn());
-                else
-                    return String.format("%d:%d-%d", getFromLine(), getFromColumn(), getToColumn());
-            }
-            else
-                return String.format("%d:%d-%d:%d", getFromLine(), getFromColumn(), getToLine(), getToColumn());
-        }
-
-        @NotNull
-        static AstNode.Location of(int startLine, int startColumn, int endLine, int endColumn) {
-            return new Location() {
-                @Override
-                public int getFromLine() {
-                    return startLine;
-                }
-
-                @Override
-                public int getFromColumn() {
-                    return startColumn;
-                }
-
-                @Override
-                public int getToLine() {
-                    return endLine;
-                }
-
-                @Override
-                public int getToColumn() {
-                    return endColumn;
-                }
-            };
-        }
-
-        @NotNull
-        static AstNode.Location range(Location from, Location to) {
-            return of(from.getFromLine(), from.getFromColumn(), to.getToLine(), to.getToColumn());
-        }
-
-        static Location oneChar(int line, int column) {
-           return of(line, column, line, column);
-        }
-
-        int getFromLine();
-
-        int getFromColumn();
-
-        int getToLine();
-
-        int getToColumn();
-
-        /**
-         * Marks this position in the given text
-         * by underlining it in the format of {@code ^------^} or {@code ^-^-> description} depending on the size of the description and the selected area
-         *
-         * @param text the text to mark this location in
-         * @param context the number of lines to show before and after the marked area
-         * @param description a description that describes what is marked. If no description is needed use {@code null}
-         * @return the string containing the marked text
-         */
-        default String markInText(String text, int context, @Nullable String description) {
-            //columns are human readable -> 1 based
-            int fromLine = getFromLine()-1;
-            int fromColumn = getFromColumn()-1;
-            int toLine = getToLine()-1;
-            int toColumn = getToColumn()-1;
-
-            String[] lines = text.split("\n");
-            StringBuilder builder = new StringBuilder();
-            int startLine = Math.max(0, fromLine - context);
-            int endLine = Math.min(lines.length, toLine + context);
-            for (int i = startLine; i < endLine; i++) {
-                String line = lines[i];
-                builder.append(line).append("\n");
-                if (i == fromLine) {
-                    builder.append(repeat(" ",fromColumn)).append("^");
-                    if (fromLine == toLine) {
-                        builder.append(repeat("-",Math.max(0,toColumn - fromColumn - 2)));
-                        if (toColumn-fromColumn > 1) builder.append("^");
-                        if (description != null) {
-                            builder.append("-> ").append(description);
-                        }
-                    } else {
-                        builder.append(repeat("-",line.length() - fromColumn));
-                    }
-                    builder.append("\n");
-                } else if(i > fromLine && i < toLine){
-                    builder.append(repeat("-",line.length())).append("\n");
-                } else if (i == toLine) {
-                    builder.append(repeat("-",toColumn-1)).append("^");
-                    if (description != null) {
-                        builder.append("-> ").append(description);
-                    }
-                    builder.append("\n");
-                }
-            }
-            return builder.toString();
-        }
-        private static String repeat(String s, int count) {//Tdoo teavm
-            return String.join("", Collections.nCopies(count, s));
-        }
-    }
 }
 

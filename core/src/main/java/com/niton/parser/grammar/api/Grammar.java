@@ -24,7 +24,6 @@ import java.util.LinkedHashMap;
  */
 public abstract class Grammar<R extends AstNode> {
     private String name;
-
     public static Builder build(GrammarName string) {
         return build(string.getName());
     }
@@ -60,6 +59,9 @@ public abstract class Grammar<R extends AstNode> {
     public static Grammar<?> optional(Grammar<?> g) {
         return new OptionalGrammar(g);
     }
+    public static Grammar<?> not(Grammar<?> g) {
+        return new NotGrammar(g);
+    }
 
     public static Grammar<?> repeat(Grammar<?> g) {
         return new RepeatGrammar(g, 0);
@@ -85,10 +87,6 @@ public abstract class Grammar<R extends AstNode> {
         var chain = new ChainGrammar();
         properties.forEach((name, grammar) -> chain.addGrammar(grammar, name));
         return chain;
-    }
-
-    public Grammar<?> anyExcept() {
-        return new AnyExceptGrammar(this);
     }
 
     public Grammar<?> ignore() {
@@ -197,16 +195,16 @@ public abstract class Grammar<R extends AstNode> {
         return new MultiGrammar(combined);
     }
 
-    public Grammar<?> then(Grammar<?> tokenDefiner) {
+    public ChainGrammar then(Grammar<?> tokenDefiner) {
         var chain = new ChainGrammar();
         chain.addGrammar(this);
         chain.addGrammar(tokenDefiner);
         return chain;
     }
-    public Grammar<?> then(Tokenable tokenDefiner) {
+    public ChainGrammar then(Tokenable tokenDefiner) {
         return then(token(tokenDefiner));
     }
-    public Grammar<?> then(String name, Grammar<?> tokenDefiner) {
+    public ChainGrammar then(String name, Grammar<?> tokenDefiner) {
         var chain = new ChainGrammar();
         chain.addGrammar(this);
         chain.addGrammar(tokenDefiner, name);

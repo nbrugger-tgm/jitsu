@@ -1,11 +1,11 @@
 package com.niton.parser.grammar.matchers;
 
-import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.TokenNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarReferenceMap;
 import com.niton.parser.token.ListTokenStream;
+import com.niton.parser.token.Location;
 import com.niton.parser.token.TokenStream;
 import com.niton.parser.token.Tokenizer.AssignedToken;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 class RepeatMatcherTest {
-    private final static AstNode.Location ANY_LOCATION = AstNode.Location.of(0, 0, 0, 0);
+    private final static Location ANY_LOCATION = Location.of(0, 0, 0, 0);
 
     @Test
     void testInstantFail() throws ParsingException {

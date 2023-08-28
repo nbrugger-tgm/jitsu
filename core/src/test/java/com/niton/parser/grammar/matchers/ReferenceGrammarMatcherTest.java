@@ -6,6 +6,7 @@ import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.api.GrammarReferenceMap;
+import com.niton.parser.token.Location;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -16,7 +17,7 @@ import static org.mockito.Mockito.when;
 
 class ReferenceGrammarMatcherTest extends AbstractMatcherTest {
 
-    public AstNode newNode = new TokenNode(List.of(), AstNode.Location.of(0, 0, 0, 0));
+    public AstNode newNode = new TokenNode(List.of(), Location.of(0, 0, 0, 0));
 
     @Override
     public GrammarReference getGrammarReference() throws ParsingException {

@@ -1,5 +1,6 @@
 package com.niton.parser.ast;
 
+import com.niton.parser.token.Location;
 import com.niton.parser.token.Tokenizer;
 import lombok.NonNull;
 

@@ -1,11 +1,11 @@
 package com.niton.parser.grammar.matchers;
 
-import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.TokenNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.GrammarMatcher;
 import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.types.TokenGrammar;
+import com.niton.parser.token.Location;
 import com.niton.parser.token.TokenStream;
 import com.niton.parser.token.Tokenizer.AssignedToken;
 import org.jetbrains.annotations.NotNull;
@@ -28,6 +28,7 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
     @Override
     public @NotNull TokenNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref)
             throws ParsingException {
+        var start = tokens.currentLocation();
         if (!tokens.hasNext()) {
             throw new ParsingException(
                     getIdentifier(),
@@ -35,22 +36,19 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
                             "Expected \"%s\" but found nothing (whole file parsed already)",
                             grammar.getTokenName()
                     ),
-                    tokens
+                    start
             );
         }
-        int startLine = tokens.getLine();
-        int startColumn = tokens.getColumn();
-        int startIndex = tokens.index();
         AssignedToken token = tokens.next();
+        var tokenRange = Location.range(start, tokens.currentLocation());
         if (token.getName().equals(grammar.getTokenName())) {
-            AstNode.Location location = AstNode.Location.of(startLine, startColumn, tokens.getLine(), tokens.getColumn());
-            return new TokenNode(List.of(token), location);
+            return new TokenNode(List.of(token), tokenRange);
         }
         throw new ParsingException(getIdentifier(), String.format(
                 "expected \"%s\" but got \"%s\"",
                 grammar.getTokenName(),
                 token.getName()
-        ), startLine, startColumn, startIndex);
+        ), tokenRange);
     }
 
     /**

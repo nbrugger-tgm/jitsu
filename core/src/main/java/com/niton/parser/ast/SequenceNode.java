@@ -1,5 +1,6 @@
 package com.niton.parser.ast;
 
+import com.niton.parser.token.Location;
 import com.niton.parser.token.Tokenizer.AssignedToken;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;

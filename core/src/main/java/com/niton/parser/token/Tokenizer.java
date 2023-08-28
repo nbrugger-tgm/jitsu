@@ -182,7 +182,7 @@ public class Tokenizer {
 				"Tokens overlapping: %s overlaps previous Token %s!",
 				assignedToken,
 				overlapedWith
-		),line,col, overlapedWith.getStart());
+		), Location.of(line,col, line, col + assignedToken.value.length()));
 	}
 
 	/**

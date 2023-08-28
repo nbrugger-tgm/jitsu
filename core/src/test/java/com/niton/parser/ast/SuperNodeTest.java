@@ -1,5 +1,7 @@
 package com.niton.parser.ast;
 
+import com.niton.parser.token.Location;
+
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -9,7 +11,7 @@ class SuperNodeTest extends AstNodeTest<SequenceNode> {
 
 	@Override
 	Stream<AstNodeTest<SequenceNode>.AstNodeProbe> getProbes(String reduceName) {
-		var SOME_LOCATION = AstNode.Location.oneChar(0, 0);
+		var SOME_LOCATION = Location.oneChar(0, 0);
 		var onlyUnnamed = new SequenceNode(SOME_LOCATION);
 		onlyUnnamed.add(AstNodeMocker.getTokenNode("numbas", "NAME", "123"));
 		onlyUnnamed.add(AstNodeMocker.getMockNode("ignored", null, ""));

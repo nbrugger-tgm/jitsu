@@ -33,7 +33,11 @@ public abstract class GrammarMatcher<T extends AstNode> {
         try {
             tokens.elevate();
         } catch (IllegalStateException e) {
-            throw new ParsingException(getIdentifier(), String.format("Parsing %s failed: %s", originGrammarName, e.getMessage()), tokens);
+            throw new ParsingException(
+                    getIdentifier(),
+                    String.format("Parsing %s failed: %s", originGrammarName, e.getMessage()),
+                    tokens.currentLocation()
+            );
         }
         T res;
         try {
@@ -44,12 +48,13 @@ public abstract class GrammarMatcher<T extends AstNode> {
         }
         tokens.commit();
         res.setOriginGrammarName(getOriginGrammarName());
-        if (root && tokens.index() + 1 < tokens.size()) {
+        if (root && tokens.hasNext()) {
+            var token = tokens.next();
             if (res.getParsingException() == null) {
                 throw new ParsingException(
                         getIdentifier(),
-                        "Not all tokens consumed at the end of parsing",
-                        tokens
+                        "Not all tokens consumed at the end of parsing (next token: "+token+")",
+                        tokens.currentLocation()
                 );
             } else {
                 throw res.getParsingException();

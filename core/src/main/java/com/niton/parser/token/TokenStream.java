@@ -1,5 +1,7 @@
 package com.niton.parser.token;
 
+import com.niton.parser.exceptions.ParsingException;
+
 public interface TokenStream {
     Tokenizer.AssignedToken next();
 
@@ -28,4 +30,6 @@ public interface TokenStream {
 
     int getLine();
     int getColumn();
+
+    Location currentLocation();
 }

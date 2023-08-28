@@ -1,5 +1,7 @@
 package com.niton.parser.ast;
 
+import com.niton.parser.token.Location;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -13,7 +15,7 @@ class ListNodeTest extends AstNodeTest<SequenceNode> {
 		var tok2 = AstNodeMocker.getTokenNode("grammar2","NUMBERS","333");
 		return Stream.of(
 				new AstNodeProbe(
-						new SequenceNode(AstNode.Location.oneChar(0,0)),
+						new SequenceNode(Location.oneChar(0,0)),
 						ReducedNode.node(reduceName, List.of()),
 						""
 				),
