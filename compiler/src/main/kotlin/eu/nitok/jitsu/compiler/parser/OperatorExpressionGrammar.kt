@@ -8,15 +8,13 @@ import com.niton.parser.token.Tokenable
 import eu.nitok.jitsu.compiler.model.ExpressionType
 import eu.nitok.jitsu.compiler.model.OperationExpressionType
 
-private val nonRecursive = anyOf(statementExpression,literalExpression);
-
 private val addExpression = mathExtensionExpression(OperationExpressionType.ADD_EXPRESSION, DefaultToken.PLUS);
 private val multiplyExpression = mathExtensionExpression(OperationExpressionType.MULTIPLY_EXPRESSION, DefaultToken.STAR);
 private val subtractExpression = mathExtensionExpression(OperationExpressionType.SUBTRACT_EXPRESSION, DefaultToken.MINUS);
 private val divideExpression = mathExtensionExpression(OperationExpressionType.DIVIDE_EXPRESSION, DefaultToken.SLASH);
 private fun mathExtensionExpression(name: OperationExpressionType, token: Tokenable): Grammar<SequenceNode>? {
     return build(name)
-        .grammar(nonRecursive).add("left")
+        .grammar(anyOf(*nonRecursiveExpression)).add("left")
         .token(DefaultToken.WHITESPACE).ignore().add()
         .token(token).add()
         .token(DefaultToken.WHITESPACE).ignore().add()

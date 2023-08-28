@@ -3,6 +3,8 @@ package eu.nitok.jitsu.compiler.parser
 import com.niton.parser.grammar.api.Grammar.*
 import com.niton.parser.grammar.api.GrammarName
 import com.niton.parser.token.DefaultToken
+import com.niton.parser.token.DefaultToken.COLON
+import com.niton.parser.token.DefaultToken.SEMICOLON
 import eu.nitok.jitsu.compiler.model.CaseBodyType
 import eu.nitok.jitsu.compiler.model.CaseMatchType
 import eu.nitok.jitsu.compiler.model.StatementType
@@ -33,8 +35,8 @@ private val conditionMatch = typematch.then(optional(expression)).named(CaseMatc
 private val defaultMatch = keyword("default").named(CaseMatchType.DEFAULT_CASE);
 
 
-private val caseCodeBlockBody = token(DefaultToken.COLON).then(ignorables).then("body", codeBlock).named(CaseBodyType.CODE_BLOCK_CASE_BODY)
-private val expressionBlockBody = keyword("->").then(ignorables).then("body", expression).named(CaseBodyType.EXPRESSION_CASE_BODY)
+private val caseCodeBlockBody = token(COLON).then(ignorables).then("body", codeBlock).named(CaseBodyType.CODE_BLOCK_CASE_BODY)
+private val expressionBlockBody = keyword("->").then(ignorables).then("body", expression).then(token(SEMICOLON)).named(CaseBodyType.EXPRESSION_CASE_BODY)
 
 private val case = keyword("case")
     .then(ignorables)
@@ -52,7 +54,7 @@ val switchStatement = keyword("switch")
     .then(ignorables)
     .then(DefaultToken.ROUND_BRACKET_OPEN)
     .then(ignorables)
-    .then("cases", case.repeat())
+    .then("cases", case.then(ignorables).repeat())
     .then(ignorables)
     .then(DefaultToken.ROUND_BRACKET_CLOSED)
     .named(StatementType.SWITCH_STATEMENT)

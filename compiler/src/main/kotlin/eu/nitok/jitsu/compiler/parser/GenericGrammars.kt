@@ -16,8 +16,3 @@ var ignorables = anyOf(
     token(WHITESPACE),
     token(NEW_LINE)
 ).repeat();
-
-val TYPE_DEF = token(COLON)
-    .then(token(WHITESPACE))
-    .then("type", identifier)
-    .named("TYPE_DEF")

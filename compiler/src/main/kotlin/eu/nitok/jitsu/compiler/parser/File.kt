@@ -11,11 +11,12 @@ private val fileGrammar =
         .then(token(EOF).optional())
         .named("JITSU_FILE")
 
+val grammarReference = GrammarReferenceMap()
+    .deepMap(fileGrammar)
+    .deepMap(expression)
+    .deepMap(statement)
 private val parser = DefaultParser(
-    GrammarReferenceMap()
-        .deepMap(fileGrammar)
-        .deepMap(expression)
-        .deepMap(statement),
+    grammarReference,
     fileGrammar
 );
 

@@ -1,6 +1,5 @@
 package eu.nitok.jitsu.playground
 
-import com.niton.parser.ast.AstNode.Location
 import com.niton.parser.exceptions.ParsingException
 import eu.nitok.jitsu.compiler.parser.parse
 import io.ktor.server.application.*
@@ -34,12 +33,24 @@ fun main() {
                 val code = call.receiveParameters()["code"]!!
                 println("Parsing: $code")
                 val ast = try {
-                    "<pre>${parse(code).format().replace("\n", "<br/>")}</pre>"
+                    "<pre>${
+                        parse(code).format()
+                            .replace("<","&lt")
+                            .replace(">","&gt")
+                            .replace("\n", "<br/>")
+                    }</pre>"
                 } catch (e: ParsingException) {
                     val error = e.mostProminentDeepException;
-                    val loc = Location.oneChar(error.line, error.column);
                     error.printStackTrace()
-                    "Error: <pre>${loc.markInText(code, 2, error.message)}</pre>\n<h2>Detailed</h2><pre>${e.fullExceptionTree}</pre>Stack strace:<pre>${error.stackTraceToString()}</pre>".replace("\n", "<br/>")
+                    """Error: <pre>${
+                        error.markInText(code, 2)
+                        .replace("<","&lt")
+                        .replace(">","&gt")
+                    }</pre>
+                    <h2>Detailed</h2>
+                    Stack strace:
+                    <pre>${error.stackTraceToString()}</pre>
+                    """
                 } catch (e: Exception) {
                     e.printStackTrace()
                     "Error: ${e.message}".replace("\n", "<br/>")
