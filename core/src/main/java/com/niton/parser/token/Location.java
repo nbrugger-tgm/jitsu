@@ -3,9 +3,21 @@ package com.niton.parser.token;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Comparator;
+
 import static java.lang.Math.max;
 
 public interface Location {
+    public static final Comparator<Location> byStart = Comparator.comparingInt(Location::getFromLine)
+            .thenComparingInt(Location::getFromColumn)
+            .thenComparingInt(Location::getToLine)
+            .thenComparingInt(Location::getToColumn);
+
+    public static final Comparator<Location> byEnd = Comparator.comparingInt(Location::getToLine)
+            .thenComparingInt(Location::getToColumn)
+            .thenComparingInt(Location::getFromLine)
+            .thenComparingInt(Location::getFromColumn);
+
     default String format() {
         if (getFromLine() == getToLine()) {
             if (getFromColumn() == getToColumn())

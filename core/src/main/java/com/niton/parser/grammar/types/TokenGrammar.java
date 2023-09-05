@@ -21,6 +21,7 @@ public class TokenGrammar extends Grammar<TokenNode> {
 	public TokenGrammar(String token) {
 		super();
 		this.tokenName = token;
+//		setName(token);
 	}
 
 

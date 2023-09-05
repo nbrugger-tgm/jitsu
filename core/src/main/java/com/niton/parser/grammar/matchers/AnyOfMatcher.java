@@ -1,18 +1,22 @@
 package com.niton.parser.grammar.matchers;
 
-import com.niton.parser.ast.SwitchNode;
 import com.niton.parser.ast.AstNode;
+import com.niton.parser.ast.ParsingResult;
+import com.niton.parser.ast.SwitchNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarMatcher;
 import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.types.MultiGrammar;
+import com.niton.parser.internal.Lazy;
+import com.niton.parser.token.Location;
 import com.niton.parser.token.TokenStream;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import static java.util.stream.Collectors.joining;
 
@@ -23,7 +27,7 @@ import static java.util.stream.Collectors.joining;
  * @version 2019-05-29
  */
 public class AnyOfMatcher extends GrammarMatcher<SwitchNode> {
-    private MultiGrammar grammars;
+    private final MultiGrammar grammars;
 
     public AnyOfMatcher(MultiGrammar grammers) {
         this.grammars = grammers;
@@ -35,40 +39,59 @@ public class AnyOfMatcher extends GrammarMatcher<SwitchNode> {
      * @see GrammarMatcher#process(TokenStream, GrammarReference)
      */
     @Override
-    public @NotNull SwitchNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref)
-            throws ParsingException {
-        Map<String, ParsingException> fails = new HashMap<>();
+    public @NotNull ParsingResult<SwitchNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
+        Map<String, ParsingResult<? extends AstNode>> results = new HashMap<>();
         for (var grammar : this.grammars.getGrammars()) {
-            try {
-                AstNode obj = grammar.parse(tokens, ref);
-                SwitchNode wrapper = new SwitchNode(obj);
-                if (obj.getParsingException() != null)
-                    fails.put(grammar.getIdentifier(), obj.getParsingException());
-                if(fails.size() > 0){
-                    wrapper.setParsingException(new ParsingException(getIdentifier(), String.format(
-                            "Expected one of : [%s] and some were not parsable",
-                            Arrays.stream(this.grammars.getGrammars()).map(Grammar::getIdentifier).collect(joining(", "))
-                    ), formatFails(fails)));
-                }
-                return wrapper;
-            } catch (ParsingException e) {
-                fails.put(grammar.getIdentifier(), e);
+            var result = grammar.parse(tokens, ref);
+            results.put(grammar.getIdentifier(), result);
+            if (!result.wasParsed()) {
+                continue;
             }
+            var node = result.unwrap();
+            SwitchNode wrapper = new SwitchNode(node);
+            var mappedExceptions = formatFails(results);
+            if (mappedExceptions.length > 0) {
+                wrapper.setParsingException(new ParsingException(getIdentifier(), String.format(
+                        "Expected one of : [%s] and some were not parsable",
+                        Arrays.stream(this.grammars.getGrammars()).map(Grammar::getIdentifier).collect(joining(", "))
+                ), mappedExceptions));
+            }
+            return ParsingResult.ok(wrapper);
         }
-        throw new ParsingException(getIdentifier(), String.format(
-                "Expected one of : [%s] but none of them was parsable",
-                Arrays.stream(this.grammars.getGrammars()).map(Grammar::getIdentifier).collect(joining(", "))
-        ), formatFails(fails));
+        var identifiers = Arrays.stream(this.grammars.getGrammars()).map(Grammar::getIdentifier).collect(joining(", "));
+        var allOptionsNamed = Arrays.stream(grammars.getGrammars()).allMatch(e -> e.getDisplayName() != null);
+        if (allOptionsNamed) {
+            var first = results.values().stream()
+                    .filter(e -> !e.wasParsed())
+                    .map(ParsingResult::exception)
+                    .map(ParsingException::getLocation)
+                    .map(Lazy::get)
+                    .min(Location.byStart)
+                    .orElseThrow();
+            return ParsingResult.error(new ParsingException(
+                    getIdentifier(),
+                    "Expected one of: [" + identifiers + "]",
+                    first
+            ));
+        }
+        return ParsingResult.error(new ParsingException(
+                getIdentifier(),
+                "Expected one of : [" + identifiers + "] but none of them was parsable",
+                !allOptionsNamed ? formatFails(results) : new ParsingException[0]
+        ));
     }
 
-    private ParsingException[] formatFails(Map<String, ParsingException> fails) {
+    private ParsingException[] formatFails(Map<String, ParsingResult<? extends AstNode>> fails) {
         return fails.entrySet().stream().map(e -> {
-            return new ParsingException(getIdentifier(), String.format(
-                    "%s: %s",
-                    e.getKey(),
-                    e.getValue().getMessage()
-            ), e.getValue());
-        }).toArray(ParsingException[]::new);
+            var parsed = e.getValue().wasParsed();
+            ParsingException ex;
+            if (parsed && (ex = e.getValue().unwrap().getParsingException()) != null) {
+                return new ParsingException(getIdentifier(), e.getKey() + ": was parsed with allowed exception", ex);
+            } else if (!parsed)
+                return new ParsingException(getIdentifier(), e.getKey() + ": was not parsed", e.getValue().exception());
+            else
+                return null;
+        }).filter(Objects::nonNull).toArray(ParsingException[]::new);
     }
 
 
@@ -77,9 +100,5 @@ public class AnyOfMatcher extends GrammarMatcher<SwitchNode> {
      */
     public Grammar<?>[] getGrammars() {
         return grammars.getGrammars();
-    }
-
-    public void setGrammars(MultiGrammar grammars) {
-        this.grammars = grammars;
     }
 }

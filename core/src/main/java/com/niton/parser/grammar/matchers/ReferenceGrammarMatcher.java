@@ -1,6 +1,7 @@
 package com.niton.parser.grammar.matchers;
 
 import com.niton.parser.ast.AstNode;
+import com.niton.parser.ast.ParsingResult;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarMatcher;
@@ -40,15 +41,19 @@ public class ReferenceGrammarMatcher extends GrammarMatcher<AstNode> {
 	}
 
 	@Override
-	protected @NotNull AstNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref)
-			throws ParsingException {
-		if (ref.get(grammar) == null) {
-			throw new ParsingException(getIdentifier(), format(
+	protected @NotNull ParsingResult<AstNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
+		Grammar<?> g = ref.get(grammar);
+		if (g == null) {
+			return ParsingResult.error(new ParsingException(getIdentifier(), format(
 					"Unknown reference! The Grammar \"%s\" was not found in reference",
 					grammar
-			),tokens.currentLocation());
+			),tokens.currentLocation()));
 		}
-		Grammar<?> g = ref.get(grammar);
-		return g.parse(tokens, ref);
+		var res = g.parse(tokens, ref);
+		if(res.wasParsed()){
+			return ParsingResult.ok(res.unwrap());
+		} else {
+			return ParsingResult.error(res.exception());
+		}
 	}
 }

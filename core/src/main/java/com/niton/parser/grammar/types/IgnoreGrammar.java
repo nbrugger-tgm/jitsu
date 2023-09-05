@@ -19,10 +19,12 @@ import java.util.stream.Stream;
 @Getter
 @Setter
 public class IgnoreGrammar extends WrapperGrammar<OptionalNode> {
-    private Grammar<?> grammar;
+    private final Grammar<?> grammar;
+    private final IgnoreMatcher matcher;
 
     public IgnoreGrammar(Grammar<?> grammar) {
         this.grammar = grammar;
+        this.matcher = new IgnoreMatcher(grammar);
     }
 
 
@@ -41,7 +43,7 @@ public class IgnoreGrammar extends WrapperGrammar<OptionalNode> {
      */
     @Override
     public IgnoreMatcher createExecutor() {
-        return new IgnoreMatcher(grammar);
+        return matcher;
     }
 
 }

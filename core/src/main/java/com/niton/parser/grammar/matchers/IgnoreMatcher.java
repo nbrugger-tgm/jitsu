@@ -3,6 +3,7 @@ package com.niton.parser.grammar.matchers;
 import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.IgnoredNode;
 import com.niton.parser.ast.OptionalNode;
+import com.niton.parser.ast.ParsingResult;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarMatcher;
@@ -34,15 +35,12 @@ public class IgnoreMatcher extends GrammarMatcher<OptionalNode> {
 	 * @param ref
 	 */
 	@Override
-	public @NotNull OptionalNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref)
-	throws ParsingException {
+	public @NotNull ParsingResult<OptionalNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
 		OptionalNode thisRes = new IgnoredNode();
-		try {
-			AstNode res = grammar.parse(tokens, ref);
-			thisRes.setValue(res);
-		} catch (ParsingException e) {
-			thisRes.setParsingException(new ParsingException(getIdentifier(), "Nothing to ignore", e));
-		}
-		return thisRes;
+		grammar.parse(tokens, ref).ifParsedOrElse(
+				thisRes::setValue,
+				err -> thisRes.setParsingException(new ParsingException(getIdentifier(), "Nothing to ignore", err))
+		);
+		return ParsingResult.ok(thisRes);
 	}
 }

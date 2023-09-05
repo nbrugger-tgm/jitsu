@@ -59,8 +59,7 @@ public class GrammarFileGrammar {
 			.get();
 	private static final Grammar<?> fileHead             = build(FILE_HEAD)
 			.grammar(
-					toIgnore.ignore().then(tokenDefiner).named("ignoring_toke_definer")
-					        .repeat()
+					toIgnore.ignore().then(tokenDefiner).named("ignoring_toke_definer").repeat()
 			).add("token_definers")
 			.get();
 	private static final Grammar<?> grammarReference     = token(IDENTIFIER)

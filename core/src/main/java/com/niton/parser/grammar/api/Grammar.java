@@ -1,6 +1,7 @@
 package com.niton.parser.grammar.api;
 
 import com.niton.parser.ast.AstNode;
+import com.niton.parser.ast.ParsingResult;
 import com.niton.parser.ast.SequenceNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.types.*;
@@ -12,6 +13,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -24,6 +26,8 @@ import java.util.LinkedHashMap;
  */
 public abstract class Grammar<R extends AstNode> {
     private String name;
+    @Getter
+    private @Nullable String displayName;
     public static Builder build(GrammarName string) {
         return build(string.getName());
     }
@@ -108,7 +112,7 @@ public abstract class Grammar<R extends AstNode> {
         ref.map(this);
     }
 
-    public ParsingProbe parsable(@NonNull TokenStream tokens, @NonNull GrammarReference ref) {
+    public boolean parsable(@NonNull TokenStream tokens, @NonNull GrammarReference ref) {
         try {
             tokens.elevate();
         } catch (Exception e) {
@@ -118,10 +122,7 @@ public abstract class Grammar<R extends AstNode> {
             GrammarMatcher<R> matcher = createExecutor();
             matcher.setOriginGrammarName(getName());
             matcher.setIdentifier(getIdentifier());
-            var result = matcher.parse(tokens, ref);
-            return new ParsingProbe(true, result.getParsingException());
-        } catch (ParsingException pex) {
-            return new ParsingProbe(false, pex);
+            return matcher.parse(tokens, ref).wasParsed();
         } finally {
             tokens.rollback();
         }
@@ -175,17 +176,20 @@ public abstract class Grammar<R extends AstNode> {
     }
 
     @NotNull
-    public R parse(@NonNull TokenStream tokens, @NotNull GrammarReference ref)
-            throws ParsingException {
+    public ParsingResult<R> parse(@NonNull TokenStream tokens, @NotNull GrammarReference ref){
         GrammarMatcher<R> matcher = createExecutor();
         matcher.setOriginGrammarName(getName());
         matcher.setIdentifier(getIdentifier());
         return matcher.parse(tokens, ref);
     }
 
+    public Grammar<?> merged(){
+        return new MergedGrammar(this);
+    }
+
     @Override
     public String toString() {
-        return String.format("%s(%s)", this.getClass().getSimpleName(), getName());
+        return this.getClass().getSimpleName() + "(" + getName() + ")";
     }
 
     public Grammar<?> or(Grammar<?>... alternatives) {
@@ -216,13 +220,21 @@ public abstract class Grammar<R extends AstNode> {
         return this;
     }
 
-    @NotNull
     public Grammar<R> named(GrammarName name) {
         this.name = name.getName();
         return this;
     }
 
+    public Grammar<R> display(String name) {
+        this.displayName = name;
+        return this;
+    }
+
+    @NotNull
     public String getIdentifier() {
+        if(getDisplayName() != null){
+            return getDisplayName();
+        }
         if (getName() != null)
             return getName();
         return this.getClass().getSimpleName();
@@ -300,7 +312,7 @@ public abstract class Grammar<R extends AstNode> {
             return new RuleApplier(Grammar.keyword(keyword));
         }
 
-        public Grammar<SequenceNode> get() {
+        public ChainGrammar get() {
             return chain;
         }
 

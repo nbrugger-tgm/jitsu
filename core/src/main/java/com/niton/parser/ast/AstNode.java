@@ -1,6 +1,7 @@
 package com.niton.parser.ast;
 
 import com.niton.parser.exceptions.ParsingException;
+import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.token.Location;
 import com.niton.parser.token.Tokenizer;
 import lombok.Getter;
@@ -30,6 +31,7 @@ import java.util.stream.Stream;
 @Getter
 @Setter
 public abstract class AstNode {
+    public static final String ERRORNOUS_CONTENT = "$errornous_content";
     private String originGrammarName;
     /**
      * The parsing exception that occurred while parsing this node.
@@ -105,5 +107,8 @@ public abstract class AstNode {
      */
     public abstract Optional<LocatableReducedNode> reduce(@NonNull String name);
 
+    public boolean isError(){
+        return originGrammarName.equals(ERRORNOUS_CONTENT);
+    }
 }
 

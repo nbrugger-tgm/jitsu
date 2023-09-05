@@ -45,22 +45,22 @@ public class OptionalNode extends AstNode {
         return new Location() {
             @Override
             public int getFromLine() {
-                return value == null ? 0 : value.getLocation().getFromLine();
+                return value == null ? 1 : value.getLocation().getFromLine();
             }
 
             @Override
             public int getFromColumn() {
-                return value == null ? 0 : value.getLocation().getFromColumn();
+                return value == null ? 1 : value.getLocation().getFromColumn();
             }
 
             @Override
             public int getToLine() {
-                return value == null ? 0 : value.getLocation().getToLine();
+                return value == null ? 1 : value.getLocation().getToLine();
             }
 
             @Override
             public int getToColumn() {
-                return value == null ? 0 : value.getLocation().getToColumn();
+                return value == null ? 1 : value.getLocation().getToColumn();
             }
         };
     }

@@ -1,5 +1,6 @@
 package com.niton.parser.grammar.matchers;
 
+import com.niton.parser.ast.ParsingResult;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarMatcher;
 import com.niton.parser.grammar.api.GrammarReference;
@@ -38,18 +39,17 @@ public class AnyExceptMatcher extends GrammarMatcher<TokenNode> {
 	 * @param reference
 	 */
 	@Override
-	public @NotNull TokenNode process(@NotNull TokenStream tokens, @NotNull GrammarReference reference)
-	throws ParsingException {
+	public @NotNull ParsingResult<TokenNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference reference) {
 		List<AssignedToken> matchedTokens = new LinkedList<>();
 		int startLine = tokens.getLine();
 		int startColumn = tokens.getColumn();
-		while (!dunnoaccept.parsable(tokens, reference).isParsable() && tokens.hasNext()) {
+		while (!dunnoaccept.parsable(tokens, reference) && tokens.hasNext()) {
 			AssignedToken token = tokens.next();
 			matchedTokens.add(token);
 		}
 		int endLine = tokens.getLine();
 		int endColumn = tokens.getColumn();
-		return new TokenNode(matchedTokens, Location.of(startLine, startColumn, endLine, endColumn));
+		return ParsingResult.ok(new TokenNode(matchedTokens, Location.of(startLine, startColumn, endLine, endColumn)));
 	}
 
 }

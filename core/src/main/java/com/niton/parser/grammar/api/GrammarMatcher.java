@@ -1,11 +1,17 @@
 package com.niton.parser.grammar.api;
 
 import com.niton.parser.ast.AstNode;
+import com.niton.parser.ast.ParsingResult;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.token.ListTokenStream;
 import com.niton.parser.token.TokenStream;
+import lombok.Getter;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Stack;
 
 /**
  * Contains the logic how to handle a specific grammar. It creates a {@link AstNode} out of
@@ -15,8 +21,12 @@ import org.jetbrains.annotations.NotNull;
  * @version 2019-06-07
  */
 public abstract class GrammarMatcher<T extends AstNode> {
+    @Getter
     private String originGrammarName;
     private String originIdentifier;
+    static public String additionalInfo = "";
+
+    static final ThreadLocal<Stack<String>> recursionStack = ThreadLocal.withInitial(Stack::new);
 
     /**
      * same as {@link GrammarMatcher#parse(TokenStream, GrammarReference)} but only checks after the
@@ -28,43 +38,47 @@ public abstract class GrammarMatcher<T extends AstNode> {
      * @version 2019-05-29
      */
     @NotNull
-    public T parse(@NonNull TokenStream tokens, @NonNull GrammarReference reference) throws ParsingException {
+    public ParsingResult<T> parse(@NonNull TokenStream tokens, @NonNull GrammarReference reference) {
         boolean root = tokens.level() == 0;
         try {
             tokens.elevate();
+            if(originGrammarName != null) {
+                recursionStack.get().push(originGrammarName + "(" + additionalInfo + "-"+tokens.index() + ")");
+                additionalInfo = "";
+            }
         } catch (IllegalStateException e) {
-            throw new ParsingException(
+            return ParsingResult.error(new ParsingException(
                     getIdentifier(),
                     String.format("Parsing %s failed: %s", originGrammarName, e.getMessage()),
                     tokens.currentLocation()
-            );
+            ));
         }
-        T res;
-        try {
-            res = process(tokens, reference);
-        } catch (ParsingException e) {
+
+        var result = process(tokens, reference);
+        if (!result.wasParsed()) {
             tokens.rollback();
-            throw e;
+            if(originGrammarName != null)
+                recursionStack.get().pop();
+            return result;
         }
         tokens.commit();
-        res.setOriginGrammarName(getOriginGrammarName());
+        if(originGrammarName != null)
+            recursionStack.get().pop();
+        var node = result.unwrap();
+        node.setOriginGrammarName(getOriginGrammarName());
         if (root && tokens.hasNext()) {
             var token = tokens.next();
-            if (res.getParsingException() == null) {
-                throw new ParsingException(
+            if (node.getParsingException() == null) {
+                return ParsingResult.error(new ParsingException(
                         getIdentifier(),
-                        "Not all tokens consumed at the end of parsing (next token: "+token+")",
+                        "Not all tokens consumed at the end of parsing (next token: " + token + ")",
                         tokens.currentLocation()
-                );
+                ));
             } else {
-                throw res.getParsingException();
+                return ParsingResult.error(node.getParsingException());
             }
         }
-        return res;
-    }
-
-    public String getOriginGrammarName() {
-        return originGrammarName;
+        return result;
     }
 
     public GrammarMatcher<T> setOriginGrammarName(String originGrammarName) {
@@ -83,12 +97,10 @@ public abstract class GrammarMatcher<T extends AstNode> {
      *
      * @param tokens    the tokens representing the tokenized string to parse
      * @param reference the collection to get Grammars from
-     * @return the grammar object @NotNull
-     * @throws ParsingException if anything goes wrong in the parsing process
+     * @return the result of the parsing process. Error or AstNode @NotNull
      */
     @NotNull
-    protected abstract T process(@NotNull TokenStream tokens, @NotNull GrammarReference reference)
-            throws ParsingException;
+    protected abstract ParsingResult<T> process(@NotNull TokenStream tokens, @NotNull GrammarReference reference);
 
     public String getIdentifier() {
         return originIdentifier;

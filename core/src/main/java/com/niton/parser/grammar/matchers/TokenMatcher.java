@@ -1,5 +1,6 @@
 package com.niton.parser.grammar.matchers;
 
+import com.niton.parser.ast.ParsingResult;
 import com.niton.parser.ast.TokenNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.GrammarMatcher;
@@ -26,29 +27,28 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
     }
 
     @Override
-    public @NotNull TokenNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref)
-            throws ParsingException {
+    public @NotNull ParsingResult<TokenNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
         var start = tokens.currentLocation();
         if (!tokens.hasNext()) {
-            throw new ParsingException(
+            return ParsingResult.error(new ParsingException(
                     getIdentifier(),
                     String.format(
                             "Expected \"%s\" but found nothing (whole file parsed already)",
                             grammar.getTokenName()
                     ),
                     start
-            );
+            ));
         }
         AssignedToken token = tokens.next();
         var tokenRange = Location.range(start, tokens.currentLocation());
         if (token.getName().equals(grammar.getTokenName())) {
-            return new TokenNode(List.of(token), tokenRange);
+            return ParsingResult.ok(new TokenNode(List.of(token), tokenRange));
         }
-        throw new ParsingException(getIdentifier(), String.format(
+        return ParsingResult.error(new ParsingException(getIdentifier(), String.format(
                 "expected \"%s\" but got \"%s\"",
                 grammar.getTokenName(),
                 token.getName()
-        ), tokenRange);
+        ), tokenRange));
     }
 
     /**

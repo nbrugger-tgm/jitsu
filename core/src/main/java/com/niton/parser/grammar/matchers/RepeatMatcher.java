@@ -1,6 +1,7 @@
 package com.niton.parser.grammar.matchers;
 
 import com.niton.parser.ast.AstNode;
+import com.niton.parser.ast.ParsingResult;
 import com.niton.parser.ast.SequenceNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.Grammar;
@@ -30,8 +31,8 @@ import static java.util.stream.Collectors.toMap;
 @Setter
 public class RepeatMatcher extends GrammarMatcher<SequenceNode> {
 
-    private Grammar<?> check;
     private final int minimum;
+    private Grammar<?> check;
 
     public RepeatMatcher(Grammar<?> expression, int minimum) {
         this.check = expression;
@@ -40,43 +41,48 @@ public class RepeatMatcher extends GrammarMatcher<SequenceNode> {
 
 
     @Override
-    public @NotNull SequenceNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) throws ParsingException {
+    public @NotNull ParsingResult<SequenceNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
         List<ParsingException> exitStates = new LinkedList<>();
         List<AstNode> subNodes = new ArrayList<>(4);
         int resultIndex = 0;
         while (true) {
-            try {
-                var oldPos = tokens.index();
-                AstNode subNode = check.parse(tokens, ref);
-                subNodes.add(subNode);
-                if (oldPos == tokens.index()) {
-                    //Since the position did not change, the grammar did an empty match and the stream did not continue!
-                    //This would lead to an infinite loop since it is a stalemate
-                    exitStates.add(new ParsingException(getIdentifier(), format("The %s element parsed a zero-sized result",englishify(resultIndex)), subNode.getParsingException()));
-                    break;
-                }
-                if(subNode.getParsingException() != null)
-                    exitStates.add(new ParsingException(getIdentifier(), format("The %s element parsed successfull with exception",englishify(resultIndex)),subNode.getParsingException()));
-            } catch (ParsingException e) {
-                exitStates.add(new ParsingException(getIdentifier(), format("The %s element failed and stopped parsing the repetition",englishify(resultIndex)), e));
+            var oldPos = tokens.index();
+            var res = check.parse(tokens, ref);
+            if (!res.wasParsed()) {
+                exitStates.add(new ParsingException(getIdentifier(), format("The %s element failed and stopped parsing the repetition", englishify(resultIndex)), res.exception()));
                 break;
             }
+            AstNode subNode = res.unwrap();
+            subNodes.add(subNode);
+            if (oldPos == tokens.index()) {
+                //Since the position did not change, the grammar did an empty match and the stream did not continue!
+                //This would lead to an infinite loop since it is a stalemate
+                exitStates.add(new ParsingException(getIdentifier(), format("The %s element parsed a zero-sized result", englishify(resultIndex)), subNode.getParsingException()));
+                break;
+            }
+            if (subNode.getParsingException() != null)
+                exitStates.add(new ParsingException(getIdentifier(), format("The %s element parsed successfull with exception", englishify(resultIndex)), subNode.getParsingException()));
+
             resultIndex++;
         }
-        if(resultIndex < minimum) {
-            throw new ParsingException(getIdentifier(), format("The repetition only matched %d from the minimum of %d elements", resultIndex, minimum), exitStates.toArray(ParsingException[]::new));
+        if (resultIndex < minimum) {
+            return ParsingResult.error(new ParsingException(
+                    getIdentifier(),
+                    format("The repetition only matched %d from the minimum of %d elements", resultIndex, minimum),
+                    exitStates.toArray(ParsingException[]::new)
+            ));
         }
         SequenceNode astNode;
-        if(subNodes.isEmpty()) {
+        if (subNodes.isEmpty()) {
             astNode = new SequenceNode(Location.oneChar(tokens.getLine(), tokens.getColumn()));
         } else {
             astNode = new SequenceNode(subNodes, IntStream.range(0, subNodes.size()).boxed().collect(toMap(Object::toString, i -> i)));
         }
         astNode.setParsingException(new ParsingException(
                 getIdentifier(),
-                format("The repetition was parsed successful and matched %d elements before an terminating exception", resultIndex-1),
+                format("The repetition was parsed successful and matched %d elements before an terminating exception", resultIndex - 1),
                 exitStates.toArray(ParsingException[]::new)));
-        return astNode;
+        return ParsingResult.ok(astNode);
     }
 
     private String englishify(int resultIndex) {

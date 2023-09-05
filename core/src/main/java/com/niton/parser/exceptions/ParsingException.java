@@ -1,5 +1,6 @@
 package com.niton.parser.exceptions;
 
+import com.niton.parser.internal.Lazy;
 import com.niton.parser.token.Location;
 import lombok.Getter;
 
@@ -16,14 +17,15 @@ import java.util.stream.Stream;
  * @version 2019-05-29
  */
 @Getter
-public class ParsingException extends Exception {
+public class ParsingException {
     private final static Comparator<Location> locationComparator = Comparator.comparingInt(Location::getFromLine)
             .thenComparingInt(Location::getFromColumn)
             .thenComparingInt(Location::getToLine)
             .thenComparingInt(Location::getToColumn);
     private final String grammarName;
-    private final Location location;
+    private final Lazy<Location> location;
     private final List<ParsingException> causes;
+    private final String message;
 
     /**
      * Creates an Instance of ParsingException.java
@@ -34,40 +36,38 @@ public class ParsingException extends Exception {
      * @version 2019-05-29
      */
     public ParsingException(String grammarName, String message, Location location) {
-        super(message);
+        this.message = message;
         this.grammarName = grammarName;
-        this.location = location;
+        this.location = new Lazy<>(location);
         causes = List.of();
     }
 
     public ParsingException(String grammarName, String message, ParsingException lastException) {
-        super(message, lastException);
+        this.message = message;
+        ;
         this.grammarName = grammarName;
         this.location = lastException.location;
         causes = List.of(lastException);
     }
 
     public ParsingException(String grammarName, String message, ParsingException[] lastExceptions) {
-        super(message);
+        this.message = message;
         this.grammarName = grammarName;
-        var lastException = Arrays.stream(lastExceptions)
-                .max((a, b) -> locationComparator.compare(a.location, b.location))
-                .orElseThrow();
-        this.location = lastException.location;
+        this.location = new Lazy<>(
+                () -> Arrays.stream(lastExceptions)
+                        .map(ex -> ex.location.get())
+                        .max(locationComparator)
+                        .orElseThrow()
+        );
         causes = List.of(lastExceptions);
     }
 
-    @Override
-    public String getMessage() {
-        return super.getMessage() + " [" + grammarName + ": " + location.format() + "]";
-    }
-
     public String getRawMessage() {
-        return super.getMessage();
+        return getMessage();
     }
 
     public String markInText(String code, int context) {
-        return location.markInText(code, context, getMessage());
+        return location.get().markInText(code, context, getMessage());
     }
 
     public String getFullExceptionTree() {
@@ -86,7 +86,9 @@ public class ParsingException extends Exception {
     }
 
     private boolean hasSameStart(ParsingException e) {
-        return e.location.getFromLine() == this.location.getFromLine() && e.location.getFromColumn() == this.location.getFromColumn();
+        var otherLocation = e.location.get();
+        var myLocation = this.location.get();
+        return otherLocation.getFromLine() == myLocation.getFromLine() && otherLocation.getFromColumn() == myLocation.getFromColumn();
     }
 
     public ParsingException getMostProminentDeepException() {

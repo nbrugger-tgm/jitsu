@@ -2,17 +2,12 @@ package com.niton.parser.grammar.types;
 
 import com.niton.parser.ast.SwitchNode;
 import com.niton.parser.grammar.api.Grammar;
-import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.api.WrapperGrammar;
 import com.niton.parser.grammar.matchers.AnyOfMatcher;
 import lombok.Getter;
 import lombok.Setter;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
-import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -24,6 +19,7 @@ import java.util.stream.Stream;
 @Getter
 @Setter
 public class MultiGrammar extends WrapperGrammar<SwitchNode> {
+    private final AnyOfMatcher matcher = new AnyOfMatcher(this);
     private Grammar<?>[] grammars;
 
     public MultiGrammar(Grammar<?>[] grammars) {
@@ -40,7 +36,7 @@ public class MultiGrammar extends WrapperGrammar<SwitchNode> {
      */
     @Override
     public AnyOfMatcher createExecutor() {
-        return new AnyOfMatcher(this);
+        return matcher;
     }
 
     @Override

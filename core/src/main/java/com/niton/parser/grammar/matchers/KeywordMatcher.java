@@ -1,5 +1,6 @@
 package com.niton.parser.grammar.matchers;
 
+import com.niton.parser.ast.ParsingResult;
 import com.niton.parser.ast.TokenNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.GrammarMatcher;
@@ -22,7 +23,7 @@ public class KeywordMatcher extends GrammarMatcher<TokenNode> {
     }
 
     @Override
-    protected @NotNull TokenNode process(@NotNull TokenStream tokens, @NotNull GrammarReference reference) throws ParsingException {
+    protected @NotNull ParsingResult<TokenNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference reference) {
         List<Tokenizer.AssignedToken> collected = new LinkedList<>();
         StringBuilder collectedKeyword = new StringBuilder();
         var start = tokens.currentLocation();
@@ -32,21 +33,21 @@ public class KeywordMatcher extends GrammarMatcher<TokenNode> {
                 collected.add(tkn);
                 collectedKeyword.append(tkn.getValue());
             } else {
-                throw new ParsingException(
+                return ParsingResult.error(new ParsingException(
                         getIdentifier(),
-                        format("Expected keyword '%s', got '%s' and then EOF", keyword, exludeLinebreak(collectedKeyword)),
+                        "Expected keyword '"+keyword+"', got '"+exludeLinebreak(collectedKeyword)+"' and then EOF",
                         Location.range(start, tokens.currentLocation())
-                );
+                ));
             }
             if (collectedKeyword.toString().equals(keyword)) {
-                return new TokenNode(collected, Location.range(start, tokens.currentLocation()));
+                return ParsingResult.ok(new TokenNode(collected, Location.range(start, tokens.currentLocation())));
             }
         }
-        throw new ParsingException(
+        return ParsingResult.error(new ParsingException(
                 getIdentifier(),
-                format("Expected keyword '%s', got '%s'", keyword, exludeLinebreak(collectedKeyword)),
+                "Expected keyword '"+keyword+"', got '"+exludeLinebreak(collectedKeyword)+"'",
                 Location.range(start, tokens.currentLocation())
-        );
+        ));
     }
 
     private String exludeLinebreak(StringBuilder collectedKeyword) {

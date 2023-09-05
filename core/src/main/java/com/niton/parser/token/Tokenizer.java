@@ -1,8 +1,10 @@
 package com.niton.parser.token;
 
+import com.niton.parser.ast.ParsingResult;
 import com.niton.parser.exceptions.ParsingException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -95,11 +97,13 @@ public class Tokenizer {
 	 *
 	 * @throws ParsingException
 	 */
-	public List<AssignedToken> tokenize(String content) throws ParsingException {
+	public ParsingResult<List<AssignedToken>> tokenize(String content) {
 		List<AssignedToken> assignedTokens = parseTokens(content);
-		verifyNoOverlap(assignedTokens);
+		var err = verifyNoOverlap(assignedTokens);
+		if(err != null)
+			return ParsingResult.error(err);
 		fillGaps(content, assignedTokens);
-		return assignedTokens;
+		return ParsingResult.ok(assignedTokens);
 	}
 
 	private List<AssignedToken> parseTokens(String content) {
@@ -123,8 +127,7 @@ public class Tokenizer {
 		return parsed;
 	}
 
-	private void verifyNoOverlap(List<AssignedToken> tokens)
-			throws ParsingException {
+	private @Nullable ParsingException verifyNoOverlap(List<AssignedToken> tokens) {
 		int           last      = 0;
 		AssignedToken lastToken = null;
 		var line = 1;
@@ -134,7 +137,7 @@ public class Tokenizer {
 			if (assignedToken.start > last) {
 				last = assignedToken.start;
 			} else if (last > assignedToken.start) {
-				throw overlapException(assignedToken, lastToken,line,col);
+				return overlapException(assignedToken, lastToken,line,col);
 			}
 			last += assignedToken.value.length();
 			lastToken = assignedToken;
@@ -145,6 +148,7 @@ public class Tokenizer {
 				col += assignedToken.value.length();
 			}
 		}
+		return null;
 	}
 
 	private void fillGaps(String content, List<AssignedToken> tokens) {

@@ -1,5 +1,6 @@
 package com.niton.parser.grammar.matchers;
 
+import com.niton.parser.ast.ParsingResult;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarMatcher;
@@ -34,17 +35,13 @@ public class OptionalMatcher extends GrammarMatcher<OptionalNode> {
 	 * @param ref
 	 */
 	@Override
-	public @NotNull OptionalNode process(@NotNull TokenStream tokens, @NotNull GrammarReference ref)
-			throws ParsingException {
-		try {
-			OptionalNode obj = new OptionalNode();
-			obj.setValue(check.parse(tokens, ref));
-			return obj;
-		} catch (ParsingException e) {
-			var node = new OptionalNode();
-			node.setParsingException(e);
-			return node;
-		}
+	public @NotNull ParsingResult<OptionalNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
+		var node = new OptionalNode();
+		check.parse(tokens, ref).ifParsedOrElse(
+				node::setValue,
+				node::setParsingException
+		);
+		return ParsingResult.ok(node);
 	}
 
 }

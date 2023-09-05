@@ -20,7 +20,6 @@ import java.util.stream.Stream;
 public class RepeatGrammar extends WrapperGrammar<SequenceNode> {
     private Grammar<?> check;
     private final int minimum;
-
     public RepeatGrammar(Grammar<?> gramarReference, int minimum) {
         this.check = gramarReference;
         this.minimum = minimum;
@@ -43,5 +42,4 @@ public class RepeatGrammar extends WrapperGrammar<SequenceNode> {
     public RepeatMatcher createExecutor() {
         return new RepeatMatcher(check, minimum);
     }
-
 }
