@@ -2,62 +2,92 @@ package eu.nitok.jitsu.compiler.parser
 
 import com.niton.parser.grammar.api.Grammar.*
 import com.niton.parser.token.DefaultToken.*
-import eu.nitok.jitsu.compiler.model.CodeBlockContent
-import eu.nitok.jitsu.compiler.model.StatementType.*
+import eu.nitok.jitsu.compiler.ast.CodeBlockContentType
+import eu.nitok.jitsu.compiler.ast.StatementType
+import eu.nitok.jitsu.compiler.ast.StatementType.*
 import eu.nitok.jitsu.compiler.parser.matchers.ListGrammar
 
 private val assignmentOperator =
     token(EQUAL)
         .then(ignorables)
         .then("expression", expression)
-val typeDeclaration = token(COLON)
+        .display("assignment")
+internal val typeDeclaration = token(COLON)
     .then(ignorables)
     .then("type", type)
+    .display("type declaration (: type)")
+
+internal val typeDefinition = first("keyword", keyword("type"))
+    .then(ignorables)
+    .then("name", identifier)
+    .then(ignorables)
+    .then(token(EQUAL))
+    .then(ignorables)
+    .then("type", type)
+    .named(TYPE_DEFINITION)
+    .display("type definition")
 private val variableDeclaration =
-    (keyword("var").or(keyword("const")))
+    first("keyword",(keyword("var").or(keyword("const"))))
         .then(ignorables)
         .then("name", identifier)
         .then("type_def", ignorables.ignore().then(typeDeclaration).optional().named("APPENDED_TYPE_DEF"))
         .then(ignorables.ignore())
         .then("assignment", assignmentOperator.optional())
         .named(VARIABLE_DECLARATION)
+        .display("variable delcaration")
 
 private var assignment = first("variable", identifier)
     .then(WHITESPACE)
     .then("assignment", assignmentOperator)
     .named(ASSIGNMENT)
+    .display("assignment")
 
-private val functionDeclaration = keyword("fn")
+private val parameter = first("name", identifier)
+    .then(ignorables.ignore())
+    .then("type_def", typeDeclaration)
+    .then(ignorables.ignore())
+    .then("default_value", assignmentOperator.optional())
+    .display("parameter")
+
+private val functionDeclaration = first("keyword", keyword("fn"))
     .then(WHITESPACE)
     .then("name", identifier.optional())
     .then(token(BRACKET_OPEN))
+    .then("parameters", ListGrammar(parameter, token(COMMA).then(ignorables)))
     .then(token(BRACKET_CLOSED))
-    .then(token(WHITESPACE).ignore())
+    .then(ignorables.ignore())
+    .then("return_type", typeDeclaration.optional())
+    .then(ignorables)
     .then("body", reference(CODE_BLOCK))
     .named(FUNCTION_DECLARATION)
+    .display("function")
 
 private val functionCall = first("function", identifier)
     .then(token(BRACKET_OPEN))
     .then("parameters", ListGrammar(expression, token(COMMA).then(ignorables)))
     .then(token(BRACKET_CLOSED))
     .named(FUNCTION_CALL)
+    .display("function call")
 
-private val returnStatement = keyword("return")
+private val returnStatement = first("keyword", keyword("return"))
     .then(WHITESPACE)
-    .then(expression)
+    .then("value", expression.optional())
     .named(RETURN_STATEMENT)
+    .display("return")
 
-private val yieldStatement = keyword("yield")
+private val yieldStatement = first("keyword", keyword("yield"))
     .then(WHITESPACE)
     .then(expression)
     .named(YIELD_STATEMENT)
+    .display("yield")
 
-private var elseStatement = keyword("else")
+private var elseStatement = first("keyword", keyword("else"))
     .then(ignorables)
-    .then("code", reference(CODE_BLOCK))
+    .then("code", reference(CODE_BLOCK).or(reference(IF_STATEMENT)))
     .then(ignorables)
+    .display("else")
 
-private val ifStatement = keyword("if")
+private val ifStatement = first("keyword", keyword("if"))
     .then(ignore(token(WHITESPACE)))
     .then(token(BRACKET_OPEN))
     .then(ignore(ignorables))
@@ -66,17 +96,20 @@ private val ifStatement = keyword("if")
     .then(token(BRACKET_CLOSED))
     .then(ignorables)
     .then("code", reference(CODE_BLOCK))
+    .then(ignorables.ignore())
     .then("else", optional(elseStatement))
     .named(IF_STATEMENT)
+    .display("if statement")
 
-val codeBlock = token(ROUND_BRACKET_OPEN)
+internal val codeBlock = token(ROUND_BRACKET_OPEN)
     .then(ignorables.ignore())
-    .then("code",reference(CodeBlockContent.STATEMENTS).or(expression.namedCopy(CodeBlockContent.EXPRESSION)))
+    .then("code",reference(CodeBlockContentType.STATEMENTS).or(expression.namedCopy(CodeBlockContentType.EXPRESSION)))
     .then(ignorables.ignore())
     .then(token(ROUND_BRACKET_CLOSED))
-    .named(CODE_BLOCK);
+    .named(CODE_BLOCK)
+    .display("code block")
 
-val methodInvocation = first("target", anyOf(*atomicExpressions))
+internal val methodInvocation = first("target", anyOf(*atomicExpressions))
     .then(token(POINT))
     .then("method", identifier)
     .then(token(BRACKET_OPEN))
@@ -84,8 +117,9 @@ val methodInvocation = first("target", anyOf(*atomicExpressions))
     .then(token(BRACKET_CLOSED))
     .setLeftRecursive(true)
     .named(METHOD_INVOCATION)
+    .display("method invocation")
 
-const val ATOMIC_STATEMENT_NAME = "ATOMIC_STATEMENT"
+internal const val ATOMIC_STATEMENT_NAME = "ATOMIC_STATEMENT"
 private val atomicStatement = anyOf(
     functionCall,
     methodInvocation
@@ -102,20 +136,21 @@ private var singleLineStatement = arrayOf(
 
 private val blockStatement = arrayOf(
     ifStatement,
+    typeDefinition,
     codeBlock,
     functionDeclaration,
     switchStatement
 )
 
-const val STATEMENT_NAME = "STATEMENT"
-val statement = anyOf(
-    *blockStatement,
-    *singleLineStatement
+internal const val STATEMENT_NAME = "STATEMENT"
+internal val statement = anyOf(
+    *singleLineStatement,
+    *blockStatement
 ).named(STATEMENT_NAME)
 
-val invocationStatement = anyOf(
-    *blockStatement,
-    anyOf(*singleLineStatement.map { it.then(token(SEMICOLON)).named(it.name+"_WITH_ARRAY") }.toTypedArray()).named(STATEMENT_WITH_SEMICOLON)
+internal val invocationStatement = anyOf(
+    anyOf(*singleLineStatement.map { it.then(token(SEMICOLON)).named(it.name+"_WITH_SEMICOLON") }.toTypedArray()).named(SEMICOLON_STATEMENT),
+    *blockStatement
 )
 
-val codeLines = invocationStatement.or(ignorables.ignore()).repeat(1).named(CodeBlockContent.STATEMENTS)
+internal val codeLines = ignorables.ignore().then(invocationStatement.then(ignorables.ignore()).repeat(1)).named(CodeBlockContentType.STATEMENTS)

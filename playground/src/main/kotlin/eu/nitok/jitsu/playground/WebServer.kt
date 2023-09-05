@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.playground
 
-import com.niton.parser.exceptions.ParsingException
-import eu.nitok.jitsu.compiler.parser.parse
+import eu.nitok.jitsu.compiler.ast.buildFileAst
+import eu.nitok.jitsu.compiler.parser.parseFile
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.html.*
@@ -13,9 +13,11 @@ import kotlinx.html.body
 import kotlinx.html.head
 import kotlinx.html.title
 import kotlinx.html.unsafe
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
 
 fun main() {
-
     embeddedServer(Netty, port = 8080) {
         routing {
             get("/") {
@@ -32,28 +34,31 @@ fun main() {
             post("/parse") {
                 val code = call.receiveParameters()["code"]!!
                 println("Parsing: $code")
-                val ast = try {
-                    "<pre>${
-                        parse(code).format()
-                            .replace("<","&lt")
-                            .replace(">","&gt")
+                val ast = parseFile(code).map {
+                    "<p>Raw AST</p><pre>${
+                        it.format()
+                            .replace("<", "&lt")
+                            .replace(">", "&gt")
                             .replace("\n", "<br/>")
+                    }</pre><p>Internal AST</p><pre>${
+                        try {
+                            Json.encodeToString(buildFileAst(it))
+                                .replace("<", "&lt")
+                                .replace(">", "&gt")
+                                .replace("\n", "<br/>")
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            "Error: ${e.message}"
+                        }
                     }</pre>"
-                } catch (e: ParsingException) {
+                }.orElse { e ->
                     val error = e.mostProminentDeepException;
-                    error.printStackTrace()
                     """Error: <pre>${
                         error.markInText(code, 2)
-                        .replace("<","&lt")
-                        .replace(">","&gt")
+                            .replace("<", "&lt")
+                            .replace(">", "&gt")
                     }</pre>
-                    <h2>Detailed</h2>
-                    Stack strace:
-                    <pre>${error.stackTraceToString()}</pre>
                     """
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    "Error: ${e.message}".replace("\n", "<br/>")
                 }
                 call.respond(ast)
             }

@@ -1,4 +1,4 @@
-package eu.nitok.jitsu.compiler.model
+package eu.nitok.jitsu.compiler.ast
 
 import com.niton.parser.grammar.api.GrammarName
 

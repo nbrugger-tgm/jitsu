@@ -2,11 +2,13 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/libs/jainparse/jainparse.iml" filepath="$PROJECT_DIR$/.idea/modules/libs/jainparse/jainparse.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/libs/jainparse/core/jainparse.core.main.iml" filepath="$PROJECT_DIR$/.idea/modules/libs/jainparse/core/jainparse.core.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/libs/jainparse/core/jainparse.core.test.iml" filepath="$PROJECT_DIR$/.idea/modules/libs/jainparse/core/jainparse.core.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/libs/jainparse/generator/jainparse.generator.main.iml" filepath="$PROJECT_DIR$/.idea/modules/libs/jainparse/generator/jainparse.generator.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/libs/jainparse/grammar-parser/jainparse.grammar-parser.main.iml" filepath="$PROJECT_DIR$/.idea/modules/libs/jainparse/grammar-parser/jainparse.grammar-parser.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/libs/jainparse/grammar-parser/jainparse.grammar-parser.test.iml" filepath="$PROJECT_DIR$/.idea/modules/libs/jainparse/grammar-parser/jainparse.grammar-parser.test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/language-server/jitsu.language-server.main.iml" filepath="$PROJECT_DIR$/.idea/modules/language-server/jitsu.language-server.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/playground/jitsu.playground.main.iml" filepath="$PROJECT_DIR$/.idea/modules/playground/jitsu.playground.main.iml" />
     </modules>
   </component>

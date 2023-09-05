@@ -29,11 +29,15 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/buildSrc" />
             <option value="$PROJECT_DIR$/compiler" />
+            <option value="$PROJECT_DIR$/idea-extension" />
+            <option value="$PROJECT_DIR$/language-server" />
             <option value="$PROJECT_DIR$/libs/jainparse" />
             <option value="$PROJECT_DIR$/libs/jainparse/core" />
             <option value="$PROJECT_DIR$/libs/jainparse/generator" />
             <option value="$PROJECT_DIR$/libs/jainparse/grammar-parser" />
             <option value="$PROJECT_DIR$/playground" />
+            <option value="$PROJECT_DIR$/vs-extension" />
+            <option value="$PROJECT_DIR$/wrapper" />
           </set>
         </option>
       </GradleProjectSettings>

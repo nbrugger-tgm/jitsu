@@ -4,15 +4,15 @@ import com.niton.parser.grammar.api.Grammar
 import com.niton.parser.grammar.api.Grammar.*
 import com.niton.parser.token.DefaultToken.*
 
-val identifier: Grammar<*> = token(LETTERS).then(
+internal val identifier: Grammar<*> = token(LETTERS).then(
     anyOf(
         token(LETTERS),
         token(NUMBER),
         token(UNDERSCORE)
     ).repeat()
-).named("IDENTIFIER")
+).merged().named("IDENTIFIER").display("identifier")
 
-var ignorables = anyOf(
+internal var ignorables = anyOf(
     token(WHITESPACE),
     token(NEW_LINE)
 ).repeat();

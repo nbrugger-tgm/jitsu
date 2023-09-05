@@ -8,5 +8,27 @@
  */
 
 rootProject.name = "jitsu"
-includeBuild("libs/jainparse")
-include("compiler","playground")
+
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+
+includeBuild(
+    "libs/jainparse"
+)
+
+include(
+    "compiler",
+    "playground",
+    "language-server",
+    "wrapper"
+)
+
+include(
+    "idea-extension",
+    "vs-extension",
+)

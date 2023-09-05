@@ -2,6 +2,7 @@ package eu.nitok.jitsu.compiler.parser
 
 import com.niton.parser.DefaultParser
 import com.niton.parser.ast.LocatableReducedNode
+import com.niton.parser.ast.ParsingResult
 import com.niton.parser.grammar.api.Grammar.token
 import com.niton.parser.grammar.api.GrammarReferenceMap
 import com.niton.parser.token.DefaultToken.*
@@ -11,7 +12,7 @@ private val fileGrammar =
         .then(token(EOF).optional())
         .named("JITSU_FILE")
 
-val grammarReference = GrammarReferenceMap()
+private val grammarReference = GrammarReferenceMap()
     .deepMap(fileGrammar)
     .deepMap(expression)
     .deepMap(statement)
@@ -20,6 +21,6 @@ private val parser = DefaultParser(
     fileGrammar
 );
 
-fun parse(file: String): LocatableReducedNode {
-    return parser.parse(file).reduce("FILE").orElseThrow();
+fun parseFile(file: String): ParsingResult<LocatableReducedNode> {
+    return parser.parse(file).map { it.reduce("FILE").orElseThrow() };
 }
