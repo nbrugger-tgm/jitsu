@@ -1,0 +1,6 @@
+fn test(){
+    type x = enum(A,B);
+    const x = 12;
+}
+
+var x = 12;
