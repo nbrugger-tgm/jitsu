@@ -2,6 +2,7 @@ package com.niton.parser.grammar.types;
 
 import com.niton.parser.ast.SwitchNode;
 import com.niton.parser.grammar.api.Grammar;
+import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.api.WrapperGrammar;
 import com.niton.parser.grammar.matchers.AnyOfMatcher;
 import lombok.Getter;
@@ -37,6 +38,11 @@ public class MultiGrammar extends WrapperGrammar<SwitchNode> {
     @Override
     public AnyOfMatcher createExecutor() {
         return matcher;
+    }
+
+    @Override
+    public boolean isLeftRecursive(GrammarReference ref) {
+        return Arrays.stream(grammars).anyMatch(g -> g.isLeftRecursive(ref));
     }
 
     @Override

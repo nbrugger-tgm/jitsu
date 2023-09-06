@@ -1,6 +1,7 @@
 package com.niton.parser.grammar.types;
 
 import com.niton.parser.grammar.api.Grammar;
+import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.matchers.TokenMatcher;
 import com.niton.parser.ast.TokenNode;
 import lombok.Getter;
@@ -36,6 +37,11 @@ public class TokenGrammar extends Grammar<TokenNode> {
 	@Override
 	public TokenMatcher createExecutor() {
 		return new TokenMatcher(this);
+	}
+
+	@Override
+	public boolean isLeftRecursive(GrammarReference ref) {
+		return false;
 	}
 
 

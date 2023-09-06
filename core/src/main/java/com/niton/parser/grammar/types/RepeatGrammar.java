@@ -2,6 +2,7 @@ package com.niton.parser.grammar.types;
 
 import com.niton.parser.ast.SequenceNode;
 import com.niton.parser.grammar.api.Grammar;
+import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.api.WrapperGrammar;
 import com.niton.parser.grammar.matchers.RepeatMatcher;
 import lombok.Getter;
@@ -41,5 +42,10 @@ public class RepeatGrammar extends WrapperGrammar<SequenceNode> {
     @Override
     public RepeatMatcher createExecutor() {
         return new RepeatMatcher(check, minimum);
+    }
+
+    @Override
+    public boolean isLeftRecursive(GrammarReference ref) {
+        return check.isLeftRecursive(ref);
     }
 }

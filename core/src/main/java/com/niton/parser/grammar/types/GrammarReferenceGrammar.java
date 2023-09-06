@@ -10,6 +10,8 @@ import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+
 /**
  * This is the GrammarMatchGrammar Class
  *
@@ -73,5 +75,10 @@ public class GrammarReferenceGrammar extends Grammar<AstNode> {
     public Grammar<AstNode> setName(@Nullable String name) {
         this.explicitName = name;
         return this;
+    }
+
+    @Override
+    public boolean isLeftRecursive(GrammarReference ref) {
+        return Objects.requireNonNull(ref.get(grammar)).isLeftRecursive(ref);
     }
 }

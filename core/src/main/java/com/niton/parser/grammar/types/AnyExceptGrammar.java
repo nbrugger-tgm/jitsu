@@ -43,6 +43,11 @@ public class AnyExceptGrammar extends WrapperGrammar<TokenNode>  {
 		return new AnyExceptMatcher(except);
 	}
 
+	@Override
+	public boolean isLeftRecursive(GrammarReference ref) {
+		return except.isLeftRecursive(ref);
+	}
+
 
 	@Override
 	protected Stream<Grammar<?>> getWrapped() {

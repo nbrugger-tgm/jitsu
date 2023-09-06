@@ -2,6 +2,7 @@ package com.niton.parser.grammar.types;
 
 import com.niton.parser.ast.OptionalNode;
 import com.niton.parser.grammar.api.Grammar;
+import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.api.WrapperGrammar;
 import com.niton.parser.grammar.matchers.IgnoreMatcher;
 import lombok.Getter;
@@ -44,6 +45,11 @@ public class IgnoreGrammar extends WrapperGrammar<OptionalNode> {
     @Override
     public IgnoreMatcher createExecutor() {
         return matcher;
+    }
+
+    @Override
+    public boolean isLeftRecursive(GrammarReference ref) {
+        return grammar.isLeftRecursive(ref);
     }
 
 }

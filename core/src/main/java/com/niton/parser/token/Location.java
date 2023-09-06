@@ -50,6 +50,11 @@ public interface Location {
             public int getToColumn() {
                 return endColumn;
             }
+
+            @Override
+            public String toString() {
+                return format();
+            }
         };
     }
 
@@ -123,4 +128,11 @@ public interface Location {
         return builder.toString();
     }
 
+    default Location minusChar(int i) {
+        return of(getFromLine(), getFromColumn(), getToLine(), getToColumn() - i);
+    }
+
+    default Location minusLine(int i) {
+        return of(getFromLine(), getFromColumn(), getToLine() - i, getToColumn());
+    }
 }

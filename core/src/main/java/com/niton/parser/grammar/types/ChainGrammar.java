@@ -58,6 +58,11 @@ public class ChainGrammar extends WrapperGrammar<SequenceNode>
     }
 
     @Override
+    public boolean isLeftRecursive(GrammarReference ref) {
+        return isLeftRecursive;
+    }
+
+    @Override
     protected Stream<Grammar<?>> getWrapped() {
         return chain.stream();
     }

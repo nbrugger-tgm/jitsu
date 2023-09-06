@@ -183,6 +183,8 @@ public abstract class Grammar<R extends AstNode> {
         return matcher.parse(tokens, ref);
     }
 
+    public abstract boolean isLeftRecursive(GrammarReference ref);
+
     public Grammar<?> merged(){
         return new MergedGrammar(this);
     }

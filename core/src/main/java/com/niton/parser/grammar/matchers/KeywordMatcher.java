@@ -36,17 +36,17 @@ public class KeywordMatcher extends GrammarMatcher<TokenNode> {
                 return ParsingResult.error(new ParsingException(
                         getIdentifier(),
                         "Expected keyword '"+keyword+"', got '"+exludeLinebreak(collectedKeyword)+"' and then EOF",
-                        Location.range(start, tokens.currentLocation())
+                        Location.range(start, tokens.currentLocation().minusChar(1))
                 ));
             }
             if (collectedKeyword.toString().equals(keyword)) {
-                return ParsingResult.ok(new TokenNode(collected, Location.range(start, tokens.currentLocation())));
+                return ParsingResult.ok(new TokenNode(collected, Location.range(start, tokens.currentLocation().minusChar(1))));
             }
         }
         return ParsingResult.error(new ParsingException(
                 getIdentifier(),
                 "Expected keyword '"+keyword+"', got '"+exludeLinebreak(collectedKeyword)+"'",
-                Location.range(start, tokens.currentLocation())
+                Location.range(start, tokens.currentLocation().minusChar(1))
         ));
     }
 

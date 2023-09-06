@@ -41,6 +41,7 @@ public class AnyOfMatcher extends GrammarMatcher<SwitchNode> {
     @Override
     public @NotNull ParsingResult<SwitchNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
         Map<String, ParsingResult<? extends AstNode>> results = new HashMap<>();
+//        boolean matchAll = Arrays.stream(this.grammars.getGrammars()).filter(e -> e.isLeftRecursive(ref));
         for (var grammar : this.grammars.getGrammars()) {
             var result = grammar.parse(tokens, ref);
             results.put(grammar.getIdentifier(), result);

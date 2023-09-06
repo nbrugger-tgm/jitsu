@@ -40,7 +40,12 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
             ));
         }
         AssignedToken token = tokens.next();
-        var tokenRange = Location.range(start, tokens.currentLocation());
+        var tokenRange = Location.range(start, Location.of(
+                start.getFromLine(),
+                start.getFromColumn(),
+                tokens.currentLocation().getToLine(),
+                tokens.currentLocation().getToColumn() - 1
+        ));
         if (token.getName().equals(grammar.getTokenName())) {
             return ParsingResult.ok(new TokenNode(List.of(token), tokenRange));
         }

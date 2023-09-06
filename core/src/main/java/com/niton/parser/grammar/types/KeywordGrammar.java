@@ -2,6 +2,7 @@ package com.niton.parser.grammar.types;
 
 import com.niton.parser.ast.TokenNode;
 import com.niton.parser.grammar.api.Grammar;
+import com.niton.parser.grammar.api.GrammarReference;
 import com.niton.parser.grammar.matchers.KeywordMatcher;
 import org.jetbrains.annotations.NotNull;
 
@@ -22,5 +23,10 @@ public class KeywordGrammar extends Grammar<TokenNode> {
     @Override
     protected KeywordMatcher createExecutor() {
         return new KeywordMatcher(keyword);
+    }
+
+    @Override
+    public boolean isLeftRecursive(GrammarReference ref) {
+        return false;
     }
 }

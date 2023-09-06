@@ -74,7 +74,7 @@ public class RepeatMatcher extends GrammarMatcher<SequenceNode> {
         }
         SequenceNode astNode;
         if (subNodes.isEmpty()) {
-            astNode = new SequenceNode(Location.oneChar(tokens.getLine(), tokens.getColumn()));
+            astNode = new SequenceNode(Location.oneChar(tokens.getLine(), tokens.getColumn()-1));
         } else {
             astNode = new SequenceNode(subNodes, IntStream.range(0, subNodes.size()).boxed().collect(toMap(Object::toString, i -> i)));
         }

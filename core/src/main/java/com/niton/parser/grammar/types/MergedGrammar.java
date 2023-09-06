@@ -35,9 +35,14 @@ public class MergedGrammar extends WrapperGrammar<TokenNode> {
         return new GrammarMatcher<>() {
             @Override
             protected @NotNull ParsingResult<TokenNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference reference) {
-                return grammar.parse(tokens, reference).map(r -> new TokenNode(r.join().collect(Collectors.toList()), tokens.currentLocation()));
+                return grammar.parse(tokens, reference).map(r -> new TokenNode(r.join().collect(Collectors.toList()), r.getLocation()));
             }
         };
+    }
+
+    @Override
+    public boolean isLeftRecursive(GrammarReference ref) {
+        return grammar.isLeftRecursive(ref);
     }
 
     @Override

@@ -3,12 +3,10 @@ package com.niton.parser.grammar.matchers;
 import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.ParsingResult;
 import com.niton.parser.ast.SequenceNode;
-import com.niton.parser.ast.TokenNode;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarMatcher;
 import com.niton.parser.grammar.api.GrammarReference;
-import com.niton.parser.grammar.types.AnyExceptGrammar;
 import com.niton.parser.grammar.types.ChainGrammar;
 import com.niton.parser.token.Location;
 import com.niton.parser.token.TokenStream;
@@ -20,7 +18,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-import static com.niton.parser.ast.AstNode.ERRORNOUS_CONTENT;
 import static java.lang.String.format;
 
 /**
@@ -36,7 +33,6 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
 
     private static final Set<RecursionMarker> recursionMarkers = new HashSet<>();
     private final ChainGrammar chain;
-    private @Nullable AstNode firstNodeSubstitute;
 
     public ChainMatcher(ChainGrammar chain) {
         this.chain = chain;
@@ -53,45 +49,55 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
         Map<String, Integer> naming = new HashMap<>();
         List<AstNode> subNodes = new ArrayList<>();
         int i = 0;
-        if (recursionMarkers.stream().anyMatch(marker -> matchesMarker(tokens, marker))) {
+        var index = tokens.index();
+        var optRecursionMarker = recursionMarkers.stream().filter(m -> m.index == index).findFirst();
+        if (chain.isLeftRecursive() && optRecursionMarker.isPresent() && optRecursionMarker.get().firstNodeSubstitute == null) {
             return ParsingResult.error(
                     new ParsingException(getIdentifier(), "Left recursion occured!", tokens.currentLocation())
             );
+        } else if (!chain.isLeftRecursive() && optRecursionMarker.isPresent() && optRecursionMarker.get().firstNodeSubstitute != null) {
+            return ParsingResult.error(new ParsingException(
+                    getIdentifier(),
+                    "Skipping non-recursive node when resolving left-recursion",
+                    tokens.currentLocation()
+            ));
         }
-        if (chain.isLeftRecursive() && firstNodeSubstitute == null) {
-            var thisMarker = new RecursionMarker(chain, tokens.index());
+        if (chain.isLeftRecursive() && optRecursionMarker.isEmpty()) {
+            var thisMarker = new RecursionMarker(chain);
+            thisMarker.index = index;
             recursionMarkers.add(thisMarker);
-            var result = substituteLeftRecursion(tokens, reference);
+            var result = substituteLeftRecursion(tokens, reference, thisMarker);
             recursionMarkers.removeIf(marker -> marker == thisMarker);
             return result;
         }
+        var recursionMarker = optRecursionMarker.orElse(null);
         for (var grammar : chain.getChain()) {
             ParsingResult<? extends AstNode> res;
-            if (i == 0 && firstNodeSubstitute != null) {
-                res = ParsingResult.ok(firstNodeSubstitute);
+            if (i == 0 && (chain.isLeftRecursive() && recursionMarker.firstNodeSubstitute != null)) {
+                res = ParsingResult.ok(recursionMarker.firstNodeSubstitute);
             } else {
                 GrammarMatcher.additionalInfo = chain.getNaming().get(i);
-                if(GrammarMatcher.additionalInfo == null)
+                if (GrammarMatcher.additionalInfo == null)
                     GrammarMatcher.additionalInfo = "";
                 res = grammar.parse(tokens, reference);
             }
-            if(!res.wasParsed()) {
+            if (!res.wasParsed()) {
                 var elementName = chain.getNaming().get(i);
                 var crashingException = new ParsingException(
                         getIdentifier(),
-                        chain.getIdentifier()+"  entry '"+(elementName != null ? elementName : grammar)+"' can't be parsed!",
+                        chain.getIdentifier() + "  entry '" + (elementName != null ? elementName : grammar) + "' can't be parsed!",
                         res.exception()
                 );
                 exitStates.add(crashingException);
-                if(i+1 == chain.getChain().size() || i == 0) {
-                    return ParsingResult.error(new ParsingException(getIdentifier(),chain.getIdentifier()+"  could not be parsed!", exitStates.toArray(ParsingException[]::new)));
-                }else {
+                if (i + 1 == chain.getChain().size() || i == 0) {
+                    return ParsingResult.error(new ParsingException(getIdentifier(), chain.getIdentifier() + "  could not be parsed!", exitStates.toArray(ParsingException[]::new)));
+                } else {
 //                    Grammar<?> nextGrammar = chain.getChain().get(i + 1);
 //                    var preUnknownContentIndex = tokens.index();
 //                    var unknownIntermediateContent = new AnyExceptMatcher(nextGrammar).parse(tokens, reference);
 //                    i++;
 //                    if(!unknownIntermediateContent.wasParsed() || preUnknownContentIndex == tokens.index())
-                        return ParsingResult.error(new ParsingException(getIdentifier(), chain.getIdentifier()+"  could not be parsed!", exitStates.toArray(ParsingException[]::new)));
+                    return ParsingResult.error(new ParsingException(getIdentifier(), chain.getIdentifier() + "  could not be parsed!", exitStates.toArray(ParsingException[]::new)));
 //                    var errornousContent = unknownIntermediateContent.unwrap();
 //                    errornousContent.setOriginGrammarName(ERRORNOUS_CONTENT);
 //                    subNodes.add(errornousContent);
@@ -109,36 +115,47 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
             i++;
         }
         if (subNodes.isEmpty()) {
-            return ParsingResult.ok(new SequenceNode(Location.oneChar(tokens.getLine(), tokens.getColumn())));
+            var astNode = new SequenceNode(Location.oneChar(tokens.getLine(), tokens.getColumn()));
+            optRecursionMarker.ifPresent(marker -> {
+                if (marker.root == chain) marker.lastSameTypeNode = astNode;
+            });
+            return ParsingResult.ok(astNode);
         } else {
             var astNode = new SequenceNode(subNodes, naming);
             if (!exitStates.isEmpty()) {
                 astNode.setParsingException(new ParsingException(
                         getIdentifier(),
-                        chain.getIdentifier()+" parsed successful with allowed exceptions",
+                        chain.getIdentifier() + " parsed successful with allowed exceptions",
                         exitStates.toArray(ParsingException[]::new)
                 ));
             }
+            optRecursionMarker.ifPresent(marker -> {
+                if (marker.root == chain) marker.lastSameTypeNode = astNode;
+            });
             return ParsingResult.ok(astNode);
         }
     }
 
-    private ParsingResult<SequenceNode> substituteLeftRecursion(TokenStream tokens, GrammarReference reference) {
-        var leftElement = chain.getChain().get(0).parse(tokens, reference);
+    private ParsingResult<SequenceNode> substituteLeftRecursion(
+            TokenStream tokens,
+            GrammarReference reference,
+            RecursionMarker recursionMarker
+    ) {
+        Grammar<?> leftmostGrammar = chain.getChain().get(0);
+        var leftElement = leftmostGrammar.parse(tokens, reference);
         if (!leftElement.wasParsed()) {
-            return ParsingResult.error(new ParsingException(getIdentifier(), "Couldn't parse first element of"+ chain.getIdentifier() , leftElement.exception()));
+            return ParsingResult.error(new ParsingException(getIdentifier(), "Couldn't parse first element of" + chain.getIdentifier(), leftElement.exception()));
         }
         var leftNode = leftElement.unwrap();
-        var subMatcher = chain.createExecutor();
-        var matchedAny = false;
         while (true) {
-            subMatcher.firstNodeSubstitute = leftElement.unwrap();
-            var newSubst = subMatcher.parse(tokens, reference);
+            recursionMarker.index = tokens.index();
+            recursionMarker.firstNodeSubstitute = leftNode;
+            var newSubst = leftmostGrammar.parse(tokens, reference);
             if (!newSubst.wasParsed()) {
                 var oldExceptions = leftNode.getParsingException();
                 leftNode.setParsingException(new ParsingException(
                         getIdentifier(),
-                        chain.getIdentifier()+" parsed successful with allowed exceptions",
+                        chain.getIdentifier() + " parsed successful with allowed exceptions",
                         oldExceptions == null ?
                                 new ParsingException[]{newSubst.exception()} :
                                 new ParsingException[]{newSubst.exception(), oldExceptions}
@@ -146,17 +163,13 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
                 break;
             }
             leftNode = newSubst.unwrap();
-            matchedAny = true;
         }
-        if (!matchedAny) {
+        var last = recursionMarker.lastSameTypeNode;
+        if (last == null) {
             return ParsingResult.error(leftNode.getParsingException());
         } else {
-            return ParsingResult.ok((SequenceNode) leftNode);
+            return ParsingResult.ok(last);
         }
-    }
-
-    private boolean matchesMarker(@NotNull TokenStream tokens, RecursionMarker marker) {
-        return marker.getGrammar() == chain && marker.getIndex() == tokens.index();
     }
 
     private ParsingException softChainElementException(String elementName, ParsingException parsingException) {
@@ -168,8 +181,10 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
 
     @Data
     private static class RecursionMarker {
-        private final ChainGrammar grammar;
-        private final int index;
+        private final ChainGrammar root;
+        private @Nullable AstNode firstNodeSubstitute;
+        private int index;
+        private @Nullable SequenceNode lastSameTypeNode;
     }
 
 
