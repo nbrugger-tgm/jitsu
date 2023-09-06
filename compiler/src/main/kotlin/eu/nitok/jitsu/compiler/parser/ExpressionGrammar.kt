@@ -19,11 +19,20 @@ internal val fieldAccess = first("target", reference(ANY_EXPRESSION_NAME))
     .named(FIELD_ACCESS_EXPRESSION)
     .display("field access");
 
+internal val indexAccess = first("array", reference(ANY_EXPRESSION_NAME))
+    .then(ignorables.ignore())
+    .then(token(SQUARE_BRACKET_OPEN))
+    .then("index", reference(ANY_EXPRESSION_NAME))
+    .then(token(SQUARE_BRACKET_CLOSED))
+    .setLeftRecursive(true)
+    .named(INDEXED_ACCESS_EXPRESSION)
+    .display("array access");
 
 
 internal val nonRecursiveExpression = arrayOf(
     reference(METHOD_INVOCATION),
     fieldAccess,
+    indexAccess,
     reference(STATEMENT_EXPRESSION),
     literalExpression,
     enclosedExpression

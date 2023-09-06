@@ -159,6 +159,7 @@ private fun ExpressionNode.documentSymbols(): List<DocumentSymbol> {
         is ExpressionNode.StringLiteralNode -> emptyList()
         is ExpressionNode.VariableLiteralNode -> listOf()
         is ExpressionNode.FieldAccessNode -> emptyList()
+        is ExpressionNode.IndexAccessNode -> emptyList()
     }
 }
 

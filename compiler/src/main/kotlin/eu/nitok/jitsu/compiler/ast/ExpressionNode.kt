@@ -48,4 +48,11 @@ sealed class ExpressionNode() {
         override val location: Location,
         val fieldLocation: Location
     ) : ExpressionNode() {}
+
+    @Serializable
+    class IndexAccessNode(
+        val target: ExpressionNode,
+        val index: ExpressionNode,
+        override val location: Location
+    ) : ExpressionNode() {}
 }

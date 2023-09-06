@@ -56,6 +56,7 @@ fun resolveConstant(scope: Scope, expression: ExpressionNode, explicitType: Reso
         is ExpressionNode.StringLiteralNode -> TODO()
         is ExpressionNode.VariableLiteralNode -> TODO()
         is ExpressionNode.FieldAccessNode -> TODO()
+        is ExpressionNode.IndexAccessNode -> TODO()
     }
 }
 

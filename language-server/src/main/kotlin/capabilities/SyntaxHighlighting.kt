@@ -2,11 +2,14 @@ package capabilities
 
 import capabilities.SemanticTokenTypes.*
 import customLogger
-import eu.nitok.jitsu.compiler.ast.*
+import eu.nitok.jitsu.compiler.ast.ExpressionNode
+import eu.nitok.jitsu.compiler.ast.Location
+import eu.nitok.jitsu.compiler.ast.StatementNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode.ParameterNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseBodyNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode.ConditionCaseNode.CaseMatchingNode
+import eu.nitok.jitsu.compiler.ast.TypeNode
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -201,10 +204,10 @@ private fun TypeNode.syntaxTokens(): List<SemanticToken> {
 private fun StatementNode.SwitchNode.CaseNode.syntaxTokens(): List<SemanticToken> {
     return listOf(
         token(KEYWORD, keywordLocation),
-    ) + when(val body = body) {
+    ) + when (val body = body) {
         is CaseBodyNode.CodeBlockCaseBodyNode -> body.codeBlock.syntaxTokens()
         is CaseBodyNode.ExpressionCaseBodyNode -> body.expression.syntaxTokens()
-    } + when(val matcher = matcher){
+    } + when (val matcher = matcher) {
         is CaseMatchNode.ConditionCaseNode -> matcher.type.syntaxTokens() + matcher.matching.syntaxTokens()
         is CaseMatchNode.ConstantCaseNode -> matcher.value.syntaxTokens()
         is CaseMatchNode.DefaultCaseNode -> listOf(token(KEYWORD, matcher.location))
@@ -212,10 +215,11 @@ private fun StatementNode.SwitchNode.CaseNode.syntaxTokens(): List<SemanticToken
 }
 
 private fun CaseMatchingNode.syntaxTokens(): List<SemanticToken> {
-    return when(this) {
+    return when (this) {
         is CaseMatchingNode.CastingPatternMatch -> listOf(
             token(VARIABLE, location)
         )
+
         is CaseMatchingNode.DeconstructPatternMatch ->
             this.variables.map { token(VARIABLE, it.location) }
     }
@@ -246,6 +250,7 @@ private fun ExpressionNode.syntaxTokens(): List<SemanticToken> {
         is ExpressionNode.StatementExpressionNode -> statement.syntaxTokens()
         is ExpressionNode.StringLiteralNode -> listOf(token(STRING, location))
         is ExpressionNode.VariableLiteralNode -> listOf(token(VARIABLE, location))
+        is ExpressionNode.IndexAccessNode -> target.syntaxTokens() + index.syntaxTokens()
     }
 }
 

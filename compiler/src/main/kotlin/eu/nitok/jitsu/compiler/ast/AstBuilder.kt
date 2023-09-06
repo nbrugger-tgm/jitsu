@@ -229,7 +229,14 @@ fun buildExpression(node: RawNode): ExpressionNode {
         ExpressionType.OPERATION_EXPRESSION -> buildOperation(value)
         ExpressionType.FIELD_ACCESS_EXPRESSION -> buildFieldAccess(value)
         ExpressionType.METHOD_INVOCATION -> StatementExpressionNode(buildMethodInvocation(value))
+        ExpressionType.INDEXED_ACCESS_EXPRESSION -> buildIndexAccess(value);
     }
+}
+
+fun buildIndexAccess(value: RawNode): ExpressionNode {
+    val array = buildExpression(value.getSubNode("array").orElseThrow());
+    val index = buildExpression(value.getSubNode("index").orElseThrow());
+    return IndexAccessNode(array, index, value.location);
 }
 
 fun buildFieldAccess(value: RawNode): FieldAccessNode {
@@ -240,10 +247,10 @@ fun buildFieldAccess(value: RawNode): FieldAccessNode {
 }
 
 fun buildOperation(node: RawNode): OperationNode {
-    val (type, operatorNode) = nodeType<BiOperator>(node);
-    val left = buildExpression(operatorNode.getSubNode("left").orElseThrow());
-    val right = buildExpression(operatorNode.getSubNode("right").orElseThrow());
-    return OperationNode(left, type, right, node.location, node.location/*we do not have the '+' location*/);
+    val (type, rune) = nodeType<BiOperator>(node.getSubNode("operator").orElseThrow());
+    val left = buildExpression(node.getSubNode("left").orElseThrow());
+    val right = buildExpression(node.getSubNode("right").orElseThrow());
+    return OperationNode(left, type, right, node.location, rune.location);
 }
 
 fun joinList(node: LocatableReducedNode): String {
