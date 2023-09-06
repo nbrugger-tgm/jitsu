@@ -26,7 +26,8 @@ sealed class StatementNode() {
         val returnType: TypeNode?,
         val body: CodeBlockNode,
         override val location: Location,
-        val nameLocation: Location
+        val nameLocation: Location?,
+        val keywordLocation: Location
     ) : StatementNode() {
         @Serializable
         class ParameterNode(

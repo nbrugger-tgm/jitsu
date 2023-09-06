@@ -131,9 +131,10 @@ private fun StatementNode.syntaxTokens(): List<SemanticToken> {
                     parameters.flatMap { it.syntaxTokens() }
 
         is StatementNode.FunctionDeclarationNode ->
-            listOf(token(FUNCTION, this.nameLocation)) +
+            listOf(token(KEYWORD, this.keywordLocation), this.nameLocation?.let { token(FUNCTION, it) }).filterNotNull() +
                     parameters.flatMap { it.syntaxTokens() } +
-                    body.syntaxTokens()
+                    body.syntaxTokens() +
+                    (returnType?.syntaxTokens() ?: emptyList())
 
         is StatementNode.IfNode ->
             listOf(token(KEYWORD, keywordLocation)) +
@@ -248,9 +249,30 @@ private fun ExpressionNode.syntaxTokens(): List<SemanticToken> {
                 right.syntaxTokens()
 
         is ExpressionNode.StatementExpressionNode -> statement.syntaxTokens()
-        is ExpressionNode.StringLiteralNode -> listOf(token(STRING, location))
+        is ExpressionNode.StringLiteralNode -> this.syntaxTokens()
         is ExpressionNode.VariableLiteralNode -> listOf(token(VARIABLE, location))
         is ExpressionNode.IndexAccessNode -> target.syntaxTokens() + index.syntaxTokens()
+    }
+}
+
+private fun ExpressionNode.StringLiteralNode.syntaxTokens(): List<SemanticToken> {
+    return content.flatMap {
+        when (it) {
+            is ExpressionNode.StringLiteralNode.StringPart.Literal -> listOf(
+                token(SemanticTokenTypes.MODIFIER, it.keywordLocation),
+                token(VARIABLE, it.nameLocation)
+            )
+
+            is ExpressionNode.StringLiteralNode.StringPart.Expression -> listOf(
+                token(
+                    MODIFIER,
+                    it.startKeywordLocation
+                )
+            ) + it.expression.syntaxTokens() + listOf(token(MODIFIER, it.endKeywordLocation))
+
+            is ExpressionNode.StringLiteralNode.StringPart.Charsequence -> listOf(token(STRING, it.location))
+            is ExpressionNode.StringLiteralNode.StringPart.EscapeSequence -> listOf(token(MODIFIER, it.location))
+        }
     }
 }
 

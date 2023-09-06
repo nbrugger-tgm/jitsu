@@ -1,17 +1,7 @@
 fn main(args: String[1]) {
     const inputStr = args[0];
-    const parsingResult = parse_int(inputStr);
-    if(parsingResult is Error) {
-        println("Cannot parse $inputStr: $parsingResult");
-        return;
-    }
-    //parsing result is an int automatically now
+    const parsingResult = parse_int(inputStr).expect("Cannot parse \n $inputStr: $parsingResult");
 
-    println("Input: $input");
-    if(input is float | double) {
-        println("Input requires an integer");
-        return;
-    }
     println("fibo($input) = ${fibo(input)}");
 }
 

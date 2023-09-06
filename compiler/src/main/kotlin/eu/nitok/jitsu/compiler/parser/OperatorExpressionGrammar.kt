@@ -11,7 +11,7 @@ import eu.nitok.jitsu.compiler.ast.ExpressionType
 internal var operatorExpression = build(ExpressionType.OPERATION_EXPRESSION)
     .grammar(anyOf(*nonRecursiveExpression)).add("left")
     .token(DefaultToken.WHITESPACE).ignore().add()
-    .grammar(anyOf(*BiOperator.entries.map { keyword(it.rune) }.toTypedArray()).display("operation expression (+, -, % ...)")).add("operator")
+    .grammar(anyOf(*BiOperator.entries.map { keyword(it.rune).named(it) }.toTypedArray()).display("operation expression (+, -, % ...)")).add("operator")
     .token(DefaultToken.WHITESPACE).ignore().add()
     .grammar(ANY_EXPRESSION_NAME).add("right")
     .get();

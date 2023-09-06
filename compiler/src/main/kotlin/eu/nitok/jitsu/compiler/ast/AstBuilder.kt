@@ -3,6 +3,7 @@ package eu.nitok.jitsu.compiler.ast;
 import com.niton.parser.ast.LocatableReducedNode
 import eu.nitok.jitsu.compiler.ast.ExpressionNode.*
 import eu.nitok.jitsu.compiler.ast.ExpressionNode.NumberLiteralNode.IntegerLiteralNode
+import eu.nitok.jitsu.compiler.ast.ExpressionNode.StringLiteralNode.StringPart
 import eu.nitok.jitsu.compiler.ast.StatementNode.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.AssignmentNode.AssignmentTarget
 import eu.nitok.jitsu.compiler.ast.StatementNode.CodeBlockNode.SingleExpressionCodeBlock
@@ -69,20 +70,21 @@ fun buildSwitch(value: RawNode): StatementNode {
     );
 }
 
-fun buildCase(node: LocatableReducedNode) : SwitchNode.CaseNode {
+fun buildCase(node: LocatableReducedNode): SwitchNode.CaseNode {
     val (matchingType, matching) = nodeType<CaseMatchType>(node.getSubNode("matching").orElseThrow());
     val (bodyType, body) = nodeType<CaseBodyType>(node.getSubNode("body").orElseThrow());
     return SwitchNode.CaseNode(
-        when(matchingType) {
+        when (matchingType) {
             CaseMatchType.CONSTANT_CASE -> buildConstantCase(matching)
             CaseMatchType.CONDITION_CASE -> buildConditionCase(matching)
             CaseMatchType.DEFAULT_CASE -> DefaultCaseNode(matching.location)
         },
-        when(bodyType) {
+        when (bodyType) {
             CaseBodyType.CODE_BLOCK_CASE_BODY -> CodeBlockCaseBodyNode(
                 buildCodeBlock(body.getSubNode("body").orElseThrow()),
                 body.location
             )
+
             CaseBodyType.EXPRESSION_CASE_BODY -> ExpressionCaseBodyNode(
                 buildExpression(body.getSubNode("body").orElseThrow()),
                 body.location
@@ -102,11 +104,12 @@ fun buildConditionCase(matching: RawNode): SwitchNode.CaseNode.CaseMatchNode {
 
 fun buildMatching(orElseThrow: LocatableReducedNode): CaseMatchingNode {
     val (type, value) = nodeType<CaseMatchingType>(orElseThrow);
-    return when(type) {
+    return when (type) {
         CaseMatchingType.DECONSTRUCT_PATTERN_MATCH -> CaseMatchingNode.DeconstructPatternMatch(
-            value.getSubNode("variables").orElseThrow().children.map { Variable(it.value, it.location)  },
+            value.getSubNode("variables").orElseThrow().children.map { Variable(it.value, it.location) },
             value.location
         )
+
         CaseMatchingType.CASTING_PATTERN_MATCH -> CaseMatchingNode.CastingPatternMatch(
             value.value,
             value.location
@@ -145,7 +148,11 @@ fun buildAssignment(value: RawNode): AssignmentNode {
     val target = run {
         val (type, target) = nodeType<AssignmentTargetType>(targetNode);
         return@run when (type) {
-            AssignmentTargetType.VARIABLE_ASSIGNMENT -> AssignmentTarget.VariableAssignment(target.value, targetNode.location)
+            AssignmentTargetType.VARIABLE_ASSIGNMENT -> AssignmentTarget.VariableAssignment(
+                target.value,
+                targetNode.location
+            )
+
             AssignmentTargetType.PROPERTY_ASSIGNMENT -> AssignmentTarget.PropertyAssignment(buildFieldAccess(target))
         }
     };
@@ -167,7 +174,7 @@ fun buildMethodInvocation(node: RawNode): MethodInvocationNode {
     val parameters = node.getSubNode("parameters").map {
         it.children.map { child -> buildExpression(child) }
     }.orElse(emptyList());
-    return MethodInvocationNode(target,methodNode.value, parameters, node.location, methodNode.location);
+    return MethodInvocationNode(target, methodNode.value, parameters, node.location, methodNode.location);
 }
 
 fun buildFunctionCall(node: RawNode): FunctionCallNode {
@@ -180,7 +187,8 @@ fun buildFunctionCall(node: RawNode): FunctionCallNode {
 }
 
 fun buildFunction(node: RawNode): FunctionDeclarationNode {
-    val name: String? = node.getSubNode("name").map { e -> e.value }.getOrNull();
+    val nameNode = node.getSubNode("name").getOrNull()
+    val name: String? = nameNode?.value;
     val parameters = node.getSubNode("parameters").map {
         it.children.map { child -> buildParameter(child) }
     }.orElse(emptyList());
@@ -188,7 +196,7 @@ fun buildFunction(node: RawNode): FunctionDeclarationNode {
         buildType(it.getSubNode("type").orElseThrow())
     }.getOrNull();
     val body = buildCodeBlock(node.getSubNode("body").orElseThrow());
-    return FunctionDeclarationNode(name, parameters, returnType, body, node.location,keywordPos(node));
+    return FunctionDeclarationNode(name, parameters, returnType, body, node.location,nameNode?.location, keywordPos(node));
 }
 
 fun buildCodeBlock(node: LocatableReducedNode): CodeBlockNode {
@@ -261,19 +269,65 @@ fun buildLiteral(node: RawNode): ExpressionNode {
     val (type, value) = nodeType<LiteralType>(node);
     return when (type) {
         LiteralType.BOOLEAN_LITERAL -> BooleanLiteralNode(value.value.toBoolean(), node.location)
-        LiteralType.STRING_LITERAL -> {
-            val content = value.getSubNode("content").orElseThrow()
-            StringLiteralNode(
-                joinList(content),
-                node.location,
-                content.location
-            )
-        }
-
+        LiteralType.STRING_LITERAL -> buildStringLiteral(value)
         LiteralType.NUMBER_LITERAL -> IntegerLiteralNode(value.value, node.location)
         LiteralType.VARIABLE_LITERAL -> VariableLiteralNode(value.value, node.location)
     }
 }
+
+fun buildStringLiteral(value: RawNode): StringLiteralNode {
+    val content = value.getSubNode("content").orElseThrow()
+    val segments = content.children
+    val stringParts = segments.flatMap<LocatableReducedNode, StringPart> {
+        val charsNode = it.requiredChild("chars")
+        val chars = charsNode.value
+        val template = it.getSubNode("template_expression").getOrNull();
+        val templateVal = template?.let { nodeType<StringTemplateType>(it) };
+        val escapeSequence = it.getSubNode("escape_sequence").getOrNull()?.requiredChild("value");
+        return@flatMap (if (chars.isNotEmpty()) listOf(
+            StringPart.Charsequence(
+                chars,
+                charsNode.location
+            )
+        ) else emptyList()) +
+                when (templateVal?.first) {
+                    StringTemplateType.TEMPLATE_LITERAL -> buildLiteralStringTemplate(templateVal)
+                    StringTemplateType.TEMPLATE_EXPRESSION -> buildExpressionStringTemplate(templateVal)
+                    else -> emptyList()
+                } +
+                (if (escapeSequence != null) listOf(
+                    StringPart.EscapeSequence(
+                        escapeSequence.value,
+                        escapeSequence.location,
+                    )
+                ) else emptyList())
+    }
+    return StringLiteralNode(stringParts, value.location);
+}
+
+private fun buildExpressionStringTemplate(templateVal: Pair<StringTemplateType, RawNode>) =
+    listOf(
+        StringPart.Expression(
+            buildExpression(templateVal.second.requiredChild("expression")),
+            templateVal.second.getSubNode("symbol").orElseThrow().location,
+            templateVal.second.getSubNode("close_symbol").orElseThrow().location
+        )
+    )
+
+private fun buildLiteralStringTemplate(templateVal: Pair<StringTemplateType, RawNode>): List<StringPart.Literal> {
+    val variable = templateVal.second.requiredChild("variable")
+    return listOf(
+        StringPart.Literal(
+            variable.value,
+            variable.location,
+            templateVal.second.getSubNode("symbol").orElseThrow().location
+        )
+    )
+}
+
+private fun LocatableReducedNode.requiredChild(
+    name: String
+): LocatableReducedNode = getSubNode(name).orElseThrow()
 
 fun buildType(it: RawNode): TypeNode {
     val (type, value) = nodeType<TypeDeclarationType>(it);
@@ -290,7 +344,12 @@ fun buildEnumType(value: RawNode): TypeNode {
     val nameNode = value.getSubNode("name")
     return EnumDeclarationNode(
         nameNode.map { it.value }.getOrNull(),
-        value.getSubNode("constants").orElseThrow().children.map { EnumDeclarationNode.ConstantNode(it.value, it.location) },
+        value.getSubNode("constants").orElseThrow().children.map {
+            EnumDeclarationNode.ConstantNode(
+                it.value,
+                it.location
+            )
+        },
         value.location,
         nameNode.map { it.location }.getOrNull(),
         keywordPos(value)

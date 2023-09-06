@@ -22,8 +22,28 @@ sealed class ExpressionNode() {
     }
 
     @Serializable
-    class StringLiteralNode(val value: String, override val location: Location, val innerLocation: Location) :
-        ExpressionNode()
+    class StringLiteralNode(
+        val content: List<StringPart>, override val location: Location
+    ) : ExpressionNode() {
+        @Serializable
+        sealed interface StringPart {
+            @Serializable
+            class Literal(val literal: String, val nameLocation: Location, val keywordLocation: Location) : StringPart
+
+            @Serializable
+            class Expression(
+                val expression: ExpressionNode,
+                val startKeywordLocation: Location,
+                val endKeywordLocation: Location
+            ) : StringPart
+
+            @Serializable
+            class Charsequence(val value: String, val location: Location) : StringPart
+
+            @Serializable
+            class EscapeSequence(val value: String, val location: Location) : StringPart
+        }
+    }
 
     @Serializable
     class BooleanLiteralNode(val value: Boolean, override val location: Location) : ExpressionNode()
