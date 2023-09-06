@@ -7,7 +7,9 @@ enum class ExpressionType : GrammarName {
     STATEMENT_EXPRESSION,
     ENCLOSED_EXPRESSION,
     OPERATION_EXPRESSION,
-    FIELD_ACCESS_EXPRESSION;
+    FIELD_ACCESS_EXPRESSION,
+    METHOD_INVOCATION,
+    INDEXED_ACCESS_EXPRESSION;
 
     override fun getName(): String {
         return this.name

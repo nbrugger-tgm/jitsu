@@ -3,6 +3,9 @@ package capabilities
 import eu.nitok.jitsu.compiler.ast.ExpressionNode
 import eu.nitok.jitsu.compiler.ast.Location
 import eu.nitok.jitsu.compiler.ast.StatementNode
+import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseBodyNode
+import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode
+import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode.ConditionCaseNode.CaseMatchingNode
 import eu.nitok.jitsu.compiler.ast.TypeNode
 import getArtificalId
 import org.eclipse.lsp4j.DocumentSymbol
@@ -99,9 +102,9 @@ private fun TypeNode.documentSymbols(location: Location, name: String, nameLocat
 private fun StatementNode.SwitchNode.CaseNode.documentSymbols(): List<DocumentSymbol> {
     //https://discuss.kotlinlang.org/t/what-is-the-reason-behind-smart-cast-being-impossible-to-perform-when-referenced-class-is-in-another-module/2201/36
     return when (val matcher = matcher) {
-        is StatementNode.SwitchNode.CaseNode.CaseMatchNode.ConditionCaseNode -> {
+        is CaseMatchNode.ConditionCaseNode -> {
             when (val matching = matcher.matching) {
-                is StatementNode.SwitchNode.CaseNode.CaseMatchNode.ConditionCaseNode.CaseMatchingNode.CastingPatternMatch -> listOf(
+                is CaseMatchingNode.CastingPatternMatch -> listOf(
                     DocumentSymbol(
                         matching.captureName,
                         SymbolKind.Variable,
@@ -112,24 +115,24 @@ private fun StatementNode.SwitchNode.CaseNode.documentSymbols(): List<DocumentSy
                     )
                 )
 
-                is StatementNode.SwitchNode.CaseNode.CaseMatchNode.ConditionCaseNode.CaseMatchingNode.DeconstructPatternMatch -> matching.variables.map {
+                is CaseMatchingNode.DeconstructPatternMatch -> matching.variables.map {
                     DocumentSymbol(
-                        it,
+                        it.name,
                         SymbolKind.Variable,
                         range(matcher.location),
-                        range(matching.location),
-                        "${it} : ${matcher.type}",
+                        range(it.location),
+                        "$it : ${matcher.type}",
                         listOf()
                     )
                 }
             }
         }
 
-        is StatementNode.SwitchNode.CaseNode.CaseMatchNode.ConstantCaseNode -> listOf()
-        is StatementNode.SwitchNode.CaseNode.CaseMatchNode.DefaultCaseNode -> listOf()
+        is CaseMatchNode.ConstantCaseNode -> listOf()
+        is CaseMatchNode.DefaultCaseNode -> listOf()
     } + when (val body = body) {
-        is StatementNode.SwitchNode.CaseNode.CaseBodyNode.CodeBlockCaseBodyNode -> body.codeBlock.documentSymbols()
-        is StatementNode.SwitchNode.CaseNode.CaseBodyNode.ExpressionCaseBodyNode -> body.expression.documentSymbols()
+        is CaseBodyNode.CodeBlockCaseBodyNode -> body.codeBlock.documentSymbols()
+        is CaseBodyNode.ExpressionCaseBodyNode -> body.expression.documentSymbols()
     }
 }
 

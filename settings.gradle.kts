@@ -29,6 +29,5 @@ include(
 )
 
 include(
-    "idea-extension",
     "vs-extension",
 )

@@ -10,7 +10,7 @@ tasks.register("build", NpmTask::class) {
     inputs.files(fileTree("src"))
     inputs.files("tsconfig.json")
 
-    outputs.dir("${layout.buildDirectory}/ts-out")
+    outputs.dir("${layout.buildDirectory.get().toString()}/ts-out")
 }
 
 tasks.register("runIde", Exec::class) {

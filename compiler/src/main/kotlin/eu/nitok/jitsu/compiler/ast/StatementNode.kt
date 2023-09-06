@@ -40,7 +40,8 @@ sealed class StatementNode() {
     }
 
     @Serializable
-    class ReturnNode(val expression: ExpressionNode?, override val location: Location, val keywordLocation: Location) : StatementNode()
+    class ReturnNode(val expression: ExpressionNode?, override val location: Location, val keywordLocation: Location) :
+        StatementNode()
 
     @Serializable
     class IfNode(
@@ -82,10 +83,15 @@ sealed class StatementNode() {
     }
 
     @Serializable
-    class SwitchNode(val item: ExpressionNode, val cases: List<CaseNode>, override val location: Location,val keywordLocation: Location) :
+    class SwitchNode(
+        val item: ExpressionNode,
+        val cases: List<CaseNode>,
+        override val location: Location,
+        val keywordLocation: Location
+    ) :
         StatementNode() {
         @Serializable
-        class CaseNode(val matcher: CaseMatchNode, val body: CaseBodyNode) {
+        class CaseNode(val matcher: CaseMatchNode, val body: CaseBodyNode, val keywordLocation: Location) {
             @Serializable
             sealed class CaseMatchNode {
                 abstract val location: Location
@@ -106,8 +112,11 @@ sealed class StatementNode() {
 
                         @Serializable
                         class DeconstructPatternMatch(
-                            val variables: List<String>, override val location: Location
-                        ) : CaseMatchingNode()
+                            val variables: List<Variable>, override val location: Location
+                        ) : CaseMatchingNode() {
+                            @Serializable
+                            data class Variable(val name: String, val location: Location)
+                        }
 
                         @Serializable
                         class CastingPatternMatch(
@@ -146,24 +155,36 @@ sealed class StatementNode() {
     ) : StatementNode()
 
 
-
     @Serializable
     class FunctionCallNode(
         val function: String,
         val parameters: List<ExpressionNode>,
         override val location: Location,
         val nameLocation: Location
-    ) :
-        StatementNode()
+    ) : StatementNode()
 
     @Serializable
-    class AssignmentNode(val variable: String, val value: ExpressionNode, override val location: Location, val nameLocation: Location) :
-        StatementNode()
+    class AssignmentNode(
+        val target: AssignmentTarget,
+        val value: ExpressionNode,
+        override val location: Location,
+        val nameLocation: Location
+    ) : StatementNode() {
+        @Serializable
+        sealed class AssignmentTarget(){
+            @Serializable
+            data class VariableAssignment(val name: String, val location: Location) : AssignmentTarget()
+            @Serializable
+            data class PropertyAssignment(val property: ExpressionNode.FieldAccessNode) : AssignmentTarget()
+        }
+    }
 
     @Serializable
     class MethodInvocationNode(
         val target: ExpressionNode,
-        val name: String,
-        val parameters: List<ExpressionNode>, override val location: Location, val nameLocation: Location
+        var method: String,
+        val parameters: List<ExpressionNode>,
+        override val location: Location,
+        val nameLocation: Location
     ) : StatementNode()
 }

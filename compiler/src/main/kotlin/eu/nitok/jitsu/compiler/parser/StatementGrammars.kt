@@ -1,10 +1,13 @@
 package eu.nitok.jitsu.compiler.parser
 
 import com.niton.parser.grammar.api.Grammar.*
+import com.niton.parser.grammar.api.GrammarName
 import com.niton.parser.token.DefaultToken.*
 import eu.nitok.jitsu.compiler.ast.CodeBlockContentType
-import eu.nitok.jitsu.compiler.ast.StatementType
+import eu.nitok.jitsu.compiler.ast.ExpressionType.STATEMENT_EXPRESSION
 import eu.nitok.jitsu.compiler.ast.StatementType.*
+import eu.nitok.jitsu.compiler.parser.AssignmentTargetType.PROPERTY_ASSIGNMENT
+import eu.nitok.jitsu.compiler.parser.AssignmentTargetType.VARIABLE_ASSIGNMENT
 import eu.nitok.jitsu.compiler.parser.matchers.ListGrammar
 
 private val assignmentOperator =
@@ -27,7 +30,7 @@ internal val typeDefinition = first("keyword", keyword("type"))
     .named(TYPE_DEFINITION)
     .display("type definition")
 private val variableDeclaration =
-    first("keyword",(keyword("var").or(keyword("const"))))
+    first("keyword", (keyword("var").or(keyword("const"))))
         .then(ignorables)
         .then("name", identifier)
         .then("type_def", ignorables.ignore().then(typeDeclaration).optional().named("APPENDED_TYPE_DEF"))
@@ -36,11 +39,24 @@ private val variableDeclaration =
         .named(VARIABLE_DECLARATION)
         .display("variable delcaration")
 
-private var assignment = first("variable", identifier)
-    .then(WHITESPACE)
-    .then("assignment", assignmentOperator)
-    .named(ASSIGNMENT)
-    .display("assignment")
+enum class AssignmentTargetType : GrammarName {
+    VARIABLE_ASSIGNMENT,
+    PROPERTY_ASSIGNMENT;
+
+    override fun getName(): String {
+        return this.name
+    }
+}
+
+private var assignment =
+    first(
+        "variable",
+        anyOf(reference(fieldAccess.name).namedCopy(PROPERTY_ASSIGNMENT), identifier.namedCopy(VARIABLE_ASSIGNMENT))
+    )
+        .then(WHITESPACE)
+        .then("assignment", assignmentOperator)
+        .named(ASSIGNMENT)
+        .display("assignment")
 
 private val parameter = first("name", identifier)
     .then(ignorables.ignore())
@@ -103,13 +119,14 @@ private val ifStatement = first("keyword", keyword("if"))
 
 internal val codeBlock = token(ROUND_BRACKET_OPEN)
     .then(ignorables.ignore())
-    .then("code",reference(CodeBlockContentType.STATEMENTS).or(expression.namedCopy(CodeBlockContentType.EXPRESSION)))
+    .then("code", reference(CodeBlockContentType.STATEMENTS).or(expression.namedCopy(CodeBlockContentType.EXPRESSION)))
     .then(ignorables.ignore())
     .then(token(ROUND_BRACKET_CLOSED))
     .named(CODE_BLOCK)
     .display("code block")
 
-internal val methodInvocation = first("target", anyOf(*atomicExpressions))
+internal val methodInvocation = first("target", expression)
+    .then(ignorables.ignore())
     .then(token(POINT))
     .then("method", identifier)
     .then(token(BRACKET_OPEN))
@@ -141,6 +158,14 @@ private val blockStatement = arrayOf(
     functionDeclaration,
     switchStatement
 )
+internal val expressionStatements = anyOf(
+    methodInvocation,
+    functionCall,
+    ifStatement,
+    codeBlock,
+    functionDeclaration,
+    switchStatement
+).named(STATEMENT_EXPRESSION)
 
 internal const val STATEMENT_NAME = "STATEMENT"
 internal val statement = anyOf(
@@ -149,8 +174,10 @@ internal val statement = anyOf(
 ).named(STATEMENT_NAME)
 
 internal val invocationStatement = anyOf(
-    anyOf(*singleLineStatement.map { it.then(token(SEMICOLON)).named(it.name+"_WITH_SEMICOLON") }.toTypedArray()).named(SEMICOLON_STATEMENT),
+    anyOf(*singleLineStatement.map { it.then(token(SEMICOLON)).named(it.name + "_WITH_SEMICOLON") }
+        .toTypedArray()).named(SEMICOLON_STATEMENT),
     *blockStatement
 )
 
-internal val codeLines = ignorables.ignore().then(invocationStatement.then(ignorables.ignore()).repeat(1)).named(CodeBlockContentType.STATEMENTS)
+internal val codeLines = ignorables.ignore().then(invocationStatement.then(ignorables.ignore()).repeat(1))
+    .named(CodeBlockContentType.STATEMENTS)

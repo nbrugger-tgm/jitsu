@@ -4,6 +4,7 @@ import com.niton.parser.ast.LocatableReducedNode
 import eu.nitok.jitsu.compiler.ast.ExpressionNode.*
 import eu.nitok.jitsu.compiler.ast.ExpressionNode.NumberLiteralNode.IntegerLiteralNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.*
+import eu.nitok.jitsu.compiler.ast.StatementNode.AssignmentNode.AssignmentTarget
 import eu.nitok.jitsu.compiler.ast.StatementNode.CodeBlockNode.SingleExpressionCodeBlock
 import eu.nitok.jitsu.compiler.ast.StatementNode.CodeBlockNode.StatementsCodeBlock
 import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode.ParameterNode
@@ -11,8 +12,10 @@ import eu.nitok.jitsu.compiler.ast.StatementNode.IfNode.ElseNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseBodyNode.CodeBlockCaseBodyNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseBodyNode.ExpressionCaseBodyNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode.ConditionCaseNode.CaseMatchingNode
+import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode.ConditionCaseNode.CaseMatchingNode.DeconstructPatternMatch.Variable
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode.DefaultCaseNode
 import eu.nitok.jitsu.compiler.ast.TypeNode.*
+import eu.nitok.jitsu.compiler.parser.AssignmentTargetType
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import java.util.function.UnaryOperator
@@ -69,20 +72,24 @@ fun buildSwitch(value: RawNode): StatementNode {
 fun buildCase(node: LocatableReducedNode) : SwitchNode.CaseNode {
     val (matchingType, matching) = nodeType<CaseMatchType>(node.getSubNode("matching").orElseThrow());
     val (bodyType, body) = nodeType<CaseBodyType>(node.getSubNode("body").orElseThrow());
-    return SwitchNode.CaseNode(when(matchingType) {
-        CaseMatchType.CONSTANT_CASE -> buildConstantCase(matching)
-        CaseMatchType.CONDITION_CASE -> buildConditionCase(matching)
-        CaseMatchType.DEFAULT_CASE -> DefaultCaseNode(matching.location)
-    },when(bodyType) {
-        CaseBodyType.CODE_BLOCK_CASE_BODY -> CodeBlockCaseBodyNode(
-            buildCodeBlock(body.getSubNode("body").orElseThrow()),
-            body.location
-        )
-        CaseBodyType.EXPRESSION_CASE_BODY -> ExpressionCaseBodyNode(
-            buildExpression(body.getSubNode("body").orElseThrow()),
-            body.location
-        )
-    })
+    return SwitchNode.CaseNode(
+        when(matchingType) {
+            CaseMatchType.CONSTANT_CASE -> buildConstantCase(matching)
+            CaseMatchType.CONDITION_CASE -> buildConditionCase(matching)
+            CaseMatchType.DEFAULT_CASE -> DefaultCaseNode(matching.location)
+        },
+        when(bodyType) {
+            CaseBodyType.CODE_BLOCK_CASE_BODY -> CodeBlockCaseBodyNode(
+                buildCodeBlock(body.getSubNode("body").orElseThrow()),
+                body.location
+            )
+            CaseBodyType.EXPRESSION_CASE_BODY -> ExpressionCaseBodyNode(
+                buildExpression(body.getSubNode("body").orElseThrow()),
+                body.location
+            )
+        },
+        keywordPos(node)
+    )
 }
 
 fun buildConditionCase(matching: RawNode): SwitchNode.CaseNode.CaseMatchNode {
@@ -97,7 +104,7 @@ fun buildMatching(orElseThrow: LocatableReducedNode): CaseMatchingNode {
     val (type, value) = nodeType<CaseMatchingType>(orElseThrow);
     return when(type) {
         CaseMatchingType.DECONSTRUCT_PATTERN_MATCH -> CaseMatchingNode.DeconstructPatternMatch(
-            value.getSubNode("variables").orElseThrow().children.map { it.value },
+            value.getSubNode("variables").orElseThrow().children.map { Variable(it.value, it.location)  },
             value.location
         )
         CaseMatchingType.CASTING_PATTERN_MATCH -> CaseMatchingNode.CastingPatternMatch(
@@ -123,7 +130,7 @@ fun buildIfStatement(node: RawNode): IfNode {
     val condition = buildExpression(node.getSubNode("condition").orElseThrow());
     val thenCodeBlockNode = buildCodeBlock(node.getSubNode("code").orElseThrow());
     val elseStatement = node.getSubNode("else").map {
-        val (type, value) = nodeType<StatementType>(it);
+        val (type, value) = nodeType<StatementType>(it.getSubNode("code").orElseThrow());
         when (type) {
             StatementType.CODE_BLOCK -> ElseNode.ElseBlockNode(buildCodeBlock(value))
             StatementType.IF_STATEMENT -> ElseNode.ElseIfNode(buildIfStatement(value))
@@ -135,7 +142,13 @@ fun buildIfStatement(node: RawNode): IfNode {
 
 fun buildAssignment(value: RawNode): AssignmentNode {
     val targetNode = value.getSubNode("variable").orElseThrow()
-    val target = targetNode.value;
+    val target = run {
+        val (type, target) = nodeType<AssignmentTargetType>(targetNode);
+        return@run when (type) {
+            AssignmentTargetType.VARIABLE_ASSIGNMENT -> AssignmentTarget.VariableAssignment(target.value, targetNode.location)
+            AssignmentTargetType.PROPERTY_ASSIGNMENT -> AssignmentTarget.PropertyAssignment(buildFieldAccess(target))
+        }
+    };
     val expression = buildExpression(
         value.getSubNode("assignment").orElseThrow()
             .getSubNode("expression").orElseThrow()
@@ -149,13 +162,12 @@ fun buildReturnStatement(value: RawNode): ReturnNode {
 }
 
 fun buildMethodInvocation(node: RawNode): MethodInvocationNode {
+    var target = buildExpression(node.getSubNode("target").orElseThrow());
     val methodNode = node.getSubNode("method").orElseThrow()
-    val name = methodNode.value;
     val parameters = node.getSubNode("parameters").map {
         it.children.map { child -> buildExpression(child) }
     }.orElse(emptyList());
-    val target = buildExpression(node.getSubNode("target").orElseThrow());
-    return MethodInvocationNode(target, name, parameters, node.location, methodNode.location);
+    return MethodInvocationNode(target,methodNode.value, parameters, node.location, methodNode.location);
 }
 
 fun buildFunctionCall(node: RawNode): FunctionCallNode {
@@ -216,10 +228,11 @@ fun buildExpression(node: RawNode): ExpressionNode {
         ExpressionType.ENCLOSED_EXPRESSION -> buildExpression(value)
         ExpressionType.OPERATION_EXPRESSION -> buildOperation(value)
         ExpressionType.FIELD_ACCESS_EXPRESSION -> buildFieldAccess(value)
+        ExpressionType.METHOD_INVOCATION -> StatementExpressionNode(buildMethodInvocation(value))
     }
 }
 
-fun buildFieldAccess(value: RawNode): ExpressionNode {
+fun buildFieldAccess(value: RawNode): FieldAccessNode {
     val target = buildExpression(value.getSubNode("target").orElseThrow());
     val fieldNode = value.getSubNode("field").orElseThrow()
     val field = fieldNode.value;

@@ -54,7 +54,6 @@ class JitsuLanguageServer : LanguageServer, LanguageClientAware{
         return JitsuWorkspaceService()
     }
 
-    var customLogger: java.io.PrintWriter? = null;
     internal var client: LanguageClient? = null
 
     override fun connect(client: LanguageClient?) {

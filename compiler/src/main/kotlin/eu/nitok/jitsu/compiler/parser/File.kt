@@ -16,6 +16,7 @@ private val grammarReference = GrammarReferenceMap()
     .deepMap(fileGrammar)
     .deepMap(expression)
     .deepMap(statement)
+    .deepMap(expressionStatements)
 private val parser = DefaultParser(
     grammarReference,
     fileGrammar

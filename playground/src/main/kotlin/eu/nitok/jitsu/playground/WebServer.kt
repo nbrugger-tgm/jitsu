@@ -18,7 +18,7 @@ import kotlinx.serialization.json.Json
 
 
 fun main() {
-    embeddedServer(Netty, port = 8080) {
+    embeddedServer(Netty, port = 8081) {
         routing {
             get("/") {
                 call.respondHtml {
@@ -53,7 +53,7 @@ fun main() {
                     }</pre>"
                 }.orElse { e ->
                     val error = e.mostProminentDeepException;
-                    """Error: <pre>${
+                    """Error: <pre>${error.message}</pre><pre>${
                         error.markInText(code, 2)
                             .replace("<", "&lt")
                             .replace(">", "&gt")

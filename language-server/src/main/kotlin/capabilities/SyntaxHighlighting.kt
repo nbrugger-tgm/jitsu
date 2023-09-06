@@ -1,11 +1,13 @@
 package capabilities
 
 import capabilities.SemanticTokenTypes.*
-import eu.nitok.jitsu.compiler.ast.ExpressionNode
-import eu.nitok.jitsu.compiler.ast.Location
-import eu.nitok.jitsu.compiler.ast.StatementNode
+import customLogger
+import eu.nitok.jitsu.compiler.ast.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode.ParameterNode
-import eu.nitok.jitsu.compiler.ast.TypeNode
+import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseBodyNode
+import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode
+import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode.ConditionCaseNode.CaseMatchingNode
+import java.util.concurrent.atomic.AtomicInteger
 
 
 internal enum class SemanticTokenTypes(val id: String) {
@@ -60,10 +62,13 @@ private data class SemanticToken(
     val pos: Location
 ) {
     fun decode(previousLine: Int, previousChar: Int): List<Int> {
+        customLogger.println("previousLine: $previousLine, previousChar: $previousChar")
+        customLogger.println("abs start line: ${pos.fromLine}, abs start char: ${pos.fromColumn}")
+        val lineDiff = pos.fromLine - previousLine
         return listOf(
-            pos.fromLine - previousLine,
-            pos.fromColumn - previousChar,
-            pos.toColumn - pos.fromColumn,
+            lineDiff,
+            if (lineDiff > 0) pos.fromColumn - 1 else pos.fromColumn - previousChar,
+            pos.toColumn - pos.fromColumn + 1,
             type.ordinal,
             modifyerBitflag(*modifiers)
         )
@@ -89,22 +94,28 @@ private data class SemanticToken(
 }
 
 private fun decode(tokens: List<SemanticToken>): List<Int> {
-    var previousLine = 1
-    var previousChar = 1
+    val previousLine = AtomicInteger(1)
+    val previousChar = AtomicInteger(1)
     return tokens.flatMap {
-        var ints = it.decode(previousLine, previousChar);
-        previousLine = it.pos.toLine;
-        previousChar = it.pos.toColumn;
-        return ints;
+        customLogger.println("decoding $it")
+        customLogger.println("previousLine: $previousLine, previousChar: $previousChar")
+        val ints = it.decode(previousLine.get(), previousChar.get());
+        customLogger.println(" -> $ints")
+        customLogger.flush()
+        if (it.pos.toLine > previousLine.get()) {
+            previousLine.set(it.pos.toLine)
+        }
+        previousChar.set(it.pos.fromColumn)
+        return@flatMap ints;
     };
 }
 
 private fun modifyerBitflag(vararg modifiers: SemanticTokenModifiers): Int {
-    return modifiers.map { it.bitflag() }.reduceOrNull { acc, i -> acc or i }?:0
+    return modifiers.map { it.bitflag() }.reduceOrNull { acc, i -> acc or i } ?: 0
 }
 
-internal fun StatementNode.syntaxHighlight(): List<Int> {
-    return decode(this.syntaxTokens())
+internal fun syntaxHighlight(statements: List<StatementNode>): List<Int> {
+    return decode(statements.flatMap { it.syntaxTokens() })
 }
 
 private fun StatementNode.syntaxTokens(): List<SemanticToken> {
@@ -174,12 +185,13 @@ private fun TypeNode.syntaxTokens(): List<SemanticToken> {
                     else emptyList()
 
         is TypeNode.EnumDeclarationNode ->
-            listOf(token(KEYWORD, this.keywordLocation)) +
+            listOf(token(KEYWORD, keywordLocation)) +
                     constants.map { token(ENUMMEMBER, it.location) }
 
         is TypeNode.FloatTypeNode,
         is TypeNode.StringTypeNode,
         is TypeNode.IntTypeNode -> listOf(token(KEYWORD, this.location))
+
         is TypeNode.NamedTypeNode -> listOf(token(TYPE, this.nameLocation)) + genericTypes.flatMap { it.syntaxTokens() }
         is TypeNode.UnionTypeNode -> types.flatMap { it.syntaxTokens() }
         is TypeNode.ValueTypeNode -> value.syntaxTokens()
@@ -187,7 +199,26 @@ private fun TypeNode.syntaxTokens(): List<SemanticToken> {
 }
 
 private fun StatementNode.SwitchNode.CaseNode.syntaxTokens(): List<SemanticToken> {
-    TODO();
+    return listOf(
+        token(KEYWORD, keywordLocation),
+    ) + when(val body = body) {
+        is CaseBodyNode.CodeBlockCaseBodyNode -> body.codeBlock.syntaxTokens()
+        is CaseBodyNode.ExpressionCaseBodyNode -> body.expression.syntaxTokens()
+    } + when(val matcher = matcher){
+        is CaseMatchNode.ConditionCaseNode -> matcher.type.syntaxTokens() + matcher.matching.syntaxTokens()
+        is CaseMatchNode.ConstantCaseNode -> matcher.value.syntaxTokens()
+        is CaseMatchNode.DefaultCaseNode -> listOf(token(KEYWORD, matcher.location))
+    }
+}
+
+private fun CaseMatchingNode.syntaxTokens(): List<SemanticToken> {
+    return when(this) {
+        is CaseMatchingNode.CastingPatternMatch -> listOf(
+            token(VARIABLE, location)
+        )
+        is CaseMatchingNode.DeconstructPatternMatch ->
+            this.variables.map { token(VARIABLE, it.location) }
+    }
 }
 
 private fun StatementNode.IfNode.ElseNode?.syntaxTokens(): List<SemanticToken> {
@@ -211,6 +242,7 @@ private fun ExpressionNode.syntaxTokens(): List<SemanticToken> {
         is ExpressionNode.OperationNode -> left.syntaxTokens() +
                 listOf(token(OPERATOR, operatorLocation)) +
                 right.syntaxTokens()
+
         is ExpressionNode.StatementExpressionNode -> statement.syntaxTokens()
         is ExpressionNode.StringLiteralNode -> listOf(token(STRING, location))
         is ExpressionNode.VariableLiteralNode -> listOf(token(VARIABLE, location))

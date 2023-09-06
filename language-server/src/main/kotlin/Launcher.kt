@@ -5,12 +5,14 @@ import java.io.File
 import java.io.FileWriter
 import java.io.PrintWriter
 
+var log = File("log.txt")
+var customLogger: PrintWriter = PrintWriter(FileWriter(log))
 fun main() {
     val jitsuLsp = JitsuLanguageServer();
-    var log = File("log.txt")
     var log2 = File("trace.txt")
     if(log.exists()) log.delete()
     log.createNewFile()
+    customLogger = PrintWriter(FileWriter(log));
     if(log2.exists()) log2.delete()
     log2.createNewFile()
 
@@ -18,5 +20,4 @@ fun main() {
     launcher.startListening()
     val client = launcher.remoteProxy as LanguageClient
     jitsuLsp.connect(client)
-    jitsuLsp.customLogger = PrintWriter(FileWriter(log))
 }

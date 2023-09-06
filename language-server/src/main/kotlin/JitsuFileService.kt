@@ -1,4 +1,5 @@
 import capabilities.documentSymbols
+import capabilities.syntaxHighlight
 import com.niton.parser.ast.LocatableReducedNode
 import com.niton.parser.ast.ParsingResult
 import eu.nitok.jitsu.compiler.ast.Location
@@ -13,7 +14,6 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import java.io.File
 import java.net.URI
 import java.util.concurrent.CompletableFuture
-import capabilities.syntaxHighlight
 
 class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
     private val rawTexts: MutableMap<String, String> = mutableMapOf();
@@ -70,7 +70,7 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
                 shift[lineIndex] = (shift[lineIndex] ?: 0) + delta;
             }
             rawTexts[url] = oldText.joinToString("\n")
-            server.customLogger?.println("changed to ${rawTexts[url]}")
+            customLogger.println("changed to ${rawTexts[url]}")
         }
         updateFile(url)
     }
@@ -113,9 +113,9 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
     override fun semanticTokensFull(params: SemanticTokensParams?): CompletableFuture<SemanticTokens> {
         val ast = asts[params?.textDocument?.uri]?.value ?:// return CompletableFuture.failedFuture(NullPointerException("no ast"))
         return CompletableFuture.completedFuture(SemanticTokens(listOf()))
-        val tokens = ast.flatMap { it.syntaxHighlight() }
-        server.customLogger?.println("tokens: $tokens")
-        server.customLogger?.flush()
+        val tokens = syntaxHighlight(ast)
+        customLogger.println("tokens: $tokens")
+        customLogger.flush()
         return CompletableFuture.completedFuture(SemanticTokens(tokens))//syntax highlighting
     }
 
