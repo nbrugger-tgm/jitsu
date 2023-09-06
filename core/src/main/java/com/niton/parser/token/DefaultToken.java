@@ -10,7 +10,7 @@ public enum DefaultToken implements Tokenable {
 	LETTERS("[A-Za-z]+"),
 	NUMBER("[0-9]+"),
 	WHITESPACE("[ \t]+"),
-
+	DOLLAR("\\$"),
 	POINT("\\."),
 	COMMA(","),
 	PLUS("\\+"),
@@ -37,6 +37,7 @@ public enum DefaultToken implements Tokenable {
 
 	SMALLER("<"),
 	BIGGER(">"),
+
 
 	SLASH("\\/"),
 	BACK_SLASH("\\\\"),

@@ -1,11 +1,10 @@
 package com.niton.parser.grammar.matchers;
 
+import com.niton.parser.ast.OptionalNode;
 import com.niton.parser.ast.ParsingResult;
-import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.grammar.api.Grammar;
 import com.niton.parser.grammar.api.GrammarMatcher;
 import com.niton.parser.grammar.api.GrammarReference;
-import com.niton.parser.ast.OptionalNode;
 import com.niton.parser.token.TokenStream;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,26 +21,25 @@ import org.jetbrains.annotations.NotNull;
 @Setter
 public class OptionalMatcher extends GrammarMatcher<OptionalNode> {
 
-	private Grammar<?> check;
+    private Grammar<?> check;
 
-	public OptionalMatcher(Grammar<?> value) {
-		this.check = value;
-	}
+    public OptionalMatcher(Grammar<?> value) {
+        this.check = value;
+    }
 
 
-	/**
-	 * @see GrammarMatcher#process(TokenStream, GrammarReference)
-	 * @param tokens
-	 * @param ref
-	 */
-	@Override
-	public @NotNull ParsingResult<OptionalNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
-		var node = new OptionalNode();
-		check.parse(tokens, ref).ifParsedOrElse(
-				node::setValue,
-				node::setParsingException
-		);
-		return ParsingResult.ok(node);
-	}
+    /**
+     * @param tokens
+     * @param ref
+     * @see GrammarMatcher#process(TokenStream, GrammarReference)
+     */
+    @Override
+    public @NotNull ParsingResult<OptionalNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
+        return ParsingResult.ok(
+                check.parse(tokens, ref).map(
+                        OptionalNode::new
+                ).orElse((ex) -> new OptionalNode(tokens.currentLocation(), ex))
+        );
+    }
 
 }

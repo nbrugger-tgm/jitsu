@@ -7,6 +7,7 @@ import com.niton.parser.token.Tokenizer;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
+import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

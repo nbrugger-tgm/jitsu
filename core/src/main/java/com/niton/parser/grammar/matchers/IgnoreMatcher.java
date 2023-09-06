@@ -1,6 +1,5 @@
 package com.niton.parser.grammar.matchers;
 
-import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.IgnoredNode;
 import com.niton.parser.ast.OptionalNode;
 import com.niton.parser.ast.ParsingResult;
@@ -22,25 +21,25 @@ import org.jetbrains.annotations.NotNull;
 @Getter
 @Setter
 public class IgnoreMatcher extends GrammarMatcher<OptionalNode> {
-	private Grammar<?> grammar;
+    private Grammar<?> grammar;
 
-	public IgnoreMatcher(Grammar<?> name2) {
-		this.grammar = name2;
-	}
+    public IgnoreMatcher(Grammar<?> name2) {
+        this.grammar = name2;
+    }
 
 
-	/**
-	 * @see GrammarMatcher#process(TokenStream, GrammarReference)
-	 * @param tokens
-	 * @param ref
-	 */
-	@Override
-	public @NotNull ParsingResult<OptionalNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
-		OptionalNode thisRes = new IgnoredNode();
-		grammar.parse(tokens, ref).ifParsedOrElse(
-				thisRes::setValue,
-				err -> thisRes.setParsingException(new ParsingException(getIdentifier(), "Nothing to ignore", err))
-		);
-		return ParsingResult.ok(thisRes);
-	}
+    /**
+     * @param tokens
+     * @param ref
+     * @see GrammarMatcher#process(TokenStream, GrammarReference)
+     */
+    @Override
+    public @NotNull ParsingResult<OptionalNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
+        OptionalNode thisRes = grammar.parse(tokens, ref).map(
+                (sub) -> new IgnoredNode(tokens.currentLocation(), sub.getParsingException())
+        ).orElse(
+                err -> new IgnoredNode(tokens.currentLocation(), new ParsingException(getIdentifier(), "Nothing to ignore", err))
+        );
+        return ParsingResult.ok(thisRes);
+    }
 }

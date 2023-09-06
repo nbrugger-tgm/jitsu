@@ -24,8 +24,10 @@ public class NotMatcher extends GrammarMatcher<OptionalNode> {
         var result = grammarNotToMatch.parse(tokens, reference);
         if(!result.wasParsed()){
             tokens.commit();
-            var node = new OptionalNode();
-            node.setParsingException(new ParsingException(getIdentifier(), "Successfully  mis-matched " + grammarNotToMatch.getIdentifier(), result.exception()));
+            var node = new OptionalNode(
+                    tokens.currentLocation(),
+                    new ParsingException(getIdentifier(), "Successfully  mis-matched " + grammarNotToMatch.getIdentifier(), result.exception())
+            );
             return ParsingResult.ok(node);
         }
         AstNode node = result.unwrap();
