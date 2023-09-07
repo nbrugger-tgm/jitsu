@@ -24,7 +24,7 @@ public class TokenGrammarMatcherTest extends AbstractMatcherTest {
         var number = new TokenMatcher(new TokenGrammar(DefaultToken.NUMBER.name()));
         var letters = new TokenMatcher(new TokenGrammar(DefaultToken.LETTERS.name()));
         var minus = new TokenMatcher(new TokenGrammar(DefaultToken.MINUS.name()));
-        var dot = new TokenMatcher(new TokenGrammar(DefaultToken.POINT.name()));
+        var dot = new TokenMatcher(new TokenGrammar(DefaultToken.DOT.name()));
         var tokenizer = new Tokenizer();
 
         return Stream.of(

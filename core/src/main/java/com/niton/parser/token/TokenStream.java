@@ -17,6 +17,11 @@ public interface TokenStream {
 
     int size();
 
+    /**
+     * @return the next token without consuming it
+     */
+    Tokenizer.AssignedToken peek();
+
     String getPreviousTokens(int count);
 
     boolean hasNext();
@@ -32,4 +37,9 @@ public interface TokenStream {
     int getColumn();
 
     Location currentLocation();
+
+    /**
+     * Skips the next i tokens
+     */
+    void skip(int i);
 }

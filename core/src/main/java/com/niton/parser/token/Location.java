@@ -135,4 +135,9 @@ public interface Location {
     default Location minusLine(int i) {
         return of(getFromLine(), getFromColumn(), getToLine() - i, getToColumn());
     }
+
+    @NotNull
+    default Location rangeTo(@NotNull Location parameterLoc) {
+        return range(this, parameterLoc);
+    }
 }

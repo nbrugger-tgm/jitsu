@@ -116,6 +116,11 @@ public class ListTokenStream implements TokenStream {
     }
 
     @Override
+    public AssignedToken peek() {
+        return tokens.get(index());
+    }
+
+    @Override
     public String getPreviousTokens(int count) {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < count; i++) {
@@ -156,5 +161,10 @@ public class ListTokenStream implements TokenStream {
     @Override
     public Location currentLocation() {
         return Location.oneChar(getLine(), getColumn());
+    }
+
+    @Override
+    public void skip(int i) {
+        index(index() + i);
     }
 }

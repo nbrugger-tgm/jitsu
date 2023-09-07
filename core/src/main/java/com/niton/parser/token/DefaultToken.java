@@ -11,7 +11,7 @@ public enum DefaultToken implements Tokenable {
 	NUMBER("[0-9]+"),
 	WHITESPACE("[ \t]+"),
 	DOLLAR("\\$"),
-	POINT("\\."),
+	DOT("\\."),
 	COMMA(","),
 	PLUS("\\+"),
 	MINUS("-"),
