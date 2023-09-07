@@ -1,0 +1,51 @@
+//importing dependencies
+
+example structure:
+```
+github.com
+    `- nbrugger-tgm
+           |-jorm
+           |   |-build.gradle
+           |   |-mysql
+           |   |    `-(src, gradle ...)
+           |   |
+           |   `-core
+           |      `-main/jitsu
+           |          |-repository
+           |          |    |-namespace-info.jit
+           |          |    |-autoinserting (no jit namespace - belongs to `repository` module)
+           |          |    |    `-AutoInsertingRepository.jit
+           |          |    `-JitsuRepository.jit
+           |          |
+           |          `-attributes
+           |               |-namespace-info.jit
+           |               |-transactional (sub jit namespace)
+           |               |    |-module-info.jit
+           |               |    `-TransactionalAttributes.jit
+           |               |
+           |               `-JitsuAttributes.jit
+           |
+           `-justils
+               |-build.gradle
+               `-src/main/jitsu
+                   |-math.jit
+                   `-string.jit
+```
+
+terminology:
+  project: github.com/nbrugger-tgm/jorm
+  module: jorm/core, jorm/mysql
+  namespace: repository,attributes, attributes.transactional
+//import targets exported symbols(constants, functions, structs ...) not files!
+import { autoinsert } from nbrugger-tgm.jorm:core@repository;
+import { autoinsert } from nbrugger-tgm.jorm:core.repository;
+
+import { repository.JitsuRepository } from nbrugger-tgm.jorm.core;
+import { repository.JitsuRepository } from nbrugger-tgm.jorm.core;
+
+
+import nbrugger-tgm.jorm.core@repository.JitsuRepository;
+import nbrugger-tgm.jorm.core.repository.JitsuRepository;
+
+//simple dependency
+import { to_upper_case } from nbrugger-tgm.justils;

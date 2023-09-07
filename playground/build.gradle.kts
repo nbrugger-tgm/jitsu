@@ -8,6 +8,7 @@ dependencies {
     implementation("io.ktor:ktor-server-netty-jvm:2.3.4")
     runtimeOnly("ch.qos.logback:logback-classic:1.4.11")
     implementation(project(":compiler"))
+    implementation(project(":language-server"))
 }
 
 application {

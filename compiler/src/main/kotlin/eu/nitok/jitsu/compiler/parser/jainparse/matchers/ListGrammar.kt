@@ -1,4 +1,4 @@
-package eu.nitok.jitsu.compiler.parser.matchers
+package eu.nitok.jitsu.compiler.parser.jainparse.matchers
 
 import com.niton.parser.ast.SequenceNode
 import com.niton.parser.grammar.api.Grammar

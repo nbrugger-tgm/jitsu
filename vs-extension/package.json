@@ -48,7 +48,13 @@
           "description": "Traces the communication between VS Code and the language server."
         }
       }
-    }
+    },
+    "commands": [
+      {
+        "command": "jistu.connectLsp",
+        "title": "Start Jitsu LSP"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

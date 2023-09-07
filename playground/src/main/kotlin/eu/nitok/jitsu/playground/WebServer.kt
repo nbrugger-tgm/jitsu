@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.playground
 
-import eu.nitok.jitsu.compiler.ast.buildFileAst
-import eu.nitok.jitsu.compiler.parser.parseFile
+import capabilities.syntaxDiagnostic
+import eu.nitok.jitsu.compiler.parser.recursivedescent.parseFile
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.html.*
@@ -35,14 +35,9 @@ fun main() {
                 val code = call.receiveParameters()["code"]!!
                 println("Parsing: $code")
                 val ast = parseFile(code).map {
-                    "<p>Raw AST</p><pre>${
-                        it.format()
-                            .replace("<", "&lt")
-                            .replace(">", "&gt")
-                            .replace("\n", "<br/>")
-                    }</pre><p>Internal AST</p><pre>${
+                    "<p>Internal AST</p><pre>${
                         try {
-                            Json.encodeToString(buildFileAst(it))
+                            Json.encodeToString((it))
                                 .replace("<", "&lt")
                                 .replace(">", "&gt")
                                 .replace("\n", "<br/>")
@@ -50,7 +45,7 @@ fun main() {
                             e.printStackTrace()
                             "Error: ${e.message}"
                         }
-                    }</pre>"
+                    }</pre><p>Diagnostics:</p><pre>${it.flatMap { syntaxDiagnostic(it) }}</pre>"
                 }.orElse { e ->
                     val error = e.mostProminentDeepException;
                     """Error: <pre>${error.message}</pre><pre>${

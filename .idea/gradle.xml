@@ -29,7 +29,6 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/buildSrc" />
             <option value="$PROJECT_DIR$/compiler" />
-            <option value="$PROJECT_DIR$/idea-extension" />
             <option value="$PROJECT_DIR$/language-server" />
             <option value="$PROJECT_DIR$/libs/jainparse" />
             <option value="$PROJECT_DIR$/libs/jainparse/core" />

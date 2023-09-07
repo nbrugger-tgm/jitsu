@@ -9,19 +9,17 @@ sealed class TypeNode() {
     abstract val location: Location
 
     @Serializable
-    class IntTypeNode(val bitSize: BitSize, override val location: Location) : TypeNode()
+    class IntTypeNode(val bitSize: N<BitSize>, override val location: Location) : TypeNode()
 
     @Serializable
-    class FloatTypeNode(val bitSize: BitSize, override val location: Location) : TypeNode()
+    class FloatTypeNode(val bitSize: N<BitSize>, override val location: Location) : TypeNode()
 
     @Serializable
     class StringTypeNode(override val location: Location) : TypeNode()
     @Serializable
     class EnumDeclarationNode(
-        val name: String?,
-        val constants: List<ConstantNode>,
+        val constants: List<N<ConstantNode>>,
         override val location: Location,
-        val nameLocation: Location?,
         val keywordLocation: Location
     ) : TypeNode() {
 
@@ -31,25 +29,23 @@ sealed class TypeNode() {
 
     @Serializable
     class ArrayTypeNode(
-        @SerialName("type_definition") val type: TypeNode,
-        val fixedSize: Int?,
-        override val location: Location,
-        val sizeLocation: Location?
+        @SerialName("type_definition") val type: N<TypeNode>,
+        val fixedSize: N<ExpressionNode>?,
+        override val location: Location
     ) : TypeNode() {
     }
 
     @Serializable
     class NamedTypeNode(
-        val name: String,
-        val genericTypes: List<TypeNode>,
-        override val location: Location,
-        val nameLocation: Location
+        val name: N<Located<String>>,
+        val genericTypes: List<N<TypeNode>>,
+        override val location: Location
     ) :
         TypeNode()
 
     @Serializable
-    class UnionTypeNode(val types: List<TypeNode>, override val location: Location) : TypeNode()
+    class UnionTypeNode(val types: List<N<TypeNode>>, override val location: Location) : TypeNode()
 
     @Serializable
-    class ValueTypeNode(val value: ExpressionNode, override val location: Location) : TypeNode()
+    class ValueTypeNode(val value: N<ExpressionNode>, override val location: Location) : TypeNode()
 }

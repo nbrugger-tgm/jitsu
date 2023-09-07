@@ -4,8 +4,14 @@ import { client } from './lsp';
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	console.log('Congratulations, your extension "jitsu" is now active!');
-	console.error("WEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+	console.log("jitsu activated")
+	const command = 'jistu.connectLsp';
+
+	const startLsp = () => {
+		client.start()
+	};
+
+	context.subscriptions.push(vscode.commands.registerCommand(command, startLsp));
 	client.start();
 }
 

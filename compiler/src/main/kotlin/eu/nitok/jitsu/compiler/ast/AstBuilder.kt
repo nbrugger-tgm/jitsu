@@ -1,5 +1,5 @@
 package eu.nitok.jitsu.compiler.ast;
-
+/*
 import com.niton.parser.ast.LocatableReducedNode
 import eu.nitok.jitsu.compiler.ast.ExpressionNode.*
 import eu.nitok.jitsu.compiler.ast.ExpressionNode.NumberLiteralNode.IntegerLiteralNode
@@ -16,7 +16,7 @@ import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNo
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode.ConditionCaseNode.CaseMatchingNode.DeconstructPatternMatch.Variable
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode.DefaultCaseNode
 import eu.nitok.jitsu.compiler.ast.TypeNode.*
-import eu.nitok.jitsu.compiler.parser.AssignmentTargetType
+import eu.nitok.jitsu.compiler.parser.jainparse.AssignmentTargetType
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import java.util.function.UnaryOperator
@@ -24,7 +24,6 @@ import kotlin.jvm.optionals.getOrNull
 import kotlin.reflect.typeOf
 
 typealias RawNode = LocatableReducedNode;
-typealias Location = @Serializable(with = LocationSerializer::class) com.niton.parser.token.Location
 
 fun buildFileAst(node: RawNode): @Contextual List<StatementNode> {
     return node.children.map { buildStatement(it) }
@@ -391,4 +390,4 @@ inline fun <reified T : Enum<T>> nodeType(it: RawNode, postfix: UnaryOperator<St
         ?: throw IllegalStateException("Unknown '${typeOf<T>()}': $typeString");
     val value = it.getSubNode("value").orElseThrow();
     return Pair(type, value);
-}
+}*/

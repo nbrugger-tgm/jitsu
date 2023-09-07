@@ -1,9 +1,9 @@
-package eu.nitok.jitsu.compiler.parser
+package eu.nitok.jitsu.compiler.parser.jainparse
 
 import com.niton.parser.grammar.api.Grammar.*
 import com.niton.parser.token.DefaultToken.*
 import eu.nitok.jitsu.compiler.ast.TypeDeclarationType
-import eu.nitok.jitsu.compiler.parser.matchers.ListGrammar
+import eu.nitok.jitsu.compiler.parser.jainparse.matchers.ListGrammar
 
 var ANY_TYPE_GRAMMAR = "ANY_TYPE_GRAMMAR";
 
@@ -16,14 +16,14 @@ internal val arrayType = first("type", reference(ANY_TYPE_GRAMMAR))
     .display("array type")
 
 internal val genericDeclaration = token(SMALLER).then(ignorables.ignore())
-    .then("types",ListGrammar(reference(ANY_TYPE_GRAMMAR), token(COMMA).then(ignorables)))
+    .then("types", ListGrammar(reference(ANY_TYPE_GRAMMAR), token(COMMA).then(ignorables)))
     .then(ignorables.ignore()).then(token(BIGGER))
     .display("generics")
 
 internal val namedType =
     first("mutable", keyword("mut").optional())
         .then(ignorables)
-        .then("referenced_type",identifier)
+        .then("referenced_type", identifier)
         .then("generic", genericDeclaration.optional())
         .named(TypeDeclarationType.NAMED_TYPE)
         .display("type")

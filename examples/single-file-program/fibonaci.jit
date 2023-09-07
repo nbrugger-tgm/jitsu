@@ -1,6 +1,6 @@
 fn main(args: String[1]) {
-    const inputStr = args[0];
-    const parsingResult = parse_int(inputStr).expect("Cannot parse \n $inputStr: $parsingResult");
+    val inputStr = args[0];
+    val parsingResult = parse_int(inputStr).expect("Cannot parse \n $inputStr");
 
     println("fibo($input) = ${fibo(input)}");
 }
@@ -9,5 +9,6 @@ fn fibo(n: int): int {
     if (n <= 1) {
         return n;
     }
+
     return fibo(n - 1) + fibo(n - 2);
 }

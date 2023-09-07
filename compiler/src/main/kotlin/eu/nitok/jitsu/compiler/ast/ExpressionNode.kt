@@ -3,16 +3,11 @@ package eu.nitok.jitsu.compiler.ast
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed class ExpressionNode() {
-    abstract val location: Location
+sealed interface ExpressionNode {
+    val location: Location
 
     @Serializable
-    class StatementExpressionNode(val statement: StatementNode) : ExpressionNode() {
-        override val location: Location get() = statement.location
-    }
-
-    @Serializable
-    sealed class NumberLiteralNode() : ExpressionNode() {
+    sealed class NumberLiteralNode() : ExpressionNode {
         @Serializable
         //Long because of unsigned values
         class IntegerLiteralNode(val value: String, override val location: Location) : NumberLiteralNode()
@@ -23,8 +18,8 @@ sealed class ExpressionNode() {
 
     @Serializable
     class StringLiteralNode(
-        val content: List<StringPart>, override val location: Location
-    ) : ExpressionNode() {
+        val content: List<N<StringPart>>, override val location: Location
+    ) : ExpressionNode {
         @Serializable
         sealed interface StringPart {
             @Serializable
@@ -32,7 +27,7 @@ sealed class ExpressionNode() {
 
             @Serializable
             class Expression(
-                val expression: ExpressionNode,
+                val expression: N<ExpressionNode>,
                 val startKeywordLocation: Location,
                 val endKeywordLocation: Location
             ) : StringPart
@@ -46,33 +41,30 @@ sealed class ExpressionNode() {
     }
 
     @Serializable
-    class BooleanLiteralNode(val value: Boolean, override val location: Location) : ExpressionNode()
+    class BooleanLiteralNode(val value: Boolean, override val location: Location) : ExpressionNode
 
     @Serializable
-    class VariableLiteralNode(val name: String, override val location: Location) : ExpressionNode()
+    class VariableLiteralNode(val name: String, override val location: Location) : ExpressionNode
 
     @Serializable
     class OperationNode(
-        val left: ExpressionNode,
-        val operator: BiOperator,
-        val right: ExpressionNode,
-        override val location: Location,
-        val operatorLocation: Location
-    ) : ExpressionNode() {
-    }
+        val left: N<ExpressionNode>,
+        val operator: Located<BiOperator>,
+        val right: N<ExpressionNode>,
+        override val location: Location
+    ) : ExpressionNode {}
 
     @Serializable
     class FieldAccessNode(
-        val target: ExpressionNode,
-        val field: String,
-        override val location: Location,
-        val fieldLocation: Location
-    ) : ExpressionNode() {}
+        val target: N<ExpressionNode>,
+        val field: N<Located<String>>,
+        override val location: Location
+    ) : ExpressionNode {}
 
     @Serializable
     class IndexAccessNode(
-        val target: ExpressionNode,
-        val index: ExpressionNode,
+        val target: N<ExpressionNode>,
+        val index: N<ExpressionNode>,
         override val location: Location
-    ) : ExpressionNode() {}
+    ) : ExpressionNode {}
 }
