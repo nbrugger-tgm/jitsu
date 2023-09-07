@@ -1,4 +1,4 @@
-package eu.nitok.jitsu.compiler.parser
+package eu.nitok.jitsu.compiler.parser.jainparse
 
 import com.niton.parser.DefaultParser
 import com.niton.parser.ast.LocatableReducedNode

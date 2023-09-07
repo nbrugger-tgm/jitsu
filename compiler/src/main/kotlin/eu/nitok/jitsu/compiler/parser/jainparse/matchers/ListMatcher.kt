@@ -1,4 +1,4 @@
-package eu.nitok.jitsu.compiler.parser.matchers
+package eu.nitok.jitsu.compiler.parser.jainparse.matchers
 
 import com.niton.parser.ast.AstNode
 import com.niton.parser.ast.ParsingResult

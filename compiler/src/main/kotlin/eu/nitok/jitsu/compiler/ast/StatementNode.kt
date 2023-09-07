@@ -28,7 +28,7 @@ sealed class StatementNode() {
         override val location: Location,
         val nameLocation: Location?,
         val keywordLocation: Location
-    ) : StatementNode() {
+    ) : StatementNode(), ExpressionNode {
         @Serializable
         class ParameterNode(
             val name: String,
@@ -51,7 +51,7 @@ sealed class StatementNode() {
         val elseStatement: ElseNode?,
         override val location: Location,
         val keywordLocation: Location
-    ) : StatementNode() {
+    ) : StatementNode(), ExpressionNode {
         @Serializable
         sealed class ElseNode() {
             @Serializable
@@ -73,7 +73,7 @@ sealed class StatementNode() {
 //    @Serializabledata
 //    class Label(val label: String) : StatementNode()
     @Serializable
-    sealed class CodeBlockNode : StatementNode() {
+    sealed class CodeBlockNode : StatementNode(), ExpressionNode {
         @Serializable
         class SingleExpressionCodeBlock(val expression: ExpressionNode, override val location: Location) :
             CodeBlockNode()
@@ -89,8 +89,7 @@ sealed class StatementNode() {
         val cases: List<CaseNode>,
         override val location: Location,
         val keywordLocation: Location
-    ) :
-        StatementNode() {
+    ) : StatementNode(), ExpressionNode {
         @Serializable
         class CaseNode(val matcher: CaseMatchNode, val body: CaseBodyNode, val keywordLocation: Location) {
             @Serializable
@@ -158,11 +157,11 @@ sealed class StatementNode() {
 
     @Serializable
     class FunctionCallNode(
-        val function: String,
-        val parameters: List<ExpressionNode>,
+        val function: N<ExpressionNode>,
+        val parameters: List<N<ExpressionNode>>,
         override val location: Location,
         val nameLocation: Location
-    ) : StatementNode()
+    ) : StatementNode(), ExpressionNode
 
     @Serializable
     class AssignmentNode(
@@ -187,5 +186,5 @@ sealed class StatementNode() {
         val parameters: List<ExpressionNode>,
         override val location: Location,
         val nameLocation: Location
-    ) : StatementNode()
+    ) : StatementNode(), ExpressionNode
 }

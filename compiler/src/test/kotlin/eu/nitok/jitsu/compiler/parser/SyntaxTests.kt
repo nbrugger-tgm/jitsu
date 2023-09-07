@@ -1,7 +1,6 @@
 package eu.nitok.jitsu.compiler.parser
 
 import com.niton.parser.exceptions.ParsingException
-import com.niton.parser.grammar.api.GrammarReferenceMap
 import com.niton.parser.token.ListTokenStream
 import com.niton.parser.token.Tokenizer
 import org.junit.jupiter.api.Test
@@ -12,7 +11,7 @@ class SyntaxTests {
         val tokenizer = Tokenizer()
         tokenizer.isIgnoreEOF = true;
         val txt = ListTokenStream(tokenizer.tokenize("a.b(xaxa).c()"));
-        val grammar = methodInvocation;
+        val grammar = eu.nitok.jitsu.compiler.parser.jainparse.methodInvocation;
         try {
             val process = grammar.parse(txt, grammarReference)
             println(process.reduce("invocation").orElseThrow().format())

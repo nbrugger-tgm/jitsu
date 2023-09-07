@@ -1,7 +1,5 @@
-package eu.nitok.jitsu.compiler.parser
+package eu.nitok.jitsu.compiler.parser.jainparse
 
-import com.niton.parser.ast.SequenceNode
-import com.niton.parser.grammar.api.Grammar
 import com.niton.parser.grammar.api.Grammar.*
 import com.niton.parser.token.DefaultToken
 import eu.nitok.jitsu.compiler.ast.BiOperator

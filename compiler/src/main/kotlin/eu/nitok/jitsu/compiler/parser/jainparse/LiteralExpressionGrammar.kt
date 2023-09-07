@@ -1,4 +1,4 @@
-package eu.nitok.jitsu.compiler.parser
+package eu.nitok.jitsu.compiler.parser.jainparse
 
 import com.niton.parser.grammar.api.Grammar.*
 import com.niton.parser.token.DefaultToken.*
@@ -35,7 +35,7 @@ private val stringTemplate = anyOf(
 private val stringTerminatingTokens = token(BACK_SLASH).or(token(DOUBLEQUOTE)).or(token(NEW_LINE)).or(token(DOLLAR)).or(token(EOF))
 private val stringContent =
     first("chars", anyExcept(stringTerminatingTokens))
-    .then("template_expression",stringTemplate.optional())
+    .then("template_expression", stringTemplate.optional())
     .then("escape_sequence", escapeSequence.optional())
     .repeat()
 internal val stringLiteral = token(DOUBLEQUOTE).then("content", stringContent).then(token(DOUBLEQUOTE))

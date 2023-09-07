@@ -16,7 +16,7 @@ import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNo
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode.ConditionCaseNode.CaseMatchingNode.DeconstructPatternMatch.Variable
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode.DefaultCaseNode
 import eu.nitok.jitsu.compiler.ast.TypeNode.*
-import eu.nitok.jitsu.compiler.parser.AssignmentTargetType
+import eu.nitok.jitsu.compiler.parser.jainparse.AssignmentTargetType
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import java.util.function.UnaryOperator

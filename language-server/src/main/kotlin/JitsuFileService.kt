@@ -7,7 +7,7 @@ import eu.nitok.jitsu.compiler.ast.StatementNode
 import eu.nitok.jitsu.compiler.ast.buildFileAst
 import eu.nitok.jitsu.compiler.graph.Scope
 import eu.nitok.jitsu.compiler.graph.buildGraph
-import eu.nitok.jitsu.compiler.parser.parseFile
+import eu.nitok.jitsu.compiler.parser.jainparse.parseFile
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.TextDocumentService

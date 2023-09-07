@@ -1,4 +1,4 @@
-package eu.nitok.jitsu.compiler.parser
+package eu.nitok.jitsu.compiler.parser.jainparse
 
 import com.niton.parser.grammar.api.Grammar
 import com.niton.parser.grammar.api.Grammar.*

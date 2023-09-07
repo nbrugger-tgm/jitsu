@@ -1,6 +1,3 @@
-fn test(){
-    type x = enum(A,B);
-    const x = 12;
+fn a(arg: a) {
+    a = a; 
 }
-
-var x = 12;

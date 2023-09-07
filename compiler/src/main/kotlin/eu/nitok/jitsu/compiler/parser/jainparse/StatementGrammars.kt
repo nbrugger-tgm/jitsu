@@ -1,4 +1,4 @@
-package eu.nitok.jitsu.compiler.parser
+package eu.nitok.jitsu.compiler.parser.jainparse
 
 import com.niton.parser.grammar.api.Grammar.*
 import com.niton.parser.grammar.api.GrammarName
@@ -6,9 +6,9 @@ import com.niton.parser.token.DefaultToken.*
 import eu.nitok.jitsu.compiler.ast.CodeBlockContentType
 import eu.nitok.jitsu.compiler.ast.ExpressionType.STATEMENT_EXPRESSION
 import eu.nitok.jitsu.compiler.ast.StatementType.*
-import eu.nitok.jitsu.compiler.parser.AssignmentTargetType.PROPERTY_ASSIGNMENT
-import eu.nitok.jitsu.compiler.parser.AssignmentTargetType.VARIABLE_ASSIGNMENT
-import eu.nitok.jitsu.compiler.parser.matchers.ListGrammar
+import eu.nitok.jitsu.compiler.parser.jainparse.AssignmentTargetType.PROPERTY_ASSIGNMENT
+import eu.nitok.jitsu.compiler.parser.jainparse.AssignmentTargetType.VARIABLE_ASSIGNMENT
+import eu.nitok.jitsu.compiler.parser.jainparse.matchers.ListGrammar
 
 private val assignmentOperator =
     token(EQUAL)
@@ -127,7 +127,7 @@ internal val codeBlock = token(ROUND_BRACKET_OPEN)
 
 internal val methodInvocation = first("target", expression)
     .then(ignorables.ignore())
-    .then(token(POINT))
+    .then(token(DOT))
     .then("method", identifier)
     .then(token(BRACKET_OPEN))
     .then("parameters", ListGrammar(expression, token(COMMA).then(ignorables)))

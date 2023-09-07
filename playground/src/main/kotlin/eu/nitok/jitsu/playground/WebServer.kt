@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.playground
 
 import eu.nitok.jitsu.compiler.ast.buildFileAst
-import eu.nitok.jitsu.compiler.parser.parseFile
+import eu.nitok.jitsu.compiler.parser.jainparse.parseFile
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.html.*

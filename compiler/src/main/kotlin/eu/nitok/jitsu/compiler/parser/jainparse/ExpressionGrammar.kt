@@ -1,4 +1,4 @@
-package eu.nitok.jitsu.compiler.parser
+package eu.nitok.jitsu.compiler.parser.jainparse
 
 import com.niton.parser.grammar.api.Grammar.*
 import com.niton.parser.token.DefaultToken.*
@@ -13,7 +13,7 @@ internal val enclosedExpression = token(BRACKET_OPEN)
 
 internal val fieldAccess = first("target", reference(ANY_EXPRESSION_NAME))
     .then(ignorables.ignore())
-    .then(token(POINT))
+    .then(token(DOT))
     .then("field", identifier)
     .setLeftRecursive(true)
     .named(FIELD_ACCESS_EXPRESSION)

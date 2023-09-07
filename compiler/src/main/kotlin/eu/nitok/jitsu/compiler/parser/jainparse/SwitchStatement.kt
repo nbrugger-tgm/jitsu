@@ -1,4 +1,4 @@
-package eu.nitok.jitsu.compiler.parser
+package eu.nitok.jitsu.compiler.parser.jainparse
 
 import com.niton.parser.grammar.api.Grammar.*
 import com.niton.parser.token.DefaultToken
@@ -8,7 +8,7 @@ import eu.nitok.jitsu.compiler.ast.CaseBodyType
 import eu.nitok.jitsu.compiler.ast.CaseMatchType
 import eu.nitok.jitsu.compiler.ast.CaseMatchingType
 import eu.nitok.jitsu.compiler.ast.StatementType
-import eu.nitok.jitsu.compiler.parser.matchers.ListGrammar
+import eu.nitok.jitsu.compiler.parser.jainparse.matchers.ListGrammar
 
 private val constantMatch = literalExpression.namedCopy(CaseMatchType.CONSTANT_CASE);
 
@@ -36,7 +36,7 @@ private val case = first("keyword", keyword("case"))
     .then(ignorables)
     .then("matching", anyOf(conditionMatch, constantMatch, defaultMatch))
     .then(ignorables.ignore())
-    .then("body",caseCodeBlockBody.or(expressionBlockBody))
+    .then("body", caseCodeBlockBody.or(expressionBlockBody))
     .display("case")
 
 internal val switchStatement = first("keyword", keyword("switch"))
