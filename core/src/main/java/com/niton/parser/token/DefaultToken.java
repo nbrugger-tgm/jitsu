@@ -19,6 +19,7 @@ public enum DefaultToken implements Tokenable {
 	STAR("\\*"),
 	SEMICOLON(";"),
 	COLON(":"),
+	PIPE("\\|"),
 	QUOTE("'"),
 	DOUBLEQUOTE("\""),
 	QUESTIONMARK("\\?"),

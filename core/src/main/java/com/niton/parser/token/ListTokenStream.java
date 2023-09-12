@@ -51,7 +51,7 @@ public class ListTokenStream implements TokenStream {
      */
     @Override
     public int index() {
-        return levelIndexes.get(0);
+        return levelIndexes.getFirst();
     }
 
     /**
@@ -161,10 +161,5 @@ public class ListTokenStream implements TokenStream {
     @Override
     public Location currentLocation() {
         return Location.oneChar(getLine(), getColumn());
-    }
-
-    @Override
-    public void skip(int i) {
-        index(index() + i);
     }
 }

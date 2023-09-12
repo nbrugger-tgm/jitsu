@@ -129,7 +129,8 @@ public interface Location {
     }
 
     default Location minusChar(int i) {
-        return of(getFromLine(), getFromColumn(), getToLine(), getToColumn() - i);
+        var isOneChar = getFromColumn() == getToColumn();
+        return of(getFromLine(), isOneChar ? getFromColumn() - 1 : getFromColumn(), getToLine(), getToColumn() - i);
     }
 
     default Location minusLine(int i) {
@@ -139,5 +140,9 @@ public interface Location {
     @NotNull
     default Location rangeTo(@NotNull Location parameterLoc) {
         return range(this, parameterLoc);
+    }
+
+    default Location fromChar() {
+        return Location.oneChar(getFromLine(), getFromColumn());
     }
 }

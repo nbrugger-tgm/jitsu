@@ -37,9 +37,4 @@ public interface TokenStream {
     int getColumn();
 
     Location currentLocation();
-
-    /**
-     * Skips the next i tokens
-     */
-    void skip(int i);
 }
