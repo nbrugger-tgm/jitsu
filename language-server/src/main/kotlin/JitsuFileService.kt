@@ -30,9 +30,24 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
 
     private fun updateFile(uri: String) {
         val text = rawTexts[uri] ?: return
-        val oldAst = asts[uri]?.value;
         asts[uri] = lazy {
-            return@lazy Parser.file(ListTokenStream(tokenizer.tokenize(text).unwrap()))
+            customLogger.println("parsing $uri")
+            val startMs = System.currentTimeMillis()
+            val tokens = tokenizer.tokenize(text).unwrap()
+            val ast = Parser.file(ListTokenStream(tokens))
+            val endMs = System.currentTimeMillis()
+            val parsingTime = endMs - startMs
+            customLogger.println("parsed in ${parsingTime}ms")
+            customLogger.println("Per char: ${parsingTime / text.length}ms")
+            customLogger.println("Per line: ${parsingTime / text.split("\n").size}ms")
+            customLogger.println("Per token: ${parsingTime / tokens.size}ms")
+            graphs[uri] = lazy {
+                customLogger.println("build graph for $uri")
+                buildGraph(ast)
+            }
+            server.client?.refreshDiagnostics()
+            server.client?.refreshSemanticTokens()
+            return@lazy ast
         }
         graphs[uri] = lazy { asts[uri]?.value?.let { buildGraph(it) } }
     }
@@ -108,11 +123,7 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
         val ast = asts[params?.textDocument?.uri]?.value
             ?:// return CompletableFuture.failedFuture(NullPointerException("no ast"))
             return CompletableFuture.completedFuture(SemanticTokens(listOf()))
-        val tokens = syntaxHighlight(ast.mapNotNull {
-            when (it) {
-                is N.Node -> it.value; else -> null
-            }
-        })
+        val tokens = syntaxHighlight(ast)
         customLogger.println("tokens: $tokens")
         customLogger.flush()
         return CompletableFuture.completedFuture(SemanticTokens(tokens))//syntax highlighting

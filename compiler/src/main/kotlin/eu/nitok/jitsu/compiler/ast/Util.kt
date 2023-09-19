@@ -12,31 +12,49 @@ sealed interface N<out T> {
         }
     }
 
-    fun location(valueMapper: (T)-> Location): Location {
+    fun location(valueMapper: (T) -> Location): Location {
         return when (this) {
             is Node -> valueMapper(value)
             is Error -> node
         }
     }
 
-    val warnings : MutableList<Error<Any>>;
+    val warnings: MutableList<Error<Any>>;
     fun warning(error: Error<Any>?): N<T> {
         error?.let { warnings.add(it) }
         return this
     }
+
     @Serializable
     data class Node<T>(val value: T) : N<T> {
         override val warnings = mutableListOf<Error<@Contextual Any>>()
+        override fun toString(): String {
+            return value.toString()
+        }
     }
+
     @Serializable
     data class Error<T>(val node: Location, val message: String, val explicitErrorLocation: Location? = null) : N<T> {
         override val warnings = mutableListOf<Error<@Contextual Any>>()
-        fun <M>casted(): Error<M> {
+        fun <M> casted(): Error<M> {
             return this as Error<M>
+        }
+
+        override fun toString(): String {
+            return "[$node] $message"
         }
     }
 }
 
-
+public fun <T> orElse(node: N<T>?, default: T): T {
+    return when (node) {
+        is N.Node -> node.value
+        else -> default
+    }
+}
+val N<Located<Any>>.location
+    get() : Location {
+        return this.location { it.second }
+    }
 typealias Location = @Serializable(with = LocationSerializer::class) com.niton.parser.token.Location
 typealias Located<T> = Pair<T, Location>

@@ -1,0 +1,12 @@
+@Singelton(stromg: 123)
+fn auth(): Pipeline {
+    if(a > b){
+        sout();
+    }
+}
+
+@ApplicationContext()
+interface MyApp {
+   kill(name: int):void,
+   String(a: void)
+}

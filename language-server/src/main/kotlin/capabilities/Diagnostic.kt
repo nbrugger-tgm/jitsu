@@ -1,20 +1,29 @@
 package capabilities
 
-import eu.nitok.jitsu.compiler.ast.ExpressionNode
-import eu.nitok.jitsu.compiler.ast.N
-import eu.nitok.jitsu.compiler.ast.StatementNode
-import eu.nitok.jitsu.compiler.ast.StatementNode.AssignmentNode.AssignmentTarget.PropertyAssignment
-import eu.nitok.jitsu.compiler.ast.StatementNode.AssignmentNode.AssignmentTarget.VariableAssignment
-import eu.nitok.jitsu.compiler.ast.TypeNode
+import eu.nitok.jitsu.compiler.ast.*
+import eu.nitok.jitsu.compiler.ast.StatementNode.AssignmentNode.AssignmentTarget.FieldTarget
+import eu.nitok.jitsu.compiler.ast.StatementNode.AssignmentNode.AssignmentTarget.VariableTarget
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
 import range
 
 private fun <T> N<T>.unwarp(function: (T) -> List<Diagnostic>): List<Diagnostic> {//rewrite to this form
     return when (this) {
-        is N.Node -> function(this.value)
+        is N.Node -> function(this.value) + when (val withAttrs = this.value) {
+            is CanHaveAttributes -> withAttrs.attributes.flatMap { it.unwarp { syntaxDiagnostic(it) } }
+            else -> listOf()
+        }
+
         is N.Error -> listOf(error(this))
     } + this.warnings.map { error(it) }
+}
+
+fun syntaxDiagnostic(it: AttributeNode): List<Diagnostic> {
+    return it.name.unwarp { listOf() } + it.values.flatMap { it.unwarp { syntaxDiagnostic(it) } }
+}
+
+fun syntaxDiagnostic(it: AttributeNode.AttributeValueNode): List<Diagnostic> {
+    return it.name.unwarp { listOf() } + it.value.unwarp { syntaxDiagnostic(it) }
 }
 
 public fun syntaxDiagnostic(rawAst: N<StatementNode>): List<Diagnostic> {
@@ -54,7 +63,7 @@ internal fun syntaxDiagnostic(rawAst: StatementNode): List<Diagnostic> {
                 (rawAst.elseStatement?.unwarp { syntaxDiagnostic(it) } ?: listOf())
 
         is StatementNode.LineCommentNode -> listOf()
-        is StatementNode.MethodInvocationNode -> rawAst.target.unwarp { syntaxDiagnostic(it) } +
+        is StatementNode.MethodInvocationNode -> rawAst.method.unwarp { syntaxDiagnostic(it) } +
                 rawAst.method.unwarp { listOf() } +
                 rawAst.parameters.flatMap { param -> param.unwarp { syntaxDiagnostic(it) } }
 
@@ -66,6 +75,9 @@ internal fun syntaxDiagnostic(rawAst: StatementNode): List<Diagnostic> {
         is StatementNode.VariableDeclarationNode -> rawAst.name.unwarp { listOf() } +
                 (rawAst.type?.unwarp { syntaxDiagnostic(it) } ?: listOf()) +
                 (rawAst.value?.unwarp { syntaxDiagnostic(it) } ?: listOf())
+
+        is StatementNode.YieldStatement -> rawAst.expression.unwarp { syntaxDiagnostic(it) }
+        is TypeNode.InterfaceTypeNode -> syntaxDiagnostic(rawAst as TypeNode)
     }
 }
 
@@ -79,6 +91,16 @@ fun syntaxDiagnostic(node: StatementNode.IfNode.ElseNode): List<Diagnostic> {
         is StatementNode.IfNode.ElseNode.ElseIfNode -> node.ifNode.unwarp { syntaxDiagnostic(it as StatementNode) }
     }
 }
+
+fun syntaxDiagnostic(it: TypeNode.InterfaceTypeNode.FunctionSignatureNode): List<Diagnostic> {
+    return it.name.unwarp { listOf() } + syntaxDiagnostic(it.typeSignature)
+}
+
+fun syntaxDiagnostic(it: TypeNode.FunctionTypeSignatureNode): List<Diagnostic> {
+    return (it.returnType?.unwarp { syntaxDiagnostic(it) } ?: listOf()) +
+            it.parameters.flatMap { it.unwarp { syntaxDiagnostic(it) } }
+}
+
 
 fun syntaxDiagnostic(node: TypeNode): List<Diagnostic> {
     return when (node) {
@@ -97,21 +119,25 @@ fun syntaxDiagnostic(node: TypeNode): List<Diagnostic> {
         is TypeNode.StringTypeNode -> listOf()
         is TypeNode.UnionTypeNode -> node.types.flatMap { type -> type.unwarp { syntaxDiagnostic(it) } }
         is TypeNode.ValueTypeNode -> node.value.unwarp { syntaxDiagnostic(it) }
+        is TypeNode.FunctionTypeSignatureNode -> syntaxDiagnostic(node)
+        is TypeNode.InterfaceTypeNode -> node.functions.flatMap { it.unwarp { syntaxDiagnostic(it) } } +
+                (node.name?.unwarp { listOf() } ?: emptyList())
+
+        is TypeNode.VoidTypeNode -> listOf()
     }
 }
 
-fun syntaxDiagnostic(inner: StatementNode.FunctionDeclarationNode.ParameterNode): List<Diagnostic> {
-    return (inner.defaultValue?.unwarp { inner -> syntaxDiagnostic(inner) } ?: listOf()) +
-            inner.name.unwarp { listOf() } +
-            inner.type.unwarp {
-                syntaxDiagnostic(it) }
-
+fun syntaxDiagnostic(param: StatementNode.FunctionDeclarationNode.ParameterNode): List<Diagnostic> {
+    return (param.defaultValue?.unwarp { syntaxDiagnostic(it) } ?: listOf()) +
+            param.name.unwarp { listOf() } +
+            param.type.unwarp { syntaxDiagnostic(it) }
 }
 
 fun syntaxDiagnostic(target: StatementNode.AssignmentNode.AssignmentTarget): List<Diagnostic> {
     return when (target) {
-        is PropertyAssignment -> target.property.unwarp { syntaxDiagnostic(it) }
-        is VariableAssignment -> listOf()
+        is FieldTarget -> target.field.unwarp { syntaxDiagnostic(it) }
+        is VariableTarget -> listOf()
+        is StatementNode.AssignmentNode.AssignmentTarget.IndexAccessTarget -> target.target.unwarp { syntaxDiagnostic(it) }
     }
 }
 
@@ -124,13 +150,21 @@ fun syntaxDiagnostic(rawAst: ExpressionNode): List<Diagnostic> {
         }
 
         is ExpressionNode.StringLiteralNode -> rawAst.content.flatMap {
-            it.unwarp {  when (it) {
-                is ExpressionNode.StringLiteralNode.StringPart.Literal -> listOf()
-                is ExpressionNode.StringLiteralNode.StringPart.Expression -> it.expression.unwarp { syntaxDiagnostic(it) }
-                is ExpressionNode.StringLiteralNode.StringPart.Charsequence -> listOf()
-                is ExpressionNode.StringLiteralNode.StringPart.EscapeSequence -> listOf()
-            } }
+            it.unwarp {
+                when (it) {
+                    is ExpressionNode.StringLiteralNode.StringPart.Literal -> listOf()
+                    is ExpressionNode.StringLiteralNode.StringPart.Expression -> it.expression.unwarp {
+                        syntaxDiagnostic(
+                            it
+                        )
+                    }
+
+                    is ExpressionNode.StringLiteralNode.StringPart.Charsequence -> listOf()
+                    is ExpressionNode.StringLiteralNode.StringPart.EscapeSequence -> listOf()
+                }
+            }
         }
+
         is ExpressionNode.BooleanLiteralNode,
         is ExpressionNode.NumberLiteralNode.FloatLiteralNode,
         is ExpressionNode.NumberLiteralNode.IntegerLiteralNode,
@@ -142,6 +176,7 @@ fun syntaxDiagnostic(rawAst: ExpressionNode): List<Diagnostic> {
                 it
             )
         }
+
         is StatementNode -> syntaxDiagnostic(rawAst as StatementNode)
     }
 }

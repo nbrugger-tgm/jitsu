@@ -1,3 +1,8 @@
-fn a(arg: a) {
-    a = a; 
-}
+if(a > b) { c } else { d }.a.b().recursive = {
+    if(a < b) { var x = 12; return x; } else {
+        fn inner() {
+            var innerVar = { var varInnerInner = 12; yield varInnerInner; };
+            var e : enum(A,B) = fn nooo(a: 8 | String){};
+        }
+    }
+};

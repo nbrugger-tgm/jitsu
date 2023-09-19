@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed class StatementNode() {
+sealed interface StatementNode {
     abstract val location: Location
 
     @Serializable
@@ -15,7 +15,7 @@ sealed class StatementNode() {
         val value: N<ExpressionNode>?,
         override val location: Location,
         val keywordLocation: Location
-    ) : StatementNode()
+    ) : StatementNode
 
 
     @Serializable
@@ -25,8 +25,9 @@ sealed class StatementNode() {
         val returnType: N<TypeNode>?,
         val body: N<CodeBlockNode>,
         override val location: Location,
-        val keywordLocation: Location
-    ) : StatementNode(), ExpressionNode {
+        val keywordLocation: Location,
+        override val attributes: List<N<AttributeNode>>
+    ) : StatementNode, ExpressionNode, CanHaveAttributes {
         @Serializable
         class ParameterNode(
             val name: N<Located<String>>,
@@ -34,12 +35,15 @@ sealed class StatementNode() {
             val defaultValue: N<ExpressionNode>?,
             val location: Location
         ) {
+            override fun toString(): String {
+                return "${name.map { it.first }} : $type${if (defaultValue != null) " = $defaultValue" else ""}"
+            }
         }
     }
 
     @Serializable
     class ReturnNode(val expression: N<ExpressionNode>?, override val location: Location, val keywordLocation: Location) :
-        StatementNode()
+        StatementNode
 
     @Serializable
     class IfNode(
@@ -48,7 +52,7 @@ sealed class StatementNode() {
         val elseStatement: N<ElseNode>?,
         override val location: Location,
         val keywordLocation: Location
-    ) : StatementNode(), ExpressionNode {
+    ) : StatementNode, ExpressionNode {
         @Serializable
         sealed class ElseNode() {
             abstract val keywordLocation: Location
@@ -78,7 +82,7 @@ sealed class StatementNode() {
 //    @Serializabledata
 //    class Label(val label: String) : StatementNode()
     @Serializable
-    sealed class CodeBlockNode : StatementNode(), ExpressionNode {
+    sealed class CodeBlockNode : StatementNode, ExpressionNode {
         @Serializable
         class SingleExpressionCodeBlock(val expression: N<ExpressionNode>, override val location: Location) :
             CodeBlockNode()
@@ -94,7 +98,7 @@ sealed class StatementNode() {
         val cases: List<N<CaseNode>>,
         override val location: Location,
         val keywordLocation: Location
-    ) : StatementNode(), ExpressionNode {
+    ) : StatementNode, ExpressionNode {
         @Serializable
         class CaseNode(val matcher: CaseMatchNode, val body: CaseBodyNode, val keywordLocation: Location) {
             @Serializable
@@ -102,13 +106,13 @@ sealed class StatementNode() {
                 abstract val location: Location
 
                 @Serializable
-                class ConstantCaseNode(val value: ExpressionNode, override val location: Location) : CaseMatchNode()
+                class ConstantCaseNode(val value: N<ExpressionNode>, override val location: Location) : CaseMatchNode()
 
                 @Serializable
                 class ConditionCaseNode(
                     @SerialName("type_definition")
-                    val type: TypeNode,
-                    val matching: CaseMatchingNode,
+                    val type: N<TypeNode>,
+                    val matching: N<CaseMatchingNode>,
                     override val location: Location
                 ) : CaseMatchNode() {
                     @Serializable
@@ -139,12 +143,12 @@ sealed class StatementNode() {
                 abstract val location: Location
 
                 @Serializable
-                class CodeBlockCaseBodyNode(val codeBlock: CodeBlockNode, override val location: Location) :
+                class CodeBlockCaseBodyNode(val codeBlock: N<CodeBlockNode>, override val location: Location) :
                     CaseBodyNode()
 
                 @Serializable
                 class ExpressionCaseBodyNode(
-                    val expression: ExpressionNode, override val location: Location
+                    val expression: N<ExpressionNode>, override val location: Location
                 ) : CaseBodyNode()
             }
         }
@@ -155,17 +159,17 @@ sealed class StatementNode() {
         val name: N<Located<String>>,
         @SerialName("definition") val type: N<TypeNode>,
         override val location: Location,
-        val keywordLocation: Location
-    ) : StatementNode()
+        val keywordLocation: Location,
+        override val attributes: List<N<AttributeNode>>
+    ) : StatementNode, CanHaveAttributes
 
 
     @Serializable
     class FunctionCallNode(
-        val function: N<ExpressionNode>,
+        val function: N<ExpressionNode.VariableLiteralNode>,
         val parameters: List<N<ExpressionNode>>,
-        override val location: Location,
-        val nameLocation: Location
-    ) : StatementNode(), ExpressionNode
+        override val location: Location
+    ) : StatementNode, ExpressionNode
 
     @Serializable
     class AssignmentNode(
@@ -173,24 +177,29 @@ sealed class StatementNode() {
         val value: N<ExpressionNode>,
         override val location: Location,
         val nameLocation: Location
-    ) : StatementNode() {
+    ) : StatementNode {
         @Serializable
         sealed class AssignmentTarget(){
             @Serializable
-            data class VariableAssignment(val name: String, val location: Location) : AssignmentTarget()
+            data class VariableTarget(val name: String, val location: Location) : AssignmentTarget()
             @Serializable
-            data class PropertyAssignment(val property: N<ExpressionNode.FieldAccessNode>) : AssignmentTarget()
+            data class FieldTarget(val field: N<ExpressionNode.FieldAccessNode>) : AssignmentTarget()
+            @Serializable
+            data class IndexAccessTarget(val target: N<ExpressionNode.IndexAccessNode>) : AssignmentTarget()
         }
     }
 
     @Serializable
     class MethodInvocationNode(
-        val target: N<ExpressionNode>,
-        var method: N<Located<String>>,
+        val method: N<ExpressionNode.FieldAccessNode>,
         val parameters: List<N<ExpressionNode>>,
         override val location: Location
-    ) : StatementNode(), ExpressionNode
+    ) : StatementNode, ExpressionNode
 
     @Serializable
-    data class LineCommentNode(val content: Located<String>, override val location: Location) : StatementNode() {}
+    data class LineCommentNode(val content: Located<String>, override val location: Location) : StatementNode {}
+    @Serializable
+    data class YieldStatement(val expression: N<ExpressionNode>, override val location: Location, val keywordLocation: Location) : StatementNode {
+
+    }
 }

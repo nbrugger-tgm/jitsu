@@ -12,3 +12,11 @@ fn fibo(n: int): int {
 
     return fibo(n - 1) + fibo(n - 2);
 }
+
+type a = interface { }
+type x = int
+type z = int | a | interface {
+    test()
+}
+
+interface X { }

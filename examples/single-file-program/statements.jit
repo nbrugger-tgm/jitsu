@@ -1,0 +1,16 @@
+fn main(){
+    switch(keyworded){ case 1 -> 2; }
+    if(keyworded) { do(); }
+    fn functionDeclaration(){ dox(); }
+    var varDeclaration = 12;
+    var varDeclarationWithType : int = 12;
+    functionCall();
+    ambigiousAssignment = 123;
+
+
+    a.b.c.methodCall();
+    a.b.c.fieldAssignment = 123;
+
+    if(a > b) { c } else { d }.recursive = 123;
+    if(a > b) { min } else { max }.recursiveMethodCall(); 
+}

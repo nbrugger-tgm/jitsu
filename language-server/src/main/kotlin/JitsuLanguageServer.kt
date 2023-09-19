@@ -1,3 +1,5 @@
+import capabilities.SemanticTokenModifiers
+import capabilities.SemanticTokenTypes
 import eu.nitok.jitsu.compiler.JitsuCompilerInfo
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
@@ -14,12 +16,12 @@ class JitsuLanguageServer : LanguageServer, LanguageClientAware{
 
         result.capabilities = ServerCapabilities()
         result.capabilities.experimental = false;
-//        result.capabilities.semanticTokensProvider = SemanticTokensWithRegistrationOptions();
-//        result.capabilities.semanticTokensProvider.full = Either.forLeft(true);
-//        result.capabilities.semanticTokensProvider.legend = SemanticTokensLegend(
-//            SemanticTokenTypes.entries.sortedBy { it.ordinal }.map { it.id },
-//            SemanticTokenModifiers.entries.sortedBy { it.ordinal }.map { it.id },
-//        )
+        result.capabilities.semanticTokensProvider = SemanticTokensWithRegistrationOptions();
+        result.capabilities.semanticTokensProvider.full = Either.forLeft(true);
+        result.capabilities.semanticTokensProvider.legend = SemanticTokensLegend(
+            SemanticTokenTypes.entries.sortedBy { it.ordinal }.map { it.id },
+            SemanticTokenModifiers.entries.sortedBy { it.ordinal }.map { it.id },
+        )
         result.capabilities.colorProvider = Either.forLeft(true);
         result.capabilities.documentSymbolProvider = Either.forLeft(true);
 //        result.capabilities.completionProvider = CompletionOptions()

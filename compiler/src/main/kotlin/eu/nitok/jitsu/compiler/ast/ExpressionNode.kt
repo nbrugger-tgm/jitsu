@@ -10,10 +10,18 @@ sealed interface ExpressionNode {
     sealed class NumberLiteralNode() : ExpressionNode {
         @Serializable
         //Long because of unsigned values
-        class IntegerLiteralNode(val value: String, override val location: Location) : NumberLiteralNode()
+        class IntegerLiteralNode(val value: String, override val location: Location) : NumberLiteralNode() {
+            override fun toString(): String {
+                return value
+            }
+        }
 
         @Serializable
-        class FloatLiteralNode(val value: Double, override val location: Location) : NumberLiteralNode()
+        class FloatLiteralNode(val value: Double, override val location: Location) : NumberLiteralNode() {
+            override fun toString(): String {
+                return value.toString()+"f"
+            }
+        }
     }
 
     @Serializable
@@ -23,28 +31,56 @@ sealed interface ExpressionNode {
         @Serializable
         sealed interface StringPart {
             @Serializable
-            class Literal(val literal: String, val nameLocation: Location, val keywordLocation: Location) : StringPart
+            class Literal(val literal: String, val nameLocation: Location, val keywordLocation: Location) : StringPart {
+                override fun toString(): String {
+                    return "\$$literal"
+                }
+            }
 
             @Serializable
             class Expression(
                 val expression: N<ExpressionNode>,
                 val startKeywordLocation: Location,
                 val endKeywordLocation: Location
-            ) : StringPart
+            ) : StringPart {
+                override fun toString(): String {
+                    return "\${ ... }"
+                }
+            }
 
             @Serializable
-            class Charsequence(val value: String, val location: Location) : StringPart
+            class Charsequence(val value: String, val location: Location) : StringPart {
+                override fun toString(): String {
+                    return value
+                }
+            }
 
             @Serializable
-            class EscapeSequence(val value: String, val location: Location) : StringPart
+            class EscapeSequence(val value: String, val location: Location) : StringPart {
+                override fun toString(): String {
+                    return value
+                }
+            }
+        }
+
+        override fun toString(): String {
+            return "\"${content.joinToString("") { it.toString() }}\""
         }
     }
 
     @Serializable
-    class BooleanLiteralNode(val value: Boolean, override val location: Location) : ExpressionNode
+    class BooleanLiteralNode(val value: Boolean, override val location: Location) : ExpressionNode {
+        override fun toString(): String {
+            return value.toString()
+        }
+    }
 
     @Serializable
-    class VariableLiteralNode(val name: String, override val location: Location) : ExpressionNode
+    class VariableLiteralNode(val name: String, override val location: Location) : ExpressionNode {
+        override fun toString(): String {
+            return name
+        }
+    }
 
     @Serializable
     class OperationNode(
