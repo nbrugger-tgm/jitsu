@@ -30,13 +30,13 @@ sealed interface StatementNode {
     ) : StatementNode, ExpressionNode, CanHaveAttributes {
         @Serializable
         class ParameterNode(
-            val name: N<Located<String>>,
+            val name: W<Located<String>>,
             val type: N<TypeNode>,
             val defaultValue: N<ExpressionNode>?,
             val location: Location
         ) {
             override fun toString(): String {
-                return "${name.map { it.first }} : $type${if (defaultValue != null) " = $defaultValue" else ""}"
+                return "${name.value} : $type${if (defaultValue != null) " = $defaultValue" else ""}"
             }
         }
     }

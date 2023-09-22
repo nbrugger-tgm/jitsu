@@ -1,5 +1,8 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.compiler.ast.Located
+import eu.nitok.jitsu.compiler.ast.Location
+import eu.nitok.jitsu.compiler.ast.N
 import eu.nitok.jitsu.compiler.model.BitSize
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
@@ -21,24 +24,25 @@ sealed class ResolvedType {
 
     @Serializable
     sealed class ComplexType() : ResolvedType() {
-        abstract val mutable: kotlin.Boolean;
 
         @Serializable
         data class Array(
-            val type: ResolvedType,
-            val size: Int?,
-            val dimensions: kotlin.Int = 1,
-            override val mutable: kotlin.Boolean
+            val type: N<ResolvedType>,
+            val size: Expression?,
+            val dimensions: kotlin.Int = 1
         ) : ComplexType() {
-
         }
 
-
         @Serializable
-        data class Struct(
-            val struct: StructDefinition,
-            override val mutable: kotlin.Boolean
-        )  : ComplexType() {}
+        class Struct(
+            private val fields: MutableSet<Field>,
+            val embedded: MutableSet<Struct> = mutableSetOf()
+        ) : ComplexType() {
+            @Serializable
+            data class Field(val name: kotlin.String, var mutable: kotlin.Boolean, val type: ResolvedType)
+
+            val allFields: Set<Field> get() = embedded.flatMap { it.allFields }.toSet() + fields
+        }
     }
 
     sealed class Reference() : ResolvedType() {
@@ -55,5 +59,28 @@ sealed class ResolvedType {
         }
     }
 
-    class Boolean : ResolvedType() {}
+    @Serializable
+    object Boolean : ResolvedType()
+    @Serializable
+    data class Enum(val constants: List<Located<kotlin.String>>) : ResolvedType() {
+    }
+
+    @Serializable
+    class Float(val bitSize: BitSize = BitSize.BIT_32) : ResolvedType() {
+    }
+
+    @Serializable
+    data class FunctionTypeSignature(val returnType: ResolvedType?, val params: List<Parameter>) : ResolvedType(){
+        @Serializable
+        data class Parameter(val name: Located<kotlin.String>, val type: ResolvedType)
+    }
+
+    @Serializable
+    data class Interface(val methods: Map<kotlin.String, Located<FunctionTypeSignature>>) : ResolvedType() {
+
+    }
+
+    data class Named(val name: Located<kotlin.String>) {
+        var type: ResolvedType? = null
+    }
 }

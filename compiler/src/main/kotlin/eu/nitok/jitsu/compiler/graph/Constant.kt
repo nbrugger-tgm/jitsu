@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.compiler.ast.Location
 import eu.nitok.jitsu.compiler.model.BitSize
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
@@ -8,16 +9,17 @@ import java.lang.IllegalArgumentException
 import java.math.BigDecimal
 
 @Serializable
-sealed class Constant<out T> {
+sealed class Constant<out T> : Expression {
     @SerialName("resolved_type")
     abstract val type: ResolvedType
     abstract val literal: String
+    abstract val originLocation: Location
 
     @Contextual
     abstract val value: T
 
     @Serializable
-    data class IntConstant(override val value: Long, val explicitType: ResolvedType.Int? = null) : Constant<Long>() {
+    data class IntConstant(override val value: Long, val explicitType: ResolvedType.Int? = null, override val originLocation: Location) : Constant<Long>() {
         override val type: ResolvedType.Int
             get() = explicitType ?: when (value) {
                 in Byte.MIN_VALUE..Byte.MAX_VALUE -> ResolvedType.Int(BitSize.BIT_8)
@@ -30,7 +32,7 @@ sealed class Constant<out T> {
     }
 
     @Serializable
-    data class UIntConstant(override val value: ULong, val explicitType: ResolvedType.UInt? = null) : Constant<ULong>() {
+    data class UIntConstant(override val value: ULong, val explicitType: ResolvedType.UInt? = null, override val originLocation: Location) : Constant<ULong>() {
         override val type: ResolvedType.UInt = explicitType ?: run {
             when {
                 value < 0u -> throw IllegalArgumentException("UInt value $value is negative")
@@ -45,12 +47,12 @@ sealed class Constant<out T> {
     }
 
     @Serializable
-    data class StringConstant(override val value: String) : Constant<String>() {
+    data class StringConstant(override val value: String, override val originLocation: Location) : Constant<String>() {
         override val type: ResolvedType = ResolvedType.String
         override val literal: String get() = "\"${value}\""
     }
 
-    class BooleanConstant(override val value: Boolean) : Constant<Boolean>() {
+    class BooleanConstant(override val value: Boolean, override val originLocation: Location) : Constant<Boolean>() {
         override val type: ResolvedType get() = ResolvedType.Boolean()
         override val literal: String get() = value.toString()
 

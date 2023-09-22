@@ -1,8 +1,12 @@
 package eu.nitok.jitsu.compiler.ast
 
 import kotlinx.serialization.Contextual
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/**
+ * A node that can be an error
+ */
 @Serializable
 sealed interface N<out T> {
     fun <M> map(function: (T) -> M): N<M> {
@@ -25,11 +29,20 @@ sealed interface N<out T> {
         return this
     }
 
-    @Serializable
-    data class Node<T>(val value: T) : N<T> {
-        override val warnings = mutableListOf<Error<@Contextual Any>>()
+    fun orNull(): T? {
+        return when (this) {
+            is Error -> null
+            is Node -> value
+        }
+    }
+
+    class Node<T>(value: T) : W<T>(value), N<T> {
         override fun toString(): String {
             return value.toString()
+        }
+        override fun warning(error: Error<Any>?): Node<T> {
+            super<W>.warning(error)
+            return this
         }
     }
 
@@ -46,15 +59,36 @@ sealed interface N<out T> {
     }
 }
 
+@Serializable
+open class W<out T>(val value: T) {
+    val warnings = mutableListOf<N.Error<@Contextual Any>>()
+    open fun warning(error: N.Error<Any>?): W<T> {
+        error?.let { warnings.add(it) }
+        return this
+    }
+
+    fun toNode() : N.Node<T> {
+        if(this is N.Node) return this;
+        else N.Node(value).let {
+            it.warnings.addAll(warnings)
+            it
+        }
+    }
+}
+
 public fun <T> orElse(node: N<T>?, default: T): T {
     return when (node) {
         is N.Node -> node.value
         else -> default
     }
 }
+
 val N<Located<Any>>.location
     get() : Location {
-        return this.location { it.second }
+        return this.location { it.location }
     }
 typealias Location = @Serializable(with = LocationSerializer::class) com.niton.parser.token.Location
 typealias Located<T> = Pair<T, Location>
+
+val Located<*>.location get() = second;
+val <T> Located<T>.value: T get() = first;

@@ -26,7 +26,7 @@ private val Tokenizer.AssignedToken.type: DefaultToken?
         if (name.equals("UNDEFINED")) return null;
         return com.niton.parser.token.DefaultToken.valueOf(name)
     }
-private typealias ParseFn<T> = (tokens: Tokens) -> N<T>?
+private typealias ParseFn<T> = (tokens: Tokens) -> T
 typealias Tokens = TokenStream;
 
 private fun TokenStream.nextWithLocation(): Located<AssignedToken> {
@@ -48,20 +48,24 @@ object Parser {
         val statements = mutableListOf<N<StatementNode>>()
         skipWhitespace(tokens)
         while (true) {
-            val statement = statement(tokens) ?: break
+            val statement = statement(tokens) ?: if (!checkNextToken(tokens, EOF)) {
+                statements.add(N.Error(tokens.nextWithLocation().second, "Expected end of file or statement"))
+                skipWhitespace(tokens)
+                continue;
+            } else {
+                break;
+            }
             statements.add(statement)
             skipWhitespace(tokens)
-        }
-        if (!checkNextToken(tokens, EOF)) {
-            statements.add(N.Error(tokens.currentLocation(), "Expected end of file or statement"))
         }
 
         return statements
     }
 
-    private fun statement(tokens: Tokens): N<StatementNode>? {
+    private fun statement(tokens: Tokens): W<StatementNode>? {
         return atomicStatement(tokens) ?: run {
-            when (val expression = expression(tokens)) {
+            tokens.elevate()
+            val result = when (val expression = expression(tokens)) {
                 null -> null
                 is N.Node -> when (val stat = expression.value) {
                     is FunctionCallNode -> N.Node(stat).warning(semicolonWarning(tokens))
@@ -72,14 +76,17 @@ object Parser {
 
                 else -> assignment(expression, tokens)
             }
+            if (result == null) tokens.rollback() else tokens.commit()
+            result
         }
     }
 
-    private fun atomicStatement(tokens: Tokens): N<StatementNode>? {
-        return lineComment(tokens) ?: variableDeclaration(tokens) ?: returnStatement(tokens) ?: yieldStatement(tokens) ?: typeDefinition(tokens) ?: interfaceDeclaration(tokens)
+    private fun atomicStatement(tokens: Tokens): W<StatementNode>? {
+        return lineComment(tokens)?.let { W(it) } ?: variableDeclaration(tokens) ?: returnStatement(tokens) ?: yieldStatement(tokens)
+        ?: typeDefinition(tokens)?.let { W(it) } ?: interfaceDeclaration(tokens)?.let { W(it) }
     }
 
-    private fun typeDefinition(tokens: Tokens): N<StatementNode>? {
+    private fun typeDefinition(tokens: Tokens): StatementNode? {
         tokens.elevate()
         val attributes = attributes(tokens)
         skipWhitespace(tokens)
@@ -90,9 +97,9 @@ object Parser {
         }
         tokens.commit()
         skipWhitespace(tokens)
-        val name = identifier(tokens) ?: N.Error(tokens.currentLocation(), "Expected type name")
+        val name = identifier(tokens)?.toNode() ?: N.Error(tokens.currentLocation(), "Expected type name")
         skipWhitespace(tokens)
-        var equals = tokens.peek();
+        val equals = tokens.peek();
         if (equals.type != EQUAL) {
             name.warning(N.Error(tokens.currentLocation(), "Expected '='"))
         } else {
@@ -101,81 +108,77 @@ object Parser {
         skipWhitespace(tokens)
         val type = type(tokens) ?: N.Error(tokens.currentLocation(), "Expected type")
         skipWhitespace(tokens)
-        return N.Node(
-            StatementNode.TypeDefinitionNode(
+        return StatementNode.TypeDefinitionNode(
                 name,
                 type,
                 range(kwLoc, type.location { it.location }),
                 kwLoc,
                 attributes
-            )
         )
     }
 
-    private fun interfaceDeclaration(tokens: Tokens): N<TypeNode.InterfaceTypeNode>? {
+    private fun interfaceDeclaration(tokens: Tokens): TypeNode.InterfaceTypeNode? {
         tokens.elevate()
         val attributes = attributes(tokens)
         skipWhitespace(tokens)
-        val (kw, kwLoc )= captureRange(tokens){ tokens.next() }
-        if(kw.value != "interface"){
+        val (kw, kwLoc) = captureRange(tokens) { tokens.next() }
+        if (kw.value != "interface") {
             tokens.rollback()
             return null;
         }
         tokens.commit()
         skipWhitespace(tokens)
-        val name = identifier(tokens) ?: N.Error(tokens.currentLocation(), "Expected interface name")
+        val name = identifier(tokens)?.toNode() ?: N.Error(tokens.currentLocation(), "Expected interface name")
         skipWhitespace(tokens)
         val statements = signatures(tokens);
 
-        return N.Node(TypeNode.InterfaceTypeNode(
+        return TypeNode.InterfaceTypeNode(
             name,
             statements,
             range(kwLoc, statements.lastOrNull()?.location { it.location } ?: name.location),
             kwLoc,
             attributes
-        ));
+        );
     }
 
-    private fun returnStatement(tokens: Tokens): N<StatementNode>? {
-        var keyword = tokens.peek();
+    private fun returnStatement(tokens: Tokens): W<StatementNode.ReturnNode>? {
+        val keyword = tokens.peek();
         if (keyword.value != "return") {
             return null;
         }
-        var (_, kwLoc) = captureRange(tokens) { tokens.next() }
+        val (_, kwLoc) = captureRange(tokens) { tokens.next() }
 
         skipWhitespace(tokens)
         val expression = expression(tokens)
         skipWhitespace(tokens)
         val semicolonWarning = semicolonWarning(tokens)
-        return N.Node(
+        return W(
             StatementNode.ReturnNode(
                 expression,
                 range(kwLoc, expression?.location { it.location } ?: kwLoc),
                 kwLoc
             )
-        )
-            .warning(semicolonWarning)
+        ).warning(semicolonWarning)
     }
 
-    private fun yieldStatement(tokens: Tokens): N<StatementNode>? {
-        var keyword = tokens.peek();
+    private fun yieldStatement(tokens: Tokens): W<StatementNode>? {
+        val keyword = tokens.peek();
         if (keyword.value != "yield") {
             return null;
         }
-        var (_, kwLoc) = captureRange(tokens) { tokens.next() }
+        val (_, kwLoc) = captureRange(tokens) { tokens.next() }
 
         skipWhitespace(tokens)
         val expression = expression(tokens)
         skipWhitespace(tokens)
         val semicolonWarning = semicolonWarning(tokens)
-        return N.Node(
+        return W(
             StatementNode.YieldStatement(
                 expression ?: N.Error(tokens.currentLocation(), "yield requires an expression"),
                 range(kwLoc, expression?.location { it.location } ?: kwLoc),
                 kwLoc
             )
-        )
-            .warning(semicolonWarning)
+        ).warning(semicolonWarning)
     }
 
     private fun assignment(expression: N<ExpressionNode>, tokens: Tokens): N<StatementNode>? {
@@ -198,11 +201,13 @@ object Parser {
             is N.Node -> when (val exprNode = expression.value) {
                 is StatementNode -> N.Node(exprNode).warning(semicolonWarning(tokens))
                 is ExpressionNode.VariableLiteralNode -> {
-                    N.Node(variableAssignment(valueExpression, N.Node(exprNode), tokens)).warning(semicolonWarning(tokens))
+                    N.Node(variableAssignment(valueExpression, N.Node(exprNode), tokens))
+                        .warning(semicolonWarning(tokens))
                 }
 
                 is ExpressionNode.FieldAccessNode -> {
-                    N.Node(fieldAssignment(valueExpression, exprNode, tokens, expression)).warning(semicolonWarning(tokens))
+                    N.Node(fieldAssignment(valueExpression, exprNode, tokens, expression))
+                        .warning(semicolonWarning(tokens))
                 }
 
                 else -> N.Error(expression.location { it.location }, "Not a statement")
@@ -247,7 +252,7 @@ object Parser {
         )
     }
 
-    private fun lineComment(tokens: Tokens): N<StatementNode>? {
+    private fun lineComment(tokens: Tokens): StatementNode.LineCommentNode? {
         if (!checkNextToken(tokens, SLASH)) {
             return null;
         }
@@ -271,26 +276,30 @@ object Parser {
             }
             return@captureRange content
         }
-        return N.Node(StatementNode.LineCommentNode(content, range(content.second.minusChar(2), content.second)))
+        return StatementNode.LineCommentNode(content, range(content.second.minusChar(2), content.second))
     }
 
     private fun literalExpression(tokens: Tokens) =
         numberLiteral(tokens) ?: variableLiteral(tokens) ?: stringLiteral(tokens) ?: booleanLiteral(tokens)
 
-    private fun booleanLiteral(tokens: Tokens): N<ExpressionNode.BooleanLiteralNode>? {
+    private fun booleanLiteral(tokens: Tokens): ExpressionNode.BooleanLiteralNode? {
         val tkn = tokens.peek();
         return tkn.value.toBooleanStrictOrNull()?.let {
-            N.Node(ExpressionNode.BooleanLiteralNode(it, tokens.nextWithLocation().second))
+            ExpressionNode.BooleanLiteralNode(it, tokens.nextWithLocation().second)
         }
     }
 
-    private fun stringLiteral(tokens: Tokens): N<ExpressionNode.StringLiteralNode>? {
+    private fun stringLiteral(tokens: Tokens): ExpressionNode.StringLiteralNode? {
         if (tokens.peek().type != DOUBLEQUOTE) return null;
         val (str, textLoc) = captureRange(tokens) {
             tokens.next()
             stringContent(tokens)
         }
-        return N.Node(ExpressionNode.StringLiteralNode(str, textLoc))
+        return ExpressionNode.StringLiteralNode(
+            str,
+            str.firstOrNull()?.location { it.location }
+                ?.rangeTo(str.lastOrNull()?.location { it.location } ?: textLoc) ?: textLoc
+        )
     }
 
     private fun stringContent(tokens: Tokens): MutableList<N<StringPart>> {
@@ -307,18 +316,23 @@ object Parser {
 
                 DOLLAR -> {
                     val identifier = identifier(tokens)
-                    val mappedIdentifier = identifier?.map { StringPart.Literal(it.first, it.second, tokenLoc) }
-                    mappedIdentifier ?: expressionStringTemplate(tokens, tokenLoc) ?: N.Error(
+                    val mappedIdentifier = identifier?.value?.let { StringPart.Literal(it.first, it.second, tokenLoc) }
+                    mappedIdentifier?.let { N.Node(it) } ?: expressionStringTemplate(tokens, tokenLoc) ?: N.Error(
                         tokens.currentLocation(),
-                        "Invalid template expression. Templates are formatted like this: \$identifier \${ someExpression.do() }"
+                        "Invalid template expression. Templates are formatted like this: \$identifier or \${ someExpression.do() }"
                     )
                 }
 
                 DOUBLEQUOTE -> break;
-                NEW_LINE, EOF -> N.Error(
-                    tokenLoc.fromChar(),
-                    "expecting string to be closed with \" - string are not multiline"
-                )
+                NEW_LINE, EOF -> {
+                    parts.add(
+                        N.Error(
+                            tokenLoc.fromChar(),
+                            "expecting string to be closed with \" - string are not multiline"
+                        )
+                    )
+                    break;
+                }
 
                 else -> N.Node(StringPart.Charsequence(token.value, tokenLoc))
             }
@@ -356,17 +370,17 @@ object Parser {
     fun expression(tokens: Tokens): N<ExpressionNode>? {
 
 
-        fun atomic(tokens: Tokens): N<ExpressionNode>? {
+        fun atomic(tokens: Tokens): W<ExpressionNode>? {
             return ifStatement(tokens) ?: switchStatement(tokens) ?: functionDeclaration(tokens) ?: literalExpression(
                 tokens
-            ) ?: enclosed("expression", tokens, "(",")"){ expression(tokens) } ?: codeBlock(tokens)
+            )?.let{W(it)} ?: enclosed("expression", tokens, "(", ")") { expression(tokens) } ?: codeBlock(tokens)
         }
 
         val start = atomic(tokens) ?: return null;
         return recursiveExpression(start, tokens)
     }
 
-    private fun numberLiteral(tokens: Tokens): N<ExpressionNode.NumberLiteralNode>? {
+    private fun numberLiteral(tokens: Tokens): ExpressionNode.NumberLiteralNode? {
         val start = tokens.currentLocation();
         val token = tokens.peek();
         if (token.type != DOT && token.type != NUMBER) {
@@ -381,26 +395,22 @@ object Parser {
         val fractionSplitToken = tokens.peek().type
         if (fractionSplitToken != DOT && token.type != DOT) {
             val end = tokens.currentLocation();
-            return N.Node(ExpressionNode.NumberLiteralNode.IntegerLiteralNode(whole.toString(), range(start, end)));
+            return ExpressionNode.NumberLiteralNode.IntegerLiteralNode(whole.toString(), range(start, end));
         }
         if (fractionSplitToken == DOT) {
             val fractionNumber = tokens.peek();
             return if (fractionNumber.type == NUMBER) {
                 tokens.next()
                 val fraction = fractionNumber.value.toInt()
-                N.Node(
                     ExpressionNode.NumberLiteralNode.FloatLiteralNode(
                         "${whole}.${fraction}".toDouble(),
                         range(start, tokens.currentLocation().minusChar(1))
                     )
-                )
             } else {
-                N.Node(
                     ExpressionNode.NumberLiteralNode.FloatLiteralNode(
                         "${whole}.0".toDouble(),
                         range(start, tokens.currentLocation().minusChar(1))
                     )
-                )
             }
         } else {
             throw RuntimeException("this should never happen")
@@ -507,12 +517,12 @@ object Parser {
             if (next == WHITESPACE || next == NEW_LINE) {
                 error = "No whitespace allowed between '.' and field name. You can put whitespace before the dot!";
             }
-            var identifier = identifier(tokens);
+            val identifier = identifier(tokens);
             if (identifier == null) {
-                identifier = N.Error(tokens.currentLocation(), "Expected field name");
-                tokens.next();//skip the non-identifier token
+                val loc = tokens.nextWithLocation().location;//skip the non-identifier token
+                return@captureRange N.Error(loc, "Expected field name");
             }
-            return@captureRange identifier;
+            return@captureRange identifier.toNode();
         }
         if (field == null) {
             return null;
@@ -524,7 +534,7 @@ object Parser {
         }
     }
 
-    private fun identifier(tokens: Tokens): N<Located<String>>? {
+    private fun identifier(tokens: Tokens): W<Located<String>>? {
         var wrongStartChar = false;
         val (content, range) = captureRange(tokens) {
             var content = ""
@@ -549,12 +559,15 @@ object Parser {
         }
         if (content == null)
             return null;
-        return if (wrongStartChar) N.Error(range, "Identifiers can only start with a letter");
-        else N.Node(content to range);
+        return W(content to range).let {
+            if (wrongStartChar)
+                it.warning(N.Error(range, "Identifiers can only start with a letter"))
+            it
+        };
     }
 
 
-    private fun ifStatement(tokens: Tokens): N<StatementNode.IfNode>? {
+    private fun ifStatement(tokens: Tokens): W<StatementNode.IfNode>? {
         tokens.elevate()
         val (ifKw, kwLoc) = tokens.nextWithLocation();
         var err: String? = null;
@@ -592,7 +605,7 @@ object Parser {
         val body = codeBlock(tokens) ?: N.Error(tokens.currentLocation(), "Expected code block")
         skipWhitespace(tokens)
         val elseBranch = elseBranch(tokens);
-        return N.Node(
+        return W(
             StatementNode.IfNode(
                 condition,
                 body,
@@ -752,27 +765,16 @@ object Parser {
         return enclosedList("call parameters", tokens, "(", ",", ")", true) { expression(tokens) }
     }
 
-    private fun switchStatement(tokens: Tokens): N<StatementNode.SwitchNode>? {
+    private fun switchStatement(tokens: Tokens): W<StatementNode.SwitchNode>? {
         val keyword = tokens.peek();
         if (keyword.value != "switch") return null;
-        var keywordLoc = captureRange(tokens) { tokens.next() }
+        val keywordLoc = captureRange(tokens) { tokens.next() }
         skipWhitespace(tokens)
-        val bracketOpen = tokens.peek();
-        if (bracketOpen.type != BRACKET_OPEN) {
-            return N.Error(tokens.currentLocation(), "Expected '(' after switch")
-        } else {
-            tokens.next()
-        }
         skipWhitespace(tokens)
-        val expression = expression(tokens) ?: N.Error(tokens.currentLocation(), "Expected expression")
-        skipWhitespace(tokens)
-        val bracketClose = tokens.peek();
-        if (bracketClose.type != BRACKET_CLOSED) {
-            return N.Error(tokens.currentLocation(), "Expected ')' after switch expression")
-        } else {
-            tokens.next()
-        }
-        skipWhitespace(tokens)
+        val expression = enclosed("switch item", tokens, "(", ")") { expression(tokens) } ?: N.Error(
+            tokens.currentLocation(),
+            "The item that a switch should check needs to be in parenteses '(' and ')'"
+        )
         val body = codeBlock(tokens) ?: N.Error(tokens.currentLocation(), "Expected code block")
         skipWhitespace(tokens)
         return N.Node(
@@ -786,7 +788,7 @@ object Parser {
     }
 
     private fun functionDeclarationParameter(tokens: Tokens): N<ParameterNode>? {
-        val name: N<Located<String>> = identifier(tokens) ?: return null;
+        val name = identifier(tokens) ?: return null;
         skipWhitespace(tokens)
 
         val typeDef = if (tokens.peek().type != COLON) {
@@ -801,7 +803,7 @@ object Parser {
         val defaultValue = if (tokens.peek().type == EQUAL) {
             tokens.next()
             skipWhitespace(tokens)
-            valueLiteral(tokens) ?: variableLiteral(tokens) ?: N.Error(
+            literalExpression(tokens) ?: N.Error(
                 tokens.currentLocation(),
                 "Expected constant for default value"
             )
@@ -816,7 +818,7 @@ object Parser {
                 typeDef,
                 defaultValue,
                 range(
-                    name.location { it.second },
+                    name.value.location,
                     defaultValue?.location { it.location } ?: typeDef.location { it.location }
                 )
             )
@@ -828,13 +830,13 @@ object Parser {
         return N.Error(tokens.currentLocation(), "Literal no found lol")
     }
 
-    private fun variableLiteral(tokens: Tokens) = identifier(tokens)?.map {
-        ExpressionNode.VariableLiteralNode(it.first, it.second)
+    private fun variableLiteral(tokens: Tokens) = identifier(tokens)?.let {
+        ExpressionNode.VariableLiteralNode(it.value.value, it.value.location)
     }
 
-    private fun functionDeclaration(tokens: Tokens): N<StatementNode.FunctionDeclarationNode>? {
+    private fun functionDeclaration(tokens: Tokens): W<StatementNode.FunctionDeclarationNode>? {
         tokens.elevate();
-        var (attrs, attrLoc) = captureRange(tokens) { attributes(tokens) }
+        val (attrs, attrLoc) = captureRange(tokens) { attributes(tokens) }
         skipWhitespace(tokens)
         val (funKw, kwLoc) = captureRange(tokens) { tokens.next() }
         if (funKw.value != "fn") {
@@ -845,7 +847,7 @@ object Parser {
         val warnings = mutableListOf<N.Error<Any>>()
 
         skipWhitespace(tokens)
-        val name = identifier(tokens) ?: N.Error(tokens.currentLocation(), "Expected function name")
+        val name = identifier(tokens)?.toNode() ?: N.Error(tokens.currentLocation(), "Expected function name")
         skipWhitespace(tokens)
         val parameters = functionParameterDeclarations(tokens)
         skipWhitespace(tokens)
@@ -880,17 +882,17 @@ object Parser {
     ): List<N<ParameterNode>> {
         return enclosedList("parameters", tokens, "(", ",", ")", false) {
             functionDeclarationParameter(tokens)
-        }?: emptyList()
+        } ?: emptyList()
     }
 
-    private fun variableDeclaration(tokens: Tokens): N<StatementNode.VariableDeclarationNode>? {
+    private fun variableDeclaration(tokens: Tokens): W<StatementNode.VariableDeclarationNode>? {
         val varKw = tokens.peek();
         if (varKw.value != "var" && varKw.value != "val") {
             return null;
         }
         val (_, kwLoc) = tokens.nextWithLocation()
         skipWhitespace(tokens)
-        val name = identifier(tokens) ?: N.Error(tokens.currentLocation(), "Expected variable name")
+        val name = identifier(tokens)?.toNode() ?: N.Error(tokens.currentLocation(), "Expected variable name")
         skipWhitespace(tokens)
         val type = if (tokens.peek().type == COLON) {
             tokens.next()
@@ -908,7 +910,7 @@ object Parser {
             null
         }
         skipWhitespace(tokens)
-        return N.Node(
+        return W(
             StatementNode.VariableDeclarationNode(
                 name,
                 type,
@@ -941,7 +943,7 @@ object Parser {
                 return N.Node(
                     TypeNode.UnionTypeNode(
                         options,
-                        range(type.location { it.location }, tokens.currentLocation().minusChar(1))
+                        range(type.location { it.location }, options.last().location { it.location })
                     )
                 );
             } else {
@@ -988,7 +990,7 @@ object Parser {
                 "Expected value for parameter ${valueName.map { it.first }}"
             )
             N.Node(AttributeValueNode(valueName, parameter))
-        }?: emptyList()
+        } ?: emptyList()
 
         skipWhitespace(tokens)
 
@@ -1033,17 +1035,19 @@ object Parser {
         val enclosed = enclosedType(tokens)
         if (enclosed != null)
             return enclosed;
-        var (keyword, kwLoc) = captureRange(tokens) { literalExpression(tokens) }
-        if (keyword == null) return null;
-        if (keyword is N.Error) {
+        val func = functionSignatureType(tokens);
+        if (func != null) return N.Node(func);
+        var literal = literalExpression(tokens) ?: return null
+        val kwLoc = literal.location { it.location }
+        if (literal is N.Error) {
             return N.Error(kwLoc, "Types need to start with a literal or typename")
         }
-        keyword = keyword as N.Node
-        return when (val expr = keyword.value) {
+        literal = literal as N.Node
+        return when (val expr = literal.value) {
             is ExpressionNode.NumberLiteralNode.FloatLiteralNode,
             is ExpressionNode.NumberLiteralNode.IntegerLiteralNode,
             is ExpressionNode.StringLiteralNode,
-            is ExpressionNode.BooleanLiteralNode -> N.Node(TypeNode.ValueTypeNode(keyword, kwLoc))
+            is ExpressionNode.BooleanLiteralNode -> N.Node(TypeNode.ValueTypeNode(literal, kwLoc))
 
             is ExpressionNode.VariableLiteralNode -> {
                 N.Node(
@@ -1087,8 +1091,19 @@ object Parser {
         }
     }
 
+    private fun functionSignatureType(tokens: Tokens): TypeNode? {
+        return when (tokens.peek().value) {
+            "fn" -> {
+                tokens.next()
+                functionTypeSignatureNode(tokens)
+            }
+
+            else -> null
+        }
+    }
+
     private fun signatures(tokens: Tokens): List<N<TypeNode.InterfaceTypeNode.FunctionSignatureNode>> {
-        return enclosedList("interface body", tokens, "{", ",", "}", false) { functionSignature(tokens) }?: emptyList()
+        return enclosedList("interface body", tokens, "{", ",", "}", false) { functionSignature(tokens) } ?: emptyList()
     }
 
     private fun <T> enclosedList(
@@ -1103,7 +1118,7 @@ object Parser {
         val elements = mutableListOf<N<T>>()
         val start = tokens.currentLocation();
         if (tokens.peek().value != opening) {
-            if(nullable)
+            if (nullable)
                 return null;
             elements.add(N.Error(start, "Expect $name to start with '$opening'"))
         } else {
@@ -1230,19 +1245,19 @@ object Parser {
 
 }
 
-fun<T> enclosed(name: String, tokens: Tokens,opener: String, closer: String, parser: ParseFn<T>): N<T>? {
+fun <T> enclosed(name: String, tokens: Tokens, opener: String, closer: String, parser: ParseFn<T>): W<T>? {
     if (tokens.peek().value != opener) {
         return null;
     }
-    val (_, openBracketLoc) = tokens.nextWithLocation()
-    val expr = parser(tokens) ?: N.Error(tokens.currentLocation(), "Expecting $name")
+    tokens.next()
+    val expr = parser(tokens)?.let { W(it) }
     val bracketClosed = tokens.peek()
     val (bracketClosedLoc, expressionClosed) = run {
         val closed = bracketClosed.type == BRACKET_CLOSED
         if (closed) tokens.next()
         tokens.currentLocation().minusChar(1) to closed
     }
-    if (!expressionClosed) expr.warning(
+    if (!expressionClosed) expr?.warning(
         N.Error(
             bracketClosedLoc,
             "Expected $name to be closed with '$closer'"
@@ -1266,5 +1281,5 @@ private fun skipWhitespace(tokens: Tokens) {
 
 private fun checkNextToken(tokens: Tokens, vararg token: DefaultToken): Boolean {
     val next = tokens.peek()
-    return token.any { it.name == next.name }
+    return token.any { it == next.type }
 }

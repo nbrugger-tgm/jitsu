@@ -85,22 +85,37 @@ private fun <T> N<T>.symbols(mapper: (T) -> List<DocumentSymbol>): List<Document
 
 private fun TypeNode.documentSymbols(location: Location, name: String, nameLocation: Location): List<DocumentSymbol> {
     return when (this) {
-        is TypeNode.ArrayTypeNode,
         is TypeNode.FloatTypeNode,
         is TypeNode.IntTypeNode,
         is TypeNode.NamedTypeNode,
         is TypeNode.StringTypeNode,
-        is TypeNode.UnionTypeNode,
         is TypeNode.ValueTypeNode -> listOf(
             DocumentSymbol(
                 name,
-                SymbolKind.Class,
+                SymbolKind.Variable,
                 range(location),
                 range(nameLocation),
                 this::class.simpleName
             )
         )
-
+        is TypeNode.ArrayTypeNode -> listOf(
+            DocumentSymbol(
+                name,
+                SymbolKind.Array,
+                range(location),
+                range(nameLocation),
+                this::class.simpleName
+            )
+        )
+        is TypeNode.UnionTypeNode -> listOf(
+            DocumentSymbol(
+                name,
+                SymbolKind.Enum,
+                range(location),
+                range(nameLocation),
+                this::class.simpleName
+            )
+        )
         is TypeNode.EnumDeclarationNode -> {
             val constantSymbols = constants.map {
                 DocumentSymbol(
@@ -124,7 +139,14 @@ private fun TypeNode.documentSymbols(location: Location, name: String, nameLocat
             )
         }
 
-        is TypeNode.FunctionTypeSignatureNode -> listOf()
+        is TypeNode.FunctionTypeSignatureNode -> listOf(DocumentSymbol(
+                name,
+                SymbolKind.Function,
+                range(location),
+                range(nameLocation),
+                toString(),
+                listOf()
+        ))
         is TypeNode.InterfaceTypeNode -> listOf(
             DocumentSymbol(
                 name,

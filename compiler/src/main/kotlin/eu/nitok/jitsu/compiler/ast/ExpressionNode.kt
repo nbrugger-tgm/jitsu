@@ -6,6 +6,8 @@ import kotlinx.serialization.Serializable
 sealed interface ExpressionNode {
     val location: Location
 
+    val located get() = this to location
+
     @Serializable
     sealed class NumberLiteralNode() : ExpressionNode {
         @Serializable
@@ -30,8 +32,11 @@ sealed interface ExpressionNode {
     ) : ExpressionNode {
         @Serializable
         sealed interface StringPart {
+            abstract val location: Location
             @Serializable
             class Literal(val literal: String, val nameLocation: Location, val keywordLocation: Location) : StringPart {
+                override val location: Location get() = keywordLocation.rangeTo(nameLocation)
+
                 override fun toString(): String {
                     return "\$$literal"
                 }
@@ -43,20 +48,22 @@ sealed interface ExpressionNode {
                 val startKeywordLocation: Location,
                 val endKeywordLocation: Location
             ) : StringPart {
+                override val location: Location get() = startKeywordLocation.rangeTo(endKeywordLocation)
+
                 override fun toString(): String {
                     return "\${ ... }"
                 }
             }
 
             @Serializable
-            class Charsequence(val value: String, val location: Location) : StringPart {
+            class Charsequence(val value: String, override val location: Location) : StringPart {
                 override fun toString(): String {
                     return value
                 }
             }
 
             @Serializable
-            class EscapeSequence(val value: String, val location: Location) : StringPart {
+            class EscapeSequence(val value: String, override val location: Location) : StringPart {
                 override fun toString(): String {
                     return value
                 }

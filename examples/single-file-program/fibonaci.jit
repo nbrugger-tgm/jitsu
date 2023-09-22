@@ -13,10 +13,13 @@ fn fibo(n: int): int {
     return fibo(n - 1) + fibo(n - 2);
 }
 
-type a = interface { }
-type x = int
-type z = int | a | interface {
-    test()
-}
+type Mapping = fn(x: int): string
 
-interface X { }
+
+type Tree = Leaf | Node
+type Leaf = string
+type Node = Tree[]
+
+type StringTree = string | StringTree[] | interface {
+    yeet()
+}

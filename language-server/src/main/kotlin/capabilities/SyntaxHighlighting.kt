@@ -1,6 +1,7 @@
 package capabilities
 
 import capabilities.SemanticTokenTypes.*
+import customLogger
 import eu.nitok.jitsu.compiler.ast.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode.ParameterNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseBodyNode
@@ -108,7 +109,11 @@ private fun modifyerBitflag(vararg modifiers: SemanticTokenModifiers): Int {
 }
 
 internal fun syntaxHighlight(statements: List<N<StatementNode>>): List<Int> {
-    return decode(statements.flatMap { it.syntax { it.syntaxTokens() } })
+    return decode(statements.flatMap {
+        val semanticTokens = it.syntax { it.syntaxTokens() }
+        customLogger.println(semanticTokens)
+        semanticTokens
+    })
 }
 
 private fun token(
@@ -195,7 +200,7 @@ private fun StatementNode.syntaxTokens(): List<SemanticToken> {
                             is TypeNode.InterfaceTypeNode -> INTERFACE
                             is TypeNode.VoidTypeNode -> TYPE
                         },
-                        type.value.location
+                        name.location
                     )
                 }
             ) + type.syntax { it.syntaxTokens() }
