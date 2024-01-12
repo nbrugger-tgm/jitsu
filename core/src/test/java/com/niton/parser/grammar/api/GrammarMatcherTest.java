@@ -2,8 +2,10 @@ package com.niton.parser.grammar.api;
 
 import com.niton.parser.ast.AstNode;
 import com.niton.parser.ast.OptionalNode;
+import com.niton.parser.ast.ParsingResult;
 import com.niton.parser.exceptions.ParsingException;
 import com.niton.parser.token.ListTokenStream;
+import com.niton.parser.token.Location;
 import com.niton.parser.token.TokenStream;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,20 +23,19 @@ class GrammarMatcherTest {
 
 	@BeforeEach
 	void setUp() throws Exception {
-		matcher = new GrammarMatcher<>() {
-			@NotNull
+		matcher = new GrammarMatcher<OptionalNode>() {
 			@Override
-			protected AstNode process(
+			protected @NotNull ParsingResult<OptionalNode> process(
 					@NotNull TokenStream tokens, @NotNull GrammarReference reference
 			) {
-				return new OptionalNode();
+				return ParsingResult.ok(mock(OptionalNode.class));
 			}
 		};
 		matcher.setOriginGrammarName("test_grammar");
 	}
 
 	@Test
-	void parseElevatesStack() throws ParsingException {
+	void parseElevatesStack() {
 		var ref = mock(GrammarReference.class);
 		var tokens = spy(new ListTokenStream(List.of()));
 
@@ -44,7 +45,7 @@ class GrammarMatcherTest {
 	}
 
 	@Test
-	void parseCommitsStack() throws ParsingException {
+	void parseCommitsStack() {
 		var ref = mock(GrammarReference.class);
 		var tokens = spy(new ListTokenStream(List.of()));
 
@@ -54,7 +55,7 @@ class GrammarMatcherTest {
 	}
 
 	@Test
-	void parseNamesResult() throws ParsingException {
+	void parseNamesResult()  {
 		var ref = mock(GrammarReference.class);
 		var tokens = spy(new ListTokenStream(List.of()));
 
@@ -70,7 +71,7 @@ class GrammarMatcherTest {
 			@Override
 			protected AstNode process(
 					@NotNull TokenStream tokens, @NotNull GrammarReference reference
-			) throws ParsingException {
+			)  {
 				throw new ParsingException("test","",tokens);
 			}
 		};

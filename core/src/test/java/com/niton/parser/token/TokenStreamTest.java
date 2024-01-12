@@ -78,7 +78,7 @@ class TokenStreamTest {
 
 	@ParameterizedTest
 	@ValueSource(ints = {0, 5, 20})
-	void elevateElevatesIndex(int streamIndex) throws ParsingException {
+	void elevateElevatesIndex(int streamIndex)  {
 		var stream = new ListTokenStream(List.of());
 		stream.index(streamIndex);
 		assertThat(stream.index()).isEqualTo(streamIndex);
@@ -90,7 +90,7 @@ class TokenStreamTest {
 
 	@ParameterizedTest
 	@ValueSource(ints = {0, 5, 20})
-	void elevateElevatesLevel(int streamIndex) throws ParsingException {
+	void elevateElevatesLevel(int streamIndex)  {
 		var stream = new ListTokenStream(List.of());
 		assertThat(stream.level()).isZero();
 		for (int i = 0; i < streamIndex; i++) {

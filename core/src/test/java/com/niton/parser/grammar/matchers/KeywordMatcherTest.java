@@ -22,7 +22,7 @@ class KeywordMatcherTest extends AbstractMatcherTest {
     }
 
     @Override
-    public Stream<TestCase> getTestCases() throws ParsingException {
+    public Stream<TestCase> getTestCases()  {
         var tokenizer = new Tokenizer();
         return Stream.of(
                 new TestCase(

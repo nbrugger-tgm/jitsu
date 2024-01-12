@@ -165,7 +165,7 @@ class GrammarFileParserTest {
 				     "BACKSLASH='\\\\(?!\\')'", tokens, Set.of());
 	}
 
-	public static void main(String[] args) throws ParsingException {
+	public static void main(String[] args)  {
 		DefaultParser p = new DefaultParser(
 				new GrammarReferenceMap().deepMap(GrammarFileGrammar.GRAMMAR_FILE_GRAMMAR),
 				GrammarFileGrammar.GRAMMAR_FILE_GRAMMAR

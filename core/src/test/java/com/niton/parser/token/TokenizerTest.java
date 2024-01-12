@@ -17,7 +17,7 @@ class TokenizerTest {
 	}
 
 	@Test
-	void onlyUndefined() throws ParsingException {
+	void onlyUndefined() {
 		Tokenizer tokenizer = new Tokenizer(List.of());
 		var       res       = tokenizer.tokenize("A1");
 		assertThat(res.get(0)).extracting(AssignedToken::getValue).isEqualTo("A1");
@@ -25,7 +25,7 @@ class TokenizerTest {
 	}
 
 	@Test
-	void mixUndefined() throws ParsingException {
+	void mixUndefined() {
 		Tokenizer tokenizer = new Tokenizer(DefaultToken.NUMBER);
 		var       res       = tokenizer.tokenize("2A2");
 		assertThat(res).hasSize(3);
@@ -52,7 +52,7 @@ class TokenizerTest {
 	}
 
 	@Test
-	void useCase() throws ParsingException {
+	void useCase() {
 		Tokenizer tokenizer = new Tokenizer();
 		tokenizer.setIgnoreEOF(true);
 		var tokens            = tokenizer.tokenize("I  am a string");

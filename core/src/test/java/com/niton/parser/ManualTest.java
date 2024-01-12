@@ -12,7 +12,7 @@ import static com.niton.parser.grammar.api.Grammar.*;
 import static com.niton.parser.token.DefaultToken.*;
 
 public class ManualTest {
-	public static void main(String[] args) throws ParsingException, IOException {
+	public static void main(String[] args) , IOException {
 		GrammarReferenceMap ref = new GrammarReferenceMap();
 		ref.map(
 				   build("Number")
@@ -148,7 +148,7 @@ public class ManualTest {
 				"</html>\n";
 	}
 
-	private static int calculateExpression(ReducedNode result) throws ParsingException {
+	private static int calculateExpression(ReducedNode result)  {
 		var start      = result.getSubNode("startExpression").orElseThrow();
 		var startValue = calculateNoCalcExpression(start);
 		var operations = result.getSubNode("operations").orElseThrow();
@@ -158,7 +158,7 @@ public class ManualTest {
 		return startValue;
 	}
 
-	private static int calculateOperator(int startValue, ReducedNode op) throws ParsingException {
+	private static int calculateOperator(int startValue, ReducedNode op)  {
 		var type = op.getSubNode("type").orElseThrow().getValue();
 		op = op.getSubNode("value").orElseThrow();
 		var operator   = op.getSubNode("operator").map(ReducedNode::getValue).orElseThrow();
@@ -179,7 +179,7 @@ public class ManualTest {
 	}
 
 	private static int applyOperation(int startValue, String operator, int expressionVal)
-			throws ParsingException {
+			 {
 		switch (operator) {
 			case "+":
 				startValue += expressionVal;
@@ -199,7 +199,7 @@ public class ManualTest {
 		return startValue;
 	}
 
-	private static int calculateNoCalcExpression(ReducedNode result) throws ParsingException {
+	private static int calculateNoCalcExpression(ReducedNode result)  {
 		var type = result.getSubNode("type").orElseThrow().getValue();
 		switch (type) {
 			case "Number":
@@ -213,7 +213,7 @@ public class ManualTest {
 		}
 	}
 
-	private static int calculateEnclosedExpression(ReducedNode node) throws ParsingException {
+	private static int calculateEnclosedExpression(ReducedNode node)  {
 		return calculateExpression(node.getSubNode("expression").orElseThrow());
 	}
 

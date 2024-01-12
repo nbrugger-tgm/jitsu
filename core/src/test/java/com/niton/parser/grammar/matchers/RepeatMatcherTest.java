@@ -20,7 +20,7 @@ class RepeatMatcherTest {
     private final static Location ANY_LOCATION = Location.of(0, 0, 0, 0);
 
     @Test
-    void testInstantFail() throws ParsingException {
+    void testInstantFail()  {
         var subGrammar = mock(Grammar.class);
         var matcher = new RepeatMatcher(subGrammar, minimum);
         when(subGrammar.parse(any(), any())).thenThrow(new ParsingException("", "", 0, 0, 0));
@@ -29,7 +29,7 @@ class RepeatMatcherTest {
     }
 
     @Test
-    void testWorking() throws ParsingException {
+    void testWorking()  {
         var subGrammar = mock(Grammar.class);
         var matcher = new RepeatMatcher(subGrammar, minimum);
         var tokenResult = new TokenNode(List.of(new AssignedToken("NUMBER", "1")), ANY_LOCATION);

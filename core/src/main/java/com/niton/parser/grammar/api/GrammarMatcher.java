@@ -33,7 +33,7 @@ public abstract class GrammarMatcher<T extends AstNode> {
      * *pos*(parameter) token
      *
      * @return the parsed {@link AstNode}
-     * @throws ParsingException when the tokens are not parsable into this Grammar
+     * @ when the tokens are not parsable into this Grammar
      * @author Nils
      * @version 2019-05-29
      */

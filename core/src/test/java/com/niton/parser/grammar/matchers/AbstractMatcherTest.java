@@ -36,7 +36,7 @@ abstract class AbstractMatcherTest {
 	}
 
 	@TestFactory
-	Stream<DynamicTest> parsingTest() throws ParsingException {
+	Stream<DynamicTest> parsingTest()  {
 		final var ref = getGrammarReference();
 		return getTestCases().map(testCase -> DynamicTest.dynamicTest(
 				"Test: " + testCase.inputTokens.stream().map(Tokenizer.AssignedToken::getValue).collect(Collectors.joining()),
@@ -57,7 +57,7 @@ abstract class AbstractMatcherTest {
 		));
 	}
 
-	protected abstract GrammarReference getGrammarReference() throws ParsingException;
+	protected abstract GrammarReference getGrammarReference() ;
 
-	protected abstract Stream<TestCase> getTestCases() throws ParsingException;
+	protected abstract Stream<TestCase> getTestCases() ;
 }

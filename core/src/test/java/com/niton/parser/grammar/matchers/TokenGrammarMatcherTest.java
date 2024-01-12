@@ -20,7 +20,7 @@ public class TokenGrammarMatcherTest extends AbstractMatcherTest {
     }
 
     @Override
-    protected Stream<TestCase> getTestCases() throws ParsingException {
+    protected Stream<TestCase> getTestCases()  {
         var number = new TokenMatcher(new TokenGrammar(DefaultToken.NUMBER.name()));
         var letters = new TokenMatcher(new TokenGrammar(DefaultToken.LETTERS.name()));
         var minus = new TokenMatcher(new TokenGrammar(DefaultToken.MINUS.name()));

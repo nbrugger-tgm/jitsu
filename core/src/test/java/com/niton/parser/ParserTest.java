@@ -102,7 +102,7 @@ class ParserTest {
 	}
 
 	@Test
-	void parsePlainReturn() throws ParsingException {
+	void parsePlainReturn()  {
 		mockGrammar();
 		assertThat(parser.parsePlain(""))
 				.as("should return the grammar parsing result")
@@ -141,7 +141,7 @@ class ParserTest {
 				.isEqualTo(ORIG_GRAMMAR_NAME);
 	}
 	@Test
-	void parseReturn() throws ParsingException {
+	void parseReturn()  {
 		mockGrammar();
 		assertThat(parser.parse(""))
 				.isNotNull()
@@ -174,14 +174,14 @@ class ParserTest {
 				.isEqualTo(ORIG_GRAMMAR_NAME);
 	}
 
-	void mockGrammar() throws ParsingException {
+	void mockGrammar()  {
 		when(node.getOriginGrammarName()).thenReturn(ORIG_GRAMMAR_NAME);
 		when(grammar.parse(any(), any())).thenReturn(node);
 		mockParser();
 	}
 
 	@Test
-	void setTokenizer() throws ParsingException {
+	void setTokenizer()  {
 		mockGrammar();
 		var newTokenizer = mock(Tokenizer.class);
 
@@ -194,7 +194,7 @@ class ParserTest {
 	}
 
 	@Test
-	void setReference() throws ParsingException {
+	void setReference()  {
 		mockParser();
 
 		var mockedRoot = mock(Grammar.class);

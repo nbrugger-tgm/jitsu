@@ -95,7 +95,7 @@ public class Tokenizer {
 	 *
 	 * @return a list of assigned tokens.
 	 *
-	 * @throws ParsingException
+	 * @
 	 */
 	public ParsingResult<List<AssignedToken>> tokenize(String content) {
 		List<AssignedToken> assignedTokens = parseTokens(content);

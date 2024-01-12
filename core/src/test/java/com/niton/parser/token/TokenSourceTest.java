@@ -147,7 +147,7 @@ class TokenSourceTest {
 			}
 
 			@Test
-			void setTokenizer() throws ParsingException {
+			void setTokenizer()  {
 				var tokenizer = mock(Tokenizer.class);
 				when(tokenizer.tokenize("ABC123+")).thenReturn(List.of(
 						new AssignedToken("ABC123+","anything")

@@ -20,7 +20,7 @@ class ReferenceGrammarMatcherTest extends AbstractMatcherTest {
     public AstNode newNode = new TokenNode(List.of(), Location.of(0, 0, 0, 0));
 
     @Override
-    public GrammarReference getGrammarReference() throws ParsingException {
+    public GrammarReference getGrammarReference()  {
         var mocked1 = mock(Grammar.class);
         var mocked3 = mock(Grammar.class);
         when(mocked3.parse(any(), any())).thenThrow(new ParsingException("", "", 0, 0, 0));
