@@ -108,7 +108,7 @@ private fun modifyerBitflag(vararg modifiers: SemanticTokenModifiers): Int {
     return modifiers.map { it.bitflag() }.reduceOrNull { acc, i -> acc or i } ?: 0
 }
 
-internal fun syntaxHighlight(statements: List<N<StatementNode>>): List<Int> {
+internal fun syntaxHighlight(statements: List<AstNode<StatementNode>>): List<Int> {
     return decode(statements.flatMap {
         val semanticTokens = it.syntax { it.syntaxTokens() }
         customLogger.println(semanticTokens)
@@ -124,17 +124,17 @@ private fun token(
     return SemanticToken(variable, modifiers, location)
 }
 
-private fun <T> N<T>.syntax(function: (T) -> List<SemanticToken>): List<SemanticToken> {
+private fun <T> AstNode<T>.syntax(function: (T) -> List<SemanticToken>): List<SemanticToken> {
     return when (this) {
-        is N.Node -> function(value) + when (val withAttrs = value) {
+        is AstNode.Node -> function(value) + when (val withAttrs = value) {
             is CanHaveAttributes -> withAttrs.attributes.flatMap { it.syntax { syntaxToken(it) } }
             else -> emptyList()
         }
-        is N.Error -> listOf(token(COMMENT, node))
+        is AstNode.Error -> listOf(token(COMMENT, node))
     }
 }
 
-private fun syntaxToken(it: AttributeNode): List<SemanticToken> {
+private fun syntaxToken(it: AttributeNodeImpl): List<SemanticToken> {
     return it.name.syntax { listOf(token(MACRO, it.second)) } + it.values.flatMap { it.syntax {
         listOf(
             token(PROPERTY, it.name.location)
@@ -185,8 +185,8 @@ private fun StatementNode.syntaxTokens(): List<SemanticToken> {
             listOf(
                 token(KEYWORD, keywordLocation),
                 when (val type = type) {
-                    is N.Error -> token(COMMENT, type.node)
-                    is N.Node -> token(
+                    is AstNode.Error -> token(COMMENT, type.node)
+                    is AstNode.Node -> token(
                         when (type.value) {
                             is TypeNode.ArrayTypeNode -> TYPE
                             is TypeNode.EnumDeclarationNode -> ENUM
@@ -343,7 +343,7 @@ private fun ExpressionNode.StringLiteralNode.syntaxTokens(): List<SemanticToken>
                             it.expression.syntax { it.syntaxTokens() } +
                             token(symbolismType, it.endKeywordLocation)
 
-                is ExpressionNode.StringLiteralNode.StringPart.Charsequence -> listOf(token(STRING, it.location))
+                is ExpressionNode.StringLiteralNode.StringPart.CharSequence -> listOf(token(STRING, it.location))
                 is ExpressionNode.StringLiteralNode.StringPart.EscapeSequence -> listOf(
                     token(
                         symbolismType,

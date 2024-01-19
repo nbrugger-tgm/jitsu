@@ -7,12 +7,12 @@ import eu.nitok.jitsu.compiler.ast.StatementNode.*
 import eu.nitok.jitsu.compiler.model.BitSize
 
 //
-fun buildGraph(file: List<N<StatementNode>>): Scope {
+fun buildGraph(file: List<AstNode<StatementNode>>): Scope {
     val rootScope = Scope(null)//top level scopes have no parent
     for (statementNode in file) {
-        if (statementNode is N.Error)
+        if (statementNode is AstNode.Error)
             continue;
-        when (val statement = (statementNode as N.Node).value) {
+        when (val statement = (statementNode as AstNode.Node).value) {
             is IfNode,
             is ReturnNode,
             is MethodInvocationNode,
@@ -37,7 +37,7 @@ fun buildGraph(file: List<N<StatementNode>>): Scope {
 
 fun buildGraph(statement: TypeDefinitionNode, scope: Scope) {
     val name = statement.name
-    if (name is N.Node) {
+    if (name is AstNode.Node) {
         scope.register(name.value) {
             statement.type.map { buildGraph(it, scope) }
         }

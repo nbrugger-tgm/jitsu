@@ -12,7 +12,7 @@ enum class CodeBlockContentType(val s: String) : GrammarName {
 
     companion object {
         fun byGrammarName(it: String): GrammarName {
-            return values().find { e -> e.s == it } ?: throw IllegalArgumentException("Unknown code block content type: $it")
+            return entries.find { e -> e.s == it } ?: throw IllegalArgumentException("Unknown code block content type: $it")
         }
     }
 }

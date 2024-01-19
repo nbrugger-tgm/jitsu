@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.playground
 
 import capabilities.syntaxDiagnostic
-import eu.nitok.jitsu.compiler.parser.recursivedescent.parseFile
+import eu.nitok.jitsu.compiler.parser.parseFile
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.html.*

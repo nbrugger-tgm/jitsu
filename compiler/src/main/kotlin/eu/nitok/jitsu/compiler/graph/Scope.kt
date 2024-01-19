@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.compiler.ast.Located
-import eu.nitok.jitsu.compiler.ast.N
+import eu.nitok.jitsu.compiler.ast.AstNode
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 
@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 class Scope(val parent: Scope?) {
-    fun register(name: Located<String>, type: ()->N<ResolvedType>) {
+    fun register(name: Located<String>, type: ()->AstNode<ResolvedType>) {
         val existing = types[name.first];
         if(existing != null) {
            error("Type with name '${name.first}' already exists : {}" to name.second, existing.value)
@@ -24,7 +24,7 @@ class Scope(val parent: Scope?) {
     }
 
     val contants: MutableList<Constant<@Contextual Any>> = mutableListOf();
-    val types: MutableMap<String, Lazy<Located<N<ResolvedType>>>> = mutableMapOf()
+    val types: MutableMap<String, Lazy<Located<AstNode<ResolvedType>>>> = mutableMapOf()
     val functions: MutableList<Function> = mutableListOf()
     val variable: MutableList<Variable> = mutableListOf()
     val errors: MutableList<Error> = mutableListOf()

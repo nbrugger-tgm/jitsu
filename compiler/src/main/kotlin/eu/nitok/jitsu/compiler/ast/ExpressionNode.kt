@@ -1,40 +1,44 @@
 package eu.nitok.jitsu.compiler.ast
 
+import eu.nitok.jitsu.compiler.ast.StatementNode.AssignmentNode.AssignmentTarget
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed interface ExpressionNode {
-    val location: Location
-
-    val located get() = this to location
+sealed interface ExpressionNode : AstNode {
 
     @Serializable
-    sealed class NumberLiteralNode() : ExpressionNode {
+    sealed interface NumberLiteralNode : ExpressionNode {
         @Serializable
         //Long because of unsigned values
-        class IntegerLiteralNode(val value: String, override val location: Location) : NumberLiteralNode() {
+        class IntegerLiteralNode(val value: String, override val location: Location) : AstNodeImpl(),
+            NumberLiteralNode {
             override fun toString(): String {
                 return value
             }
         }
 
         @Serializable
-        class FloatLiteralNode(val value: Double, override val location: Location) : NumberLiteralNode() {
+        class FloatLiteralNode(val value: Double, override val location: Location) : AstNodeImpl(), NumberLiteralNode {
             override fun toString(): String {
-                return value.toString()+"f"
+                return value.toString() + "f"
             }
         }
     }
 
     @Serializable
     class StringLiteralNode(
-        val content: List<N<StringPart>>, override val location: Location
-    ) : ExpressionNode {
+        val content: List<StringPart>
+    ) : ExpressionNode, AstNodeImpl() {
+        override val location: Location get() = content.first().location.rangeTo(content.last().location)
+
         @Serializable
-        sealed interface StringPart {
-            abstract val location: Location
+        sealed interface StringPart : AstNode {
             @Serializable
-            class Literal(val literal: String, val nameLocation: Location, val keywordLocation: Location) : StringPart {
+            class Literal(
+                val literal: String,
+                val nameLocation: Location,
+                val keywordLocation: Location
+            ) : AstNodeImpl(), StringPart {
                 override val location: Location get() = keywordLocation.rangeTo(nameLocation)
 
                 override fun toString(): String {
@@ -44,26 +48,26 @@ sealed interface ExpressionNode {
 
             @Serializable
             class Expression(
-                val expression: N<ExpressionNode>,
+                val expression: ExpressionNode?,
                 val startKeywordLocation: Location,
                 val endKeywordLocation: Location
-            ) : StringPart {
+            ) : AstNodeImpl(), StringPart {
                 override val location: Location get() = startKeywordLocation.rangeTo(endKeywordLocation)
 
                 override fun toString(): String {
-                    return "\${ ... }"
+                    return "\${ $expression }"
                 }
             }
 
             @Serializable
-            class Charsequence(val value: String, override val location: Location) : StringPart {
+            class CharSequence(val value: String, override val location: Location) : AstNodeImpl(), StringPart {
                 override fun toString(): String {
                     return value
                 }
             }
 
             @Serializable
-            class EscapeSequence(val value: String, override val location: Location) : StringPart {
+            class EscapeSequence(val value: String, override val location: Location) : AstNodeImpl(), StringPart {
                 override fun toString(): String {
                     return value
                 }
@@ -76,14 +80,15 @@ sealed interface ExpressionNode {
     }
 
     @Serializable
-    class BooleanLiteralNode(val value: Boolean, override val location: Location) : ExpressionNode {
+    class BooleanLiteralNode(val value: Boolean, override val location: Location) : AstNodeImpl(), ExpressionNode {
         override fun toString(): String {
             return value.toString()
         }
     }
 
     @Serializable
-    class VariableLiteralNode(val name: String, override val location: Location) : ExpressionNode {
+    class VariableLiteralNode(val name: String, override val location: Location) :
+        AstNodeImpl(), ExpressionNode, AssignmentTarget {
         override fun toString(): String {
             return name
         }
@@ -91,23 +96,23 @@ sealed interface ExpressionNode {
 
     @Serializable
     class OperationNode(
-        val left: N<ExpressionNode>,
-        val operator: Located<BiOperator>,
-        val right: N<ExpressionNode>,
+        val left: ExpressionNode,
+        val operator: Located<BiOperator>?,
+        val right: ExpressionNode?,
         override val location: Location
-    ) : ExpressionNode {}
+    ) : AstNodeImpl(), ExpressionNode
 
     @Serializable
     class FieldAccessNode(
-        val target: N<ExpressionNode>,
-        val field: N<Located<String>>,
+        val target: ExpressionNode,
+        val field: IdentifierNode?,
         override val location: Location
-    ) : ExpressionNode {}
+    ) : AstNodeImpl(), ExpressionNode, AssignmentTarget
 
     @Serializable
     class IndexAccessNode(
-        val target: N<ExpressionNode>,
-        val index: N<ExpressionNode>,
+        val target: ExpressionNode,
+        val index: ExpressionNode?,
         override val location: Location
-    ) : ExpressionNode {}
+    ) : AstNodeImpl(), ExpressionNode, AssignmentTarget
 }

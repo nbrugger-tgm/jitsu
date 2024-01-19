@@ -7,26 +7,26 @@ import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
 import range
 
-private fun <T> N<T>.unwarp(function: (T) -> List<Diagnostic>): List<Diagnostic> {//rewrite to this form
+private fun <T> AstNode<T>.unwarp(function: (T) -> List<Diagnostic>): List<Diagnostic> {//rewrite to this form
     return when (this) {
-        is N.Node -> function(this.value) + when (val withAttrs = this.value) {
+        is AstNode.Node -> function(this.value) + when (val withAttrs = this.value) {
             is CanHaveAttributes -> withAttrs.attributes.flatMap { it.unwarp { syntaxDiagnostic(it) } }
             else -> listOf()
         }
 
-        is N.Error -> listOf(error(this))
+        is AstNode.Error -> listOf(error(this))
     } + this.warnings.map { error(it) }
 }
 
-fun syntaxDiagnostic(it: AttributeNode): List<Diagnostic> {
+fun syntaxDiagnostic(it: AttributeNodeImpl): List<Diagnostic> {
     return it.name.unwarp { listOf() } + it.values.flatMap { it.unwarp { syntaxDiagnostic(it) } }
 }
 
-fun syntaxDiagnostic(it: AttributeNode.AttributeValueNode): List<Diagnostic> {
+fun syntaxDiagnostic(it: AttributeNodeImpl.AttributeValueNode): List<Diagnostic> {
     return it.name.unwarp { listOf() } + it.value.unwarp { syntaxDiagnostic(it) }
 }
 
-public fun syntaxDiagnostic(rawAst: N<StatementNode>): List<Diagnostic> {
+public fun syntaxDiagnostic(rawAst: AstNode<StatementNode>): List<Diagnostic> {
     return rawAst.unwarp { syntaxDiagnostic(it) }
 }
 
@@ -159,7 +159,7 @@ fun syntaxDiagnostic(rawAst: ExpressionNode): List<Diagnostic> {
                         )
                     }
 
-                    is ExpressionNode.StringLiteralNode.StringPart.Charsequence -> listOf()
+                    is ExpressionNode.StringLiteralNode.StringPart.CharSequence -> listOf()
                     is ExpressionNode.StringLiteralNode.StringPart.EscapeSequence -> listOf()
                 }
             }
@@ -181,7 +181,7 @@ fun syntaxDiagnostic(rawAst: ExpressionNode): List<Diagnostic> {
     }
 }
 
-fun error(err: N.Error<*>): Diagnostic {
+fun error(err: AstNode.Error<*>): Diagnostic {
     return Diagnostic(
         range(err.explicitErrorLocation ?: err.node),
         err.message,
@@ -190,9 +190,9 @@ fun error(err: N.Error<*>): Diagnostic {
     )
 }
 
-fun error(err: N<*>): Diagnostic? {
+fun error(err: AstNode<*>): Diagnostic? {
     return when (err) {
-        is N.Node -> null
-        is N.Error -> error(err)
+        is AstNode.Node -> null
+        is AstNode.Error -> error(err)
     }
 }

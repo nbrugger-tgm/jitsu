@@ -76,10 +76,10 @@ fun StatementNode.documentSymbols(): List<DocumentSymbol> {
     }
 }
 
-private fun <T> N<T>.symbols(mapper: (T) -> List<DocumentSymbol>): List<DocumentSymbol> {
+private fun <T> AstNode<T>.symbols(mapper: (T) -> List<DocumentSymbol>): List<DocumentSymbol> {
     return when (this) {
-        is N.Node -> mapper(this.value)
-        is N.Error -> listOf()
+        is AstNode.Node -> mapper(this.value)
+        is AstNode.Error -> listOf()
     }
 }
 

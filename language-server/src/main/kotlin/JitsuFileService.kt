@@ -4,11 +4,11 @@ import capabilities.syntaxHighlight
 import com.niton.parser.token.ListTokenStream
 import com.niton.parser.token.Tokenizer
 import eu.nitok.jitsu.compiler.ast.Location
-import eu.nitok.jitsu.compiler.ast.N
+import eu.nitok.jitsu.compiler.ast.AstNode
 import eu.nitok.jitsu.compiler.ast.StatementNode
 import eu.nitok.jitsu.compiler.graph.Scope
 import eu.nitok.jitsu.compiler.graph.buildGraph
-import eu.nitok.jitsu.compiler.parser.recursivedescent.Parser
+import eu.nitok.jitsu.compiler.parser.Parser
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.TextDocumentService
@@ -18,7 +18,7 @@ import java.util.concurrent.CompletableFuture
 
 class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
     private val rawTexts: MutableMap<String, String> = mutableMapOf();
-    private val asts = mutableMapOf<String, Lazy<List<N<StatementNode>>>>()
+    private val asts = mutableMapOf<String, Lazy<List<AstNode<StatementNode>>>>()
     private val graphs = mutableMapOf<String, Lazy<Scope?>>()
     private val tokenizer: Tokenizer = Tokenizer()
     override fun didOpen(params: DidOpenTextDocumentParams?) {
@@ -108,8 +108,8 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
 
         val flatMap = ast.flatMap {
             when (it) {
-                is N.Node -> it.value.documentSymbols()
-                is N.Error<*> -> listOf()
+                is AstNode.Node -> it.value.documentSymbols()
+                is AstNode.Error<*> -> listOf()
             }
         }
         val either = flatMap.map<DocumentSymbol, Either<SymbolInformation, DocumentSymbol>> {

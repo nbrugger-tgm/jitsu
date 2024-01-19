@@ -5,62 +5,59 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable;
 
 @Serializable
-sealed class TypeNode() {
-    abstract val location: Location
+sealed interface TypeNode : AstNode {
 
     @Serializable
-    class IntTypeNode(val bitSize: N<BitSize>, override val location: Location) : TypeNode() {
+    class IntTypeNode(val bitSize: BitSize, override val location: Location) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
-            return "i${bitSize.map { it.bits }}"
+            return "i${bitSize.bits}"
         }
     }
 
     @Serializable
-    class FloatTypeNode(val bitSize: N<BitSize>, override val location: Location) : TypeNode() {
+    class FloatTypeNode(val bitSize: BitSize, override val location: Location) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
-            return "f${bitSize.map { it.bits }}"
+            return "f${bitSize.bits}"
         }
     }
 
     @Serializable
     class InterfaceTypeNode(
-        val name: N<Located<String>>?,
-        val functions: List<N<FunctionSignatureNode>>,
+        val name: IdentifierNode?,
+        val functions: List<FunctionSignatureNode>,
         override val location: Location,
         val keywordLocation: Location,
-        override val attributes: List<N<AttributeNode>>
-    ) : TypeNode(), CanHaveAttributes, StatementNode{
+        override val attributes: List<AttributeNodeImpl>
+    ) : TypeNode, AstNodeImpl(), CanHaveAttributes, StatementNode {
         override fun toString(): String {
-            return name?.map { it.first }?.toString()?: "anonymous interface"
+            return name?.value ?: "anonymous interface"
         }
 
         @Serializable
         class FunctionSignatureNode(
-            val name: N<Located<String>>,
+            val name: IdentifierNode,
             val typeSignature: FunctionTypeSignatureNode,
-            val location: Location = com.niton.parser.token.Location.range(
-                name.location,
-                typeSignature.location
-            )
-        )
+        ) : AstNodeImpl() {
+            override val location: Location get() = name.location.rangeTo(typeSignature.location)
+        }
     }
 
 
     @Serializable
     class FunctionTypeSignatureNode(
-        val returnType: N<TypeNode>?,
-        var parameters: List<N<StatementNode.FunctionDeclarationNode.ParameterNode>>,
+        val returnType: TypeNode?,
+        var parameters: List<StatementNode.FunctionDeclarationNode.ParameterNode>,
         override val location: Location
-    ) : TypeNode() {
+    ) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
             return "(${
-                parameters.joinToString(", ") { it.map { it.type }.toString() }
+                parameters.joinToString(", ") { it.type?.toString() ?: "<invalid>" }
             }) -> $returnType"
         }
     }
 
     @Serializable
-    class StringTypeNode(override val location: Location) : TypeNode() {
+    class StringTypeNode(override val location: Location) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
             return "string"
         }
@@ -68,25 +65,21 @@ sealed class TypeNode() {
 
     @Serializable
     class EnumDeclarationNode(
-        val constants: List<N<ConstantNode>>,
+        val constants: List<IdentifierNode>,
         override val location: Location,
         val keywordLocation: Location
-    ) : TypeNode() {
-
-        @Serializable
-        class ConstantNode(val name: String, val location: Location)
-
+    ) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
-            return "enum {${constants.joinToString(", ") { it.map { it.name }.toString() }}}"
+            return "enum {${constants.joinToString(", ") { it.value }}}"
         }
     }
 
     @Serializable
     class ArrayTypeNode(
-        @SerialName("type_definition") val type: N<TypeNode>,
-        val fixedSize: N<ExpressionNode>?,
+        @SerialName("type_definition") val type: TypeNode,
+        val fixedSize: ExpressionNode?,
         override val location: Location
-    ) : TypeNode() {
+    ) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
             return "$type[${fixedSize?.toString() ?: ""}]"
         }
@@ -94,29 +87,29 @@ sealed class TypeNode() {
 
     @Serializable
     class NamedTypeNode(
-        val name: N<Located<String>>,
-        val genericTypes: List<N<TypeNode>>,
+        val name: IdentifierNode,
+        val genericTypes: List<TypeNode>,
         override val location: Location
-    ) : TypeNode() {
+    ) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
             return "$name${if (genericTypes.isNotEmpty()) "<${genericTypes.joinToString(", ")}>" else ""}"
         }
     }
 
     @Serializable
-    class UnionTypeNode(val types: List<N<TypeNode>>, override val location: Location) : TypeNode() {
+    class UnionTypeNode(val types: List<TypeNode>, override val location: Location) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
             return types.joinToString(" | ")
         }
     }
 
     @Serializable
-    class ValueTypeNode(val value: N<ExpressionNode>, override val location: Location) : TypeNode() {
+    class ValueTypeNode(val value: ExpressionNode, override val location: Location) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
             return value.toString()
         }
     }
 
     @Serializable
-    class VoidTypeNode(override val location: Location) : TypeNode()
+    class VoidTypeNode(override val location: Location) : TypeNode, AstNodeImpl()
 }

@@ -1,8 +1,7 @@
 package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.compiler.ast.Located
-import eu.nitok.jitsu.compiler.ast.Location
-import eu.nitok.jitsu.compiler.ast.N
+import eu.nitok.jitsu.compiler.ast.AstNode
 import eu.nitok.jitsu.compiler.model.BitSize
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
@@ -27,7 +26,7 @@ sealed class ResolvedType {
 
         @Serializable
         data class Array(
-            val type: N<ResolvedType>,
+            val type: AstNode<ResolvedType>,
             val size: Expression?,
             val dimensions: kotlin.Int = 1
         ) : ComplexType() {
