@@ -1,21 +1,23 @@
 package eu.nitok.jitsu.compiler.diagnostic
 
-import eu.nitok.jitsu.compiler.ast.Location
+
+import eu.nitok.jitsu.compiler.parser.Locatable
 import kotlinx.serialization.Serializable
+import org.w3c.dom.ranges.Range
 
 @Serializable
-class CompilerError(
+class CompilerMessage(
     var knownError: ErrorCode,
     var message: String,
-    val location: Location,
+    val location: Locatable,
     val hints: List<Hint> = emptyList()
 ) {
     @Serializable
-    data class Hint(val message: String, val location: Location)
+    data class Hint(val message: String, val location: Locatable)
 
     @Serializable
-    enum class ErrorCode(val stage: Stage, val id: Int) {
-        ;
+    enum class ErrorCode(private val stage: Stage, private val id: Int) {
+        EXPECT_EOF(Stage.PARSING, 1),;
 
         override fun toString(): String {
             return stage.code + id

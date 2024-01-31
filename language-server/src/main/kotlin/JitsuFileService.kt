@@ -3,7 +3,7 @@ import capabilities.syntaxDiagnostic
 import capabilities.syntaxHighlight
 import com.niton.parser.token.ListTokenStream
 import com.niton.parser.token.Tokenizer
-import eu.nitok.jitsu.compiler.ast.Location
+
 import eu.nitok.jitsu.compiler.ast.AstNode
 import eu.nitok.jitsu.compiler.ast.StatementNode
 import eu.nitok.jitsu.compiler.graph.Scope

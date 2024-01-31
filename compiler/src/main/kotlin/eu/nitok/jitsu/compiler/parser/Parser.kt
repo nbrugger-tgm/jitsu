@@ -1,12 +1,6 @@
 package eu.nitok.jitsu.compiler.parser
 
 import com.niton.parser.ast.ParsingResult
-import com.niton.parser.token.DefaultToken
-import com.niton.parser.token.DefaultToken.*
-import com.niton.parser.token.ListTokenStream
-import com.niton.parser.token.Location.range
-import com.niton.parser.token.TokenStream
-import com.niton.parser.token.Tokenizer
 import com.niton.parser.token.Tokenizer.AssignedToken
 import eu.nitok.jitsu.compiler.ast.*
 import eu.nitok.jitsu.compiler.ast.AttributeNodeImpl.AttributeValueNode
@@ -18,38 +12,26 @@ import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode.Paramet
 import eu.nitok.jitsu.compiler.ast.StatementNode.IfNode.ElseNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.IfNode.ElseNode.ElseBlockNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.MethodInvocationNode
+import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.model.BitSize
+import eu.nitok.jitsu.compiler.parser.ParsingStream.Companion.WHITESPACE
 
-
-private val Tokenizer.AssignedToken.type: DefaultToken?
-    get() {
-        if (name.equals("UNDEFINED")) return null;
-        return com.niton.parser.token.DefaultToken.valueOf(name)
-    }
 private typealias ParseFn<T> = (tokens: Tokens) -> T
-typealias Tokens = TokenStream;
+typealias Tokens = ParsingStream;
 
-private fun TokenStream.nextWithLocation(): Located<AssignedToken> {
-    return captureRange(this) { next() }
-}
-
-private val tokenizer = Tokenizer();
-
-public fun parseFile(txt: String): ParsingResult<List<AstNode<StatementNode>>> {
-    val tokens = tokenizer.tokenize(txt);
-    if (!tokens.wasParsed()) {
-        return ParsingResult.error(tokens.exception())
-    }
-    return ParsingResult.ok(Parser.file(ListTokenStream(tokens.unwrap())));
+public fun parseFile(txt: String): ParsingResult<List<StatementNode>> {
+    val tokens = ParsingStream(txt)
+    return ParsingResult.ok(Parser.file(tokens));
 }
 
 object Parser {
-    fun file(tokens: Tokens): List<AstNode<StatementNode>> {
-        val statements = mutableListOf<AstNode<StatementNode>>()
+    fun file(tokens: Tokens): List<StatementNode> {
+        val statements = mutableListOf<StatementNode>()
+        val fileNode = SourceFileNode(statements)
         skipWhitespace(tokens)
         while (true) {
-            val statement = statement(tokens) ?: if (!checkNextToken(tokens, EOF)) {
-                statements.add(AstNode.Error(tokens.nextWithLocation().second, "Expected end of file or statement"))
+            val statement = statement(tokens) ?: if (!tokens.expectEOF()) {
+                fileNode.error(CompilerMessage(CompilerMessage.ErrorCode.EXPECT_EOF, "Expected end of file or statement", tokens.range { skipUntil { false } }))
                 skipWhitespace(tokens)
                 continue;
             } else {
@@ -82,7 +64,8 @@ object Parser {
     }
 
     private fun atomicStatement(tokens: Tokens): W<StatementNode>? {
-        return lineComment(tokens)?.let { W(it) } ?: variableDeclaration(tokens) ?: returnStatement(tokens) ?: yieldStatement(tokens)
+        return lineComment(tokens)?.let { W(it) } ?: variableDeclaration(tokens) ?: returnStatement(tokens)
+        ?: yieldStatement(tokens)
         ?: typeDefinition(tokens)?.let { W(it) } ?: interfaceDeclaration(tokens)?.let { W(it) }
     }
 
@@ -109,11 +92,11 @@ object Parser {
         val type = type(tokens) ?: AstNode.Error(tokens.currentLocation(), "Expected type")
         skipWhitespace(tokens)
         return StatementNode.TypeDefinitionNode(
-                name,
-                type,
-                range(kwLoc, type.location { it.location }),
-                kwLoc,
-                attributes
+            name,
+            type,
+            range(kwLoc, type.location { it.location }),
+            kwLoc,
+            attributes
         )
     }
 
@@ -317,7 +300,8 @@ object Parser {
                 DOLLAR -> {
                     val identifier = identifier(tokens)
                     val mappedIdentifier = identifier?.value?.let { StringPart.Literal(it.first, it.second, tokenLoc) }
-                    mappedIdentifier?.let { AstNode.Node(it) } ?: expressionStringTemplate(tokens, tokenLoc) ?: AstNode.Error(
+                    mappedIdentifier?.let { AstNode.Node(it) } ?: expressionStringTemplate(tokens, tokenLoc)
+                    ?: AstNode.Error(
                         tokens.currentLocation(),
                         "Invalid template expression. Templates are formatted like this: \$identifier or \${ someExpression.do() }"
                     )
@@ -373,7 +357,7 @@ object Parser {
         fun atomic(tokens: Tokens): W<ExpressionNode>? {
             return ifStatement(tokens) ?: switchStatement(tokens) ?: functionDeclaration(tokens) ?: literalExpression(
                 tokens
-            )?.let{W(it)} ?: enclosed("expression", tokens, "(", ")") { expression(tokens) } ?: codeBlock(tokens)
+            )?.let { W(it) } ?: enclosed("expression", tokens, "(", ")") { expression(tokens) } ?: codeBlock(tokens)
         }
 
         val start = atomic(tokens) ?: return null;
@@ -402,15 +386,15 @@ object Parser {
             return if (fractionNumber.type == NUMBER) {
                 tokens.next()
                 val fraction = fractionNumber.value.toInt()
-                    ExpressionNode.NumberLiteralNode.FloatLiteralNode(
-                        "${whole}.${fraction}".toDouble(),
-                        range(start, tokens.currentLocation().minusChar(1))
-                    )
+                ExpressionNode.NumberLiteralNode.FloatLiteralNode(
+                    "${whole}.${fraction}".toDouble(),
+                    range(start, tokens.currentLocation().minusChar(1))
+                )
             } else {
-                    ExpressionNode.NumberLiteralNode.FloatLiteralNode(
-                        "${whole}.0".toDouble(),
-                        range(start, tokens.currentLocation().minusChar(1))
-                    )
+                ExpressionNode.NumberLiteralNode.FloatLiteralNode(
+                    "${whole}.0".toDouble(),
+                    range(start, tokens.currentLocation().minusChar(1))
+                )
             }
         } else {
             throw RuntimeException("this should never happen")
@@ -1024,7 +1008,8 @@ object Parser {
         val constant = numberLiteral(tokens) ?: variableLiteral(tokens);
         skipWhitespace(tokens)
         val (closing, closingLocation) = tokens.nextWithLocation()
-        val node = AstNode.Node(TypeNode.ArrayTypeNode(type, constant, range(type.location { it.location }, closingLocation)))
+        val node =
+            AstNode.Node(TypeNode.ArrayTypeNode(type, constant, range(type.location { it.location }, closingLocation)))
         if (closing.type != SQUARE_BRACKET_CLOSED) {
             node.warning(AstNode.Error(tokens.currentLocation(), "Expected closing the array ']'"))
         }
@@ -1274,9 +1259,7 @@ private fun <T> captureRange(tokens: Tokens, function: () -> T): Pair<T, Locatio
 }
 
 private fun skipWhitespace(tokens: Tokens) {
-    while (tokens.hasNext() && checkNextToken(tokens, WHITESPACE, NEW_LINE)) {
-        tokens.next()
-    }
+    tokens.skip(WHITESPACE)
 }
 
 private fun checkNextToken(tokens: Tokens, vararg token: DefaultToken): Boolean {

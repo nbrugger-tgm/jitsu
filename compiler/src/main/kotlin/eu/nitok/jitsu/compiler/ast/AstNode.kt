@@ -1,18 +1,18 @@
 package eu.nitok.jitsu.compiler.ast
 
-import eu.nitok.jitsu.compiler.diagnostic.CompilerError
+import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import kotlinx.serialization.Serializable
 
 interface AstNode {
     val location: Location
-    val warnings: MutableList<CompilerError>
-    val errors: MutableList<CompilerError>
+    val warnings: MutableList<CompilerMessage>
+    val errors: MutableList<CompilerMessage>
 
-    fun warning(warning: CompilerError) {
+    fun warning(warning: CompilerMessage) {
         warnings.add(warning)
     }
 
-    fun error(error: CompilerError) {
+    fun error(error: CompilerMessage) {
         warnings.add(error)
     }
 }
@@ -22,11 +22,11 @@ interface AstNode {
  */
 @Serializable
 abstract class AstNodeImpl : AstNode {
-    override val warnings: MutableList<CompilerError> = mutableListOf()
-    override val errors: MutableList<CompilerError> = mutableListOf()
+    override val warnings: MutableList<CompilerMessage> = mutableListOf()
+    override val errors: MutableList<CompilerMessage> = mutableListOf()
 }
 
-typealias Location = @Serializable(with = LocationSerializer::class) com.niton.parser.token.Location
+typealias Location = @Serializable(with = LocationSerializer::class) eu.nitok.jitsu.compiler.parser.Location
 interface Located<T> {
     val location: Location;
     val value: T;
