@@ -1,0 +1,3 @@
+# Pure functions
+
+Start typing here...
