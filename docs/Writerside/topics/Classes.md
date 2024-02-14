@@ -45,7 +45,8 @@ class Person {
 ## Methods
 
 Methods are functions that are executed in the context of an instance of that class accessible using `this`.
-
+To learn more about the specific of functions and methods read the [regarding documentation on functions](Functions.md)
+and [methods](Functions.md#methods)
 ## Inheritance
 
 A class can inherit from a [Struct](Structs.md), class or [Interface](Interfaces.md)
