@@ -2,4 +2,5 @@
 <!DOCTYPE terms SYSTEM "https://resources.jetbrains.com/writerside/1.0/glossary.dtd">
 <terms>
     <term name="private">Visibility scope that allows access only from within the class</term>
+    <term name="expression">A thing that can be used as a value, for example in an variable assignment</term>
 </terms>

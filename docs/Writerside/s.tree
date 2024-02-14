@@ -8,11 +8,20 @@
 
     <toc-element topic="syntax.md"/>
     <toc-element topic="Types.md">
+        <toc-element topic="Unions.md"/>
+        <toc-element topic="Enums.md"/>
         <toc-element topic="Structs.md"/>
         <toc-element topic="Classes.md"/>
         <toc-element topic="Interfaces.md"/>
     </toc-element>
+    <toc-element topic="Controll-Structures.topic">
+        <toc-element topic="Switch.md"/>
+        <toc-element topic="Functions.md"/>
+    </toc-element>
     <toc-element topic="Architecture.md">
+        <toc-element topic="Compile-Time.md">
+            <toc-element topic="Compile-Constants.md"/>
+        </toc-element>
         <toc-element topic="Pure-functions.md"/>
     </toc-element>
 </instance-profile>
