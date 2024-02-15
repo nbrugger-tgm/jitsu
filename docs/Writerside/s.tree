@@ -8,6 +8,7 @@
 
     <toc-element topic="syntax.md"/>
     <toc-element topic="Types.md">
+        <toc-element topic="Natives.md"/>
         <toc-element topic="Unions.md"/>
         <toc-element topic="Enums.md"/>
         <toc-element topic="Structs.md"/>
