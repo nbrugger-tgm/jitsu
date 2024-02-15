@@ -68,3 +68,39 @@ fn shout(name: String) {
     println("${this.name} shouts: ${name}");
 }
 ```
+
+### Extension functions {id=extension-functions}
+Extension functions are functions that are attached to non-class types or classes from outside your own code.
+
+> Be aware that extension functions can only be called upon variables with [explicit types](Types.md#explicit-implicit)
+
+Here are a few examples of how this can be used
+```Kotlin
+type SqlValue = int | String | boolean;
+
+fn SqlValue.format(): String {
+    return switch(this) {
+        is int -> Numbers.toString(this);
+        is String -> "'${this}'";//There should be escaping here
+        is boolean -> if(this) "1" else "0";
+    };
+}
+
+var someValue: SqlValue = 123;
+var fomatted = someValue.format();
+```
+
+```
+type Named = { name: String };
+
+fn Named.logName() {
+    println(this.name);
+}
+
+var markus: Named = {
+    name: "Markus
+};
+markus.logName();
+```
+
+Extension functions cannot access class internals, they can only use public methods/fields.
