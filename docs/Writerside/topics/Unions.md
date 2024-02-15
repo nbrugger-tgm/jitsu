@@ -1,6 +1,6 @@
 # Unions
 
-A Union (formal "sum type") is a type that can be one of many (2..N)
+A Union (formal "sum type") is a type that can be one of many (2..N) types
 
 ``type JsonValue = int | string | JsonObject | JsonArray;``
 
