@@ -1,6 +1,6 @@
 package com.niton.parsers.grammar;
 
-import com.niton.parser.token.Tokenable;
+import com.niton.jainparse.token.Tokenable;
 
 /**
  * This is the GrammarTokens Class

@@ -1,11 +1,9 @@
 package com.niton.parsers.grammar.test;
 
-import com.niton.parser.DefaultParser;
-import com.niton.parser.exceptions.ParsingException;
-import com.niton.parser.grammar.api.GrammarReferenceMap;
-import com.niton.parser.grammar.matchers.ReferenceGrammarMatcher;
-import com.niton.parser.token.Tokenable;
-import com.niton.parser.token.Tokenizer;
+import com.niton.jainparse.grammar.api.GrammarReferenceMap;
+import com.niton.jainparse.parser.DefaultParser;
+import com.niton.jainparse.token.Tokenable;
+import com.niton.jainparse.token.Tokenizer;
 import com.niton.parsers.grammar.GrammarFileGrammar;
 import com.niton.parsers.grammar.GrammarFileParser;
 import com.niton.parsers.grammar.GrammarFileTokens;
@@ -34,7 +32,7 @@ class GrammarFileParserTest {
 	) {
 		assertDoesNotThrow(() -> {
 			GrammarFileParser grammarFileParser = new GrammarFileParser();
-			var               result            = grammarFileParser.parse(grammarFileContent);
+			var               result            = grammarFileParser.parse(grammarFileContent).unwrap();
 			assertThat(result.getTokens())
 					.extracting(Tokenable::name)
 					.containsAll(tokenNamesExpected);
@@ -189,7 +187,7 @@ class GrammarFileParserTest {
 						"    #EQUAL\n" +
 						"    String > value\n" +
 						"    #SEMICOLON\n"
-		).reduce("GRAMMAR_FILE").get().format());
+		).unwrap().reduce("GRAMMAR_FILE").get().format());
 	}
 }
 

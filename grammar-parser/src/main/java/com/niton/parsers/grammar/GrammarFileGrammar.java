@@ -1,8 +1,8 @@
 package com.niton.parsers.grammar;
 
-import com.niton.parser.grammar.api.Grammar;
+import com.niton.jainparse.grammar.api.Grammar;
 
-import static com.niton.parser.grammar.api.Grammar.*;
+import static com.niton.jainparse.grammar.api.Grammar.*;
 import static com.niton.parsers.grammar.GrammarFileGrammar.Property.*;
 import static com.niton.parsers.grammar.GrammarFileGrammarName.*;
 import static com.niton.parsers.grammar.GrammarFileTokens.*;

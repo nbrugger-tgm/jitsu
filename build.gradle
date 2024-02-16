@@ -6,6 +6,7 @@ subprojects {
     group = 'com.niton.jainparse'
     version = '3.0.0b3'
     apply plugin: 'java'
+    apply plugin: 'java-library'
     apply plugin: 'maven-publish'
 
     java {

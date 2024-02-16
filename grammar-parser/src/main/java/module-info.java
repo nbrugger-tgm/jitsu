@@ -1,6 +1,6 @@
 module jainparse.grammarparser {
-	requires jainparse.core;
 	requires org.jetbrains.annotations;
+    requires transitive jainparse.parser;
 
-	exports com.niton.parsers.grammar;
+    exports com.niton.parsers.grammar;
 }

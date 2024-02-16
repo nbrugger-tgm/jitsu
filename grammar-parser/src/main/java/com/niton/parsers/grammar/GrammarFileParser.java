@@ -1,22 +1,20 @@
 package com.niton.parsers.grammar;
 
-import com.niton.parser.Parser;
-import com.niton.parser.ast.AstNode;
-import com.niton.parser.ast.ReducedNode;
-import com.niton.parser.exceptions.ParsingException;
-import com.niton.parser.grammar.api.Grammar;
-import com.niton.parser.grammar.types.AnyExceptGrammar;
-import com.niton.parser.grammar.types.ChainGrammar;
-import com.niton.parser.token.GenericToken;
-import com.niton.parser.token.TokenPattern;
-import com.niton.parser.token.Tokenable;
-import com.niton.parser.token.Tokenizer;
+import com.niton.jainparse.ast.AstNode;
+import com.niton.jainparse.ast.ReducedNode;
+import com.niton.jainparse.grammar.api.Grammar;
+import com.niton.jainparse.grammar.types.AnyExceptGrammar;
+import com.niton.jainparse.grammar.types.ChainGrammar;
+import com.niton.jainparse.parser.Parser;
+import com.niton.jainparse.token.GenericToken;
+import com.niton.jainparse.token.TokenPattern;
+import com.niton.jainparse.token.Tokenable;
+import com.niton.jainparse.token.Tokenizer;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.niton.parsers.grammar.GrammarFileGrammar.GRAMMAR_FILE_GRAMMAR;
 import static com.niton.parsers.grammar.GrammarFileGrammar.Property.*;
@@ -37,7 +35,7 @@ public class GrammarFileParser extends Parser<GrammarFileContent> {
     }
 
     /**
-     * @see com.niton.parser.Parser#convert(AstNode)
+     * @see com.niton.jainparse.Parser#convert(AstNode)
      */
     @Override
     public @NotNull GrammarFileContent convert(@NotNull AstNode o) {

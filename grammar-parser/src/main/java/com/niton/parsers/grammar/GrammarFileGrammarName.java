@@ -1,6 +1,6 @@
 package com.niton.parsers.grammar;
 
-import com.niton.parser.grammar.api.GrammarName;
+import com.niton.jainparse.grammar.api.GrammarName;
 
 enum GrammarFileGrammarName implements GrammarName {
 	WHITESPACE,
