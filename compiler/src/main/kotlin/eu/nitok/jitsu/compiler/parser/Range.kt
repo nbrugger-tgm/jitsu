@@ -1,8 +1,61 @@
 package eu.nitok.jitsu.compiler.parser
 
+import kotlinx.serialization.Serializable
+import kotlin.math.max
+
+@Serializable
 data class Range(val start: Location, val end: Location) : Locatable {
+    constructor(startCol: Int, startLine: Int, endCol: Int, endLine: Int) : this(
+        Location(startCol, startLine),
+        Location(endCol, endLine)
+    )
+
+    override fun format(): String = "${start.format()}-${end.format()}"
+
+    override fun absoluteFormat(): String =
+        if (start.file == null) format()
+        else "${start.file}:${start.format()}-${end.format()}"
+
+
+    override fun mark(text: String, note: String?): String {
+        val builder = StringBuilder();
+        val lines = text.split("\n").toMutableList();
+        val oneLine = start.line == end.line;
+        if (oneLine) {
+            singleLineMark(builder, note);
+            lines.add(start.line, builder.toString());
+        } else {
+            var startLine = lines[start.line - 1];
+            var endLine = lines[end.line - 1];
+            val vcol = max(startLine.length, endLine.length) + 3;
+            startLine += "<${"-".repeat((vcol - startLine.length) - 2)}+${if (note != null) " $note" else ""}";
+            endLine += "<${"-".repeat((vcol - endLine.length) - 1)}+";
+            lines[end.line - 1] = endLine;
+            lines[start.line - 1] = startLine;
+            lines.subList(start.line, end.line - 1)
+                .replaceAll { line -> line + " ".repeat(vcol - 1 - line.length) + "|" }
+        }
+        return builder.toString();
+    }
+
+    private fun singleLineMark(builder: StringBuilder, note: String?) {
+        builder.append(" ".repeat(start.column - 1));
+        builder.append("^");
+        val dashes = end.column - start.column - 1;
+        val dashesWithNote = dashes - (note?.length ?: dashes);
+        if (dashesWithNote >= 2) {
+            builder.append("-".repeat(dashesWithNote / 2));
+            builder.append(note);
+            builder.append("-".repeat(dashesWithNote / 2));
+        } else {
+            builder.append("-".repeat(dashes));
+        };
+        builder.append("^");
+        builder.append("\n");
+    }
+
     override fun toString(): String {
-        return if (start.file == null) "$start-$end" else "${start.file}:${start.charRefereneString()}-${end.charRefereneString()}";
+        return absoluteFormat();
     }
 
     fun rangeTo(location: Location): Range {
@@ -11,5 +64,9 @@ data class Range(val start: Location, val end: Location) : Locatable {
 
     fun rangeTo(range: Range): Range {
         return Range(start, range.end)
+    }
+
+    fun span(range: Range): Range {
+        return Range(if (start.isBefore(range.start)) start else range.start, range.end)
     }
 }

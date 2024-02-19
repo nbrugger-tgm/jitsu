@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 sealed class ResolvedType {
-    object String : ResolvedType()
+    data object String : ResolvedType()
 
     @Serializable
     data class Int(val bit32: BitSize) : ResolvedType()
@@ -59,7 +59,7 @@ sealed class ResolvedType {
     }
 
     @Serializable
-    object Boolean : ResolvedType()
+    data object Boolean : ResolvedType()
     @Serializable
     data class Enum(val constants: List<Located<kotlin.String>>) : ResolvedType() {
     }

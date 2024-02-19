@@ -1,10 +1,11 @@
 package eu.nitok.jitsu.compiler.ast
 
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
+import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Serializable
 
 interface AstNode {
-    val location: Location
+    val location: Range
     val warnings: MutableList<CompilerMessage>
     val errors: MutableList<CompilerMessage>
 
@@ -26,8 +27,19 @@ abstract class AstNodeImpl : AstNode {
     override val errors: MutableList<CompilerMessage> = mutableListOf()
 }
 
-typealias Location = @Serializable(with = LocationSerializer::class) eu.nitok.jitsu.compiler.parser.Location
+data class CompilerMessages(
+    val warnings: MutableList<CompilerMessage> = mutableListOf(),
+    val errors: MutableList<CompilerMessage> = mutableListOf()
+) {
+    fun warn(warning: CompilerMessage) = warnings.add(warning)
+    fun error(error: CompilerMessage) = errors.add(error)
+    fun apply(node: AstNodeImpl) {
+        node.warnings.addAll(warnings)
+        node.errors.addAll(errors)
+    }
+}
+
 interface Located<T> {
-    val location: Location;
+    val location: Range;
     val value: T;
 }
