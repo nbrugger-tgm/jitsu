@@ -1,8 +1,8 @@
 import capabilities.documentSymbols
 import capabilities.syntaxDiagnostic
 import capabilities.syntaxHighlight
-import com.niton.parser.token.ListTokenStream
-import com.niton.parser.token.Tokenizer
+import com.niton.jainparse.token.ListTokenStream
+import com.niton.jainparse.token.Tokenizer
 
 import eu.nitok.jitsu.compiler.ast.AstNode
 import eu.nitok.jitsu.compiler.ast.StatementNode

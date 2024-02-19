@@ -8,6 +8,6 @@ plugins {
 }
 
 dependencies {
-    api("com.niton.jainparse:core")
+    api("com.niton.jainparse:tokenizer")
     api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
 }

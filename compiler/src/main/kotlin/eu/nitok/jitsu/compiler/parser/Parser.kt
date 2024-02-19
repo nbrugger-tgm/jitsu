@@ -1,7 +1,5 @@
 package eu.nitok.jitsu.compiler.parser
 
-import com.niton.parser.ast.ParsingResult
-import com.niton.parser.token.Tokenizer.AssignedToken
 import eu.nitok.jitsu.compiler.ast.*
 import eu.nitok.jitsu.compiler.ast.AttributeNodeImpl.AttributeValueNode
 import eu.nitok.jitsu.compiler.ast.ExpressionNode.OperationNode

@@ -1,6 +1,6 @@
 package eu.nitok.jitsu.compiler.ast
 
-import com.niton.parser.grammar.api.GrammarName
+import com.niton.jainparse.grammar.api.GrammarName
 
 enum class CaseMatchType : GrammarName {
     CONSTANT_CASE,
