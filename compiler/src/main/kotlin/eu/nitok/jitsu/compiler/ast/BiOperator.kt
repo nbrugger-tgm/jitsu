@@ -1,8 +1,6 @@
 package eu.nitok.jitsu.compiler.ast
 
-import com.niton.jainparse.grammar.api.GrammarName
-
-enum class BiOperator(val rune: String) : GrammarName {
+enum class BiOperator(val rune: String) {
     GREATER_EQUAL(">="),
     LESS_EQUAL("<="),
     AND("&&"),
@@ -14,8 +12,4 @@ enum class BiOperator(val rune: String) : GrammarName {
     MODULO("%"),
     GREATER(">"),
     LESS("<");
-
-    override fun getName(): String {
-        return name
-    }
 }
