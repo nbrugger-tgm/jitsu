@@ -34,6 +34,18 @@ fn anonymizeName(mut employee: Person) {
 
 Note that mutable parameters are discouraged in general and mutation should more happen in [methods](#methods)
 
+## Return Values
+
+Methods often need to report values back to their caller. This values are commonly called "return values", jitsu is
+no exception. For a method to be able to return a value, use `: TYPE` at the end of the signature so that one can
+return any value of type `TYPE`. The `return` keyword is used to return the actual value.
+
+```Kotlin
+fn sum(a: int, b: int): int {
+    return a + b;
+}
+```
+
 ## Methods
 
 When a function is attached to a type to act upon it is called a `method`. Methods other than functions can access the
