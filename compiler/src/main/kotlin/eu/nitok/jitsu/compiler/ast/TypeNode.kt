@@ -104,7 +104,28 @@ sealed interface TypeNode : AstNode {
     }
 
     @Serializable
-    class ValueTypeNode(val value: ExpressionNode, override val location: Location) : TypeNode, AstNodeImpl() {
+    class StructuralInterfaceTypeNode(
+        val fields: List<StructuralFieldNode>,
+        override val location: Range
+    ) : TypeNode, AstNodeImpl(), StatementNode {
+        override fun toString(): String {
+            return "{${fields.joinToString(", ") { it.toString() }}}"
+        }
+
+        @Serializable
+        class StructuralFieldNode(
+            val name: IdentifierNode,
+            val type: TypeNode
+        ) : AstNodeImpl() {
+            override val location: Range = name.location.rangeTo(type.location)
+            override fun toString(): String {
+                return "${name.value}: $type"
+            }
+        }
+    }
+
+    @Serializable
+    class ValueTypeNode(val value: ExpressionNode, override val location: Range) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
             return value.toString()
         }
