@@ -1,9 +1,9 @@
 package eu.nitok.jitsu.compiler.diagnostic
 
 
+import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage.ErrorCode.Stage.PARSING
 import eu.nitok.jitsu.compiler.parser.Locatable
 import kotlinx.serialization.Serializable
-import org.w3c.dom.ranges.Range
 
 @Serializable
 class CompilerMessage(
@@ -17,7 +17,11 @@ class CompilerMessage(
 
     @Serializable
     enum class ErrorCode(private val stage: Stage, private val id: Int) {
-        EXPECT_EOF(Stage.PARSING, 1),;
+        EXPECT_EOF(PARSING, 1),
+        EXPECT_STATEMENT(PARSING,2),
+        IDENTIFIER_START_LETTER(PARSING, 3),
+        IDENTIFIER_ILLEGAL_CHARACTER(PARSING, 4),
+        IDENTIFIER_CONTAINS_DOLLAR(PARSING, 5),;
 
         override fun toString(): String {
             return stage.code + id
