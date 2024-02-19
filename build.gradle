@@ -18,7 +18,7 @@ subprojects {
     }
     println("Build: ${project.group}:${project.name}")
     def jUnitVersion = '5.8.+'
-    def mockitoVersion = '4.4.+'
+    def mockitoVersion = '5.10.+'
     def assertjVersion = '3.22.+'
     dependencies {
         compileOnly "org.jetbrains:annotations:20.+"

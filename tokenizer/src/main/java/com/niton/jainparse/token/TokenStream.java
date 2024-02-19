@@ -2,8 +2,10 @@ package com.niton.jainparse.token;
 
 import com.niton.jainparse.api.Location;
 
-public interface TokenStream {
-    Tokenizer.AssignedToken next();
+import java.util.List;
+
+public interface TokenStream<T extends Enum<T> & Tokenable> {
+    Tokenizer.AssignedToken<T> next();
 
     int index();
 
@@ -20,7 +22,7 @@ public interface TokenStream {
     /**
      * @return the next token without consuming it
      */
-    Tokenizer.AssignedToken peek();
+    Tokenizer.AssignedToken<T> peek();
 
     String getPreviousTokens(int count);
 
@@ -31,10 +33,14 @@ public interface TokenStream {
      * @param endIndex  exclusive
      * @return a new TokenStream with the given range. The new stream will be independent from the old one.
      */
-    TokenStream subStream(int startIndex, int endIndex);
+    TokenStream<T> subStream(int startIndex, int endIndex);
 
     int getLine();
     int getColumn();
 
     Location currentLocation();
+
+    static <T extends Enum<T> & Tokenable> TokenStream<T> of(List<Tokenizer.AssignedToken<T>> tokens) {
+        return new ListTokenStream<>(tokens);
+    }
 }

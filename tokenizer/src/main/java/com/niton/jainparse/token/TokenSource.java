@@ -19,26 +19,33 @@ import java.util.stream.Collectors;
 @Setter
 @Getter
 @EqualsAndHashCode(callSuper = false)
-public class TokenSource extends AbstractList<AssignedToken> {
+public class TokenSource<T extends Enum<T> & Tokenable> extends AbstractList<AssignedToken<T>> {
     @NonNull
     private final Reader reader;
     @Getter(AccessLevel.PRIVATE)
-    private final LinkedList<AssignedToken> readTokens = new LinkedList<>();
-
+    private final LinkedList<AssignedToken<T>> readTokens = new LinkedList<>();
+    private final Tokenizer<T> tokenizer;
     @Setter(AccessLevel.PRIVATE)
     private String buffer = "";
     @Setter(AccessLevel.PRIVATE)
     private boolean ended = false;
-
     private int chunkSize = 50;
-    private Tokenizer tokenizer = new Tokenizer();
 
-    public TokenSource(InputStream reader) {
-        this(new InputStreamReader(reader));
+    public TokenSource(InputStream reader, Tokenizer<T> tokenizer) {
+        this(new InputStreamReader(reader), tokenizer);
     }
 
-    public TokenSource(@NonNull Reader reader) {
+    public TokenSource(InputStream reader, T[] tokenTypes) {
+        this(new InputStreamReader(reader), new Tokenizer<>(tokenTypes));
+    }
+
+    public TokenSource(@NonNull Reader reader, Tokenizer<T> tokenizer) {
         this.reader = reader;
+        this.tokenizer = tokenizer;
+    }
+
+    public TokenSource(@NonNull Reader reader, T[] tokenTypes) {
+        this(reader, new Tokenizer<>(tokenTypes));
     }
 
     public void setChunkSize(int chunkSize) {
@@ -49,7 +56,7 @@ public class TokenSource extends AbstractList<AssignedToken> {
     }
 
     @Override
-    public AssignedToken get(int index) {
+    public AssignedToken<T> get(int index) {
         while (readTokens.size() <= index) {
             if (ended) {
                 outOfBoundsException(index);
@@ -76,7 +83,7 @@ public class TokenSource extends AbstractList<AssignedToken> {
         if (ended) {
             throw new IllegalStateException("All tokens read, no more tokens available");
         }
-        List<AssignedToken> newTokens = new ArrayList<>();
+        List<AssignedToken<T>> newTokens = new ArrayList<>();
         while (newTokens.size() < 2 && !ended) {
             enlargeBuffer();
             var tokenResult = tokenizer.tokenize(buffer);
@@ -86,15 +93,16 @@ public class TokenSource extends AbstractList<AssignedToken> {
             newTokens = tokenResult.unwrap();
             newTokens = newTokens.stream()
                     .filter(
-                            e -> !e.getName().equals(DefaultToken.EOF.name())
+                            e -> e.getType() != DefaultToken.EOF
                     )
                     .collect(Collectors.toList());
         }
         if (!ended) {
+            //remove the last token because the last token might be incomplete if it is a multi-char token
             newTokens.remove(newTokens.size() - 1);
         }
         readTokens.addAll(newTokens);
-        AssignedToken lastParsed = newTokens.get(newTokens.size() - 1);
+        AssignedToken<T> lastParsed = newTokens.get(newTokens.size() - 1);
         buffer = buffer.substring(lastParsed.getEnd());
     }
 

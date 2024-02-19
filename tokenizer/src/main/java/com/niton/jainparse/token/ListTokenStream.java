@@ -11,16 +11,16 @@ import java.util.List;
 /**
  * A Stream of tokens that supports stack based navigation
  */
-public class ListTokenStream implements TokenStream {
+class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
     private final LinkedList<Integer> levelIndexes = new LinkedList<>();
     private final LinkedList<Integer> levelLines = new LinkedList<>();
     private final LinkedList<Integer> levelColumns = new LinkedList<>();
-    private final List<AssignedToken> tokens;
+    private final List<AssignedToken<T>> tokens;
     @Getter
     @Setter
     private int recursionLevelLimit = 500;
 
-    public ListTokenStream(List<AssignedToken> tokens) {
+    public ListTokenStream(List<AssignedToken<T>> tokens) {
         this.tokens = tokens;
         levelIndexes.push(0);
         levelLines.push(1);
@@ -31,7 +31,7 @@ public class ListTokenStream implements TokenStream {
      * Returns the current marked assigned token and jumps one further
      */
     @Override
-    public AssignedToken next() {
+    public AssignedToken<T> next() {
         try {
             var tkn = tokens.get(index());
             if (tkn.getValue().contains("\n")) {
@@ -102,7 +102,7 @@ public class ListTokenStream implements TokenStream {
         levelLines.pop();
     }
 
-    AssignedToken get(int index) {
+    AssignedToken<T> get(int index) {
         return tokens.get(index);
     }
 
@@ -117,7 +117,7 @@ public class ListTokenStream implements TokenStream {
     }
 
     @Override
-    public AssignedToken peek() {
+    public AssignedToken<T> peek() {
         return tokens.get(index());
     }
 
@@ -141,10 +141,10 @@ public class ListTokenStream implements TokenStream {
     }
 
     @Override
-    public TokenStream subStream(int startIndex, int endIndex) {
+    public TokenStream<T> subStream(int startIndex, int endIndex) {
         if (startIndex > endIndex)
             throw new IllegalArgumentException("Start index must be smaller than end index");
-        var subStream = new ListTokenStream(tokens.subList(0, endIndex));
+        var subStream = new ListTokenStream<>(tokens.subList(0, endIndex));
         subStream.index(startIndex);
         return subStream;
     }
