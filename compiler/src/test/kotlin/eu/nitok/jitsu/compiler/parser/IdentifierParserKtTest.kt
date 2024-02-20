@@ -3,7 +3,7 @@ package eu.nitok.jitsu.compiler.parser
 import com.niton.jainparse.token.DefaultToken
 import com.niton.jainparse.token.TokenSource
 import com.niton.jainparse.token.TokenStream
-import org.assertj.core.api.Assertions
+import eu.nitok.jitsu.compiler.parser.parsers.parseIdentifier
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.io.StringReader
