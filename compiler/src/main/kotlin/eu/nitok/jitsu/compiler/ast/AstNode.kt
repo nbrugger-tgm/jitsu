@@ -50,3 +50,4 @@ interface Located<T> {
     val location: Range;
     val value: T;
 }
+data class LocatedImpl<T>(override val location: Range, override val value: T) : Located<T>

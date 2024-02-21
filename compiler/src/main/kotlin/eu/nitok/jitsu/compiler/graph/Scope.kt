@@ -1,7 +1,10 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.compiler.ast.IdentifierNode
 import eu.nitok.jitsu.compiler.ast.Located
-import eu.nitok.jitsu.compiler.ast.AstNode
+import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
+import eu.nitok.jitsu.compiler.parser.Locatable
+import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 
@@ -10,24 +13,46 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 class Scope(val parent: Scope?) {
-    fun register(name: Located<String>, type: ()->AstNode<ResolvedType>) {
-        val existing = types[name.first];
-        if(existing != null) {
-           error("Type with name '${name.first}' already exists : {}" to name.second, existing.value)
+    val contants: MutableList<Constant<@Contextual Any>> = mutableListOf();
+    val types: MutableMap<String, ResolvedType.NamedType> = mutableMapOf()
+    val functions: MutableList<eu.nitok.jitsu.compiler.graph.Function> = mutableListOf()
+    val variable: MutableList<Variable> = mutableListOf()
+    val errors: MutableList<CompilerMessage> = mutableListOf()
+    val warnings: MutableList<CompilerMessage> = mutableListOf()
+    fun register(type: ResolvedType.NamedType) {
+        val existing = types[type.name.value];
+        if (existing != null) {
+            error(
+                "Type with name '${type.name.value}' already exists : {}",
+                type.name.location,
+                listOf(CompilerMessage.Hint("Already defined here", existing.name.location))
+            )
             return
         }
-        types[name.first] = lazy { type() to name.second }
+        types[type.name.value] = type
     }
 
-    fun error(message: Located<String>, vararg elements: Located<Any>) {
-        errors.add(Error(message, listOf(*elements)))
+    fun error(message: CompilerMessage) {
+        errors.add(message)
     }
 
-    val contants: MutableList<Constant<@Contextual Any>> = mutableListOf();
-    val types: MutableMap<String, Lazy<Located<AstNode<ResolvedType>>>> = mutableMapOf()
-    val functions: MutableList<Function> = mutableListOf()
-    val variable: MutableList<Variable> = mutableListOf()
-    val errors: MutableList<Error> = mutableListOf()
-    @Serializable
-    data class Error(val message: Located<String>, val elements: List<Located<@Contextual Any>>) {}
+    fun error(message: String, location: Locatable, hints: List<CompilerMessage.Hint> = emptyList()) {
+        errors.add(CompilerMessage(message, location, hints))
+    }
+
+    fun warning(message: CompilerMessage) {
+        warnings.add(message)
+    }
+
+    fun warning(message: String, location: Locatable, hints: List<CompilerMessage.Hint> = emptyList()) {
+        warnings.add(CompilerMessage(message, location, hints))
+    }
+
+    fun resolveType(reference: Located<String>) : ResolvedType.NamedType {
+        val type = types[reference.value]
+        if (type == null) {
+            error("Type with name '$reference' does not exist", reference.location)
+        }
+        return ResolvedType.NamedType.Alias(reference, lazy { ResolvedType.Undefined })
+    }
 }

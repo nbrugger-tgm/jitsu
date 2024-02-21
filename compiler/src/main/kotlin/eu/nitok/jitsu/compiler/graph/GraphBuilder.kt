@@ -4,70 +4,63 @@ import eu.nitok.jitsu.compiler.ast.*
 
 
 import eu.nitok.jitsu.compiler.ast.StatementNode.*
-import eu.nitok.jitsu.compiler.model.BitSize
 
 //
-fun buildGraph(file: List<AstNode<StatementNode>>): Scope {
+fun buildGraph(file: SourceFileNode): Scope {
     val rootScope = Scope(null)//top level scopes have no parent
-    for (statementNode in file) {
-        if (statementNode is AstNode.Error)
-            continue;
-        when (val statement = (statementNode as AstNode.Node).value) {
+    for (statement in file.statements) {
+        when (statement) {
             is IfNode,
             is ReturnNode,
             is MethodInvocationNode,
             is FunctionCallNode,
             is AssignmentNode,
-            is SwitchNode -> rootScope.error("Statement not allowed at root level" to statement.location)
+            is SwitchNode -> rootScope.error("Statement not allowed at root level", statement.location)
 
-            is CodeBlockNode -> rootScope.error("Code block not allowed at root level" to statement.location)
-            is TypeDefinitionNode -> buildGraph(statement, rootScope)
+            is CodeBlockNode -> rootScope.error("Code block not allowed at root level", statement.location)
+            is TypeAliasNode -> buildGraph(statement, rootScope)
             is VariableDeclarationNode -> TODO()
             is TypeNode.InterfaceTypeNode -> TODO()
             is LineCommentNode -> TODO()
             is YieldStatement -> TODO()
-            is FunctionDeclarationNode -> {
-                if (statement.name != null) buildFunctionGraph(statement, rootScope)
-                else rootScope.error("root level function must have a name" to statement.keywordLocation)
-            }
+            is FunctionDeclarationNode -> buildFunctionGraph(statement, rootScope)
         }
     }
     return rootScope
 }
 
-fun buildGraph(statement: TypeDefinitionNode, scope: Scope) {
-    val name = statement.name
-    if (name is AstNode.Node) {
-        scope.register(name.value) {
-            statement.type.map { buildGraph(it, scope) }
-        }
-    }
+fun buildGraph(statement: TypeAliasNode, scope: Scope) {
+    val alias = ResolvedType.NamedType.Alias(statement.name, buildGraph(statement.type, scope))
+    scope.register(alias);
 }
 
-fun buildGraph(it: TypeNode, scope: Scope): ResolvedType {
-    return when (it) {
-        is TypeNode.ArrayTypeNode -> buildGraph(it, scope)//TODO: reduce multi dimension
-        is TypeNode.EnumDeclarationNode -> buildGraph(it)
-        is TypeNode.FloatTypeNode -> ResolvedType.Float(it.bitSize.orNull() ?: BitSize.BIT_32)
-        is TypeNode.FunctionTypeSignatureNode -> buildGraph(it, scope)
-        is TypeNode.IntTypeNode -> ResolvedType.Int(it.bitSize.orNull() ?: BitSize.BIT_32)
-        is TypeNode.InterfaceTypeNode -> buildGraph(it, scope)
-        is TypeNode.NamedTypeNode -> ResolvedType.Named(it.name)
-        is TypeNode.StringTypeNode -> TODO()
-        is TypeNode.UnionTypeNode -> TODO()
-        is TypeNode.ValueTypeNode -> TODO()
-        is TypeNode.VoidTypeNode -> TODO()
+fun buildGraph(it: TypeNode, scope: Scope): Lazy<ResolvedType> {
+    return lazy {
+        when (it) {
+            is TypeNode.FloatTypeNode -> ResolvedType.Float(it.bitSize)
+            is TypeNode.IntTypeNode -> ResolvedType.Int(it.bitSize)
+            is TypeNode.ArrayTypeNode -> buildGraph(it, scope)//TODO: reduce multi dimension
+            is TypeNode.EnumDeclarationNode -> buildGraph(it)
+            is TypeNode.FunctionTypeSignatureNode -> buildGraph(it, scope)
+            is TypeNode.InterfaceTypeNode -> buildGraph(it, scope)
+            is TypeNode.StringTypeNode -> TODO()
+            is TypeNode.UnionTypeNode -> TODO()
+            is TypeNode.ValueTypeNode -> TODO()
+            is TypeNode.VoidTypeNode -> TODO()
+            is TypeNode.StructuralInterfaceTypeNode -> TODO()
+            is TypeNode.NamedTypeNode -> scope.resolveType(it.name)
+        }
     }
 }
 
 private fun buildGraph(
     it: TypeNode.InterfaceTypeNode,
     scope: Scope
-) = ResolvedType.Interface(it.functions.mapNotNull { it.orNull() }
-    .mapNotNull { it.name.orNull()?.to(it.typeSignature) }
-    .associateBy(
-        { func -> func.first.value },
-        { func -> buildGraph(func.second, scope) to func.first.location }
+) = ResolvedType.NamedType.Interface(
+    it.name,
+    it.functions.associateBy(
+        { func -> func.name.value },
+        { func -> LocatedImpl(func.typeSignature.location, buildGraph(func.typeSignature, scope)) }
     )
 )
 
@@ -75,29 +68,26 @@ private fun buildGraph(
     it: TypeNode.FunctionTypeSignatureNode,
     scope: Scope
 ) = ResolvedType.FunctionTypeSignature(
-    it.returnType?.map { buildGraph(it, scope) }?.orNull(),
-    it.parameters.mapNotNull {
-        it.map {
-            val name = it.name.orNull() ?: return@map null;
-            val type = it.type.orNull() ?: return@map null;
-            ResolvedType.FunctionTypeSignature.Parameter(name, buildGraph(type, scope))
-        }.orNull()
+    it.returnType?.run { buildGraph(this, scope) },
+    it.parameters.map {
+        it.run {
+            val type = type?.run { buildGraph(this, scope) } ?: lazy { ResolvedType.Undefined };
+            ResolvedType.FunctionTypeSignature.Parameter(name, type)
+        }
     }
 )
 
-private fun buildGraph(enum: TypeNode.EnumDeclarationNode): ResolvedType.Enum {
-    return ResolvedType.Enum(enum.constants.mapNotNull { node ->
-        node.map { it.name to it.location }.orNull()
-    })
+private fun buildGraph(enum: TypeNode.EnumDeclarationNode): ResolvedType.NamedType.Enum {
+    return ResolvedType.NamedType.Enum(enum.name, enum.constants)
 }
 
 private fun buildGraph(
     it: TypeNode.ArrayTypeNode,
     scope: Scope
 ) =
-    ResolvedType.ComplexType.Array(
-        it.type.map { buildGraph(it, scope) },
-        it.fixedSize?.map { buildExpressionGraph(it, scope) }?.orNull()
+    ResolvedType.Array(
+        buildGraph(it.type, scope),
+        it.fixedSize?.run { buildExpressionGraph(this, scope) }
     )
 
 fun buildExpressionGraph(it: ExpressionNode, scope: Scope): Expression {
@@ -276,16 +266,16 @@ fun resolveConstantOperation(scope: Scope, expression: ExpressionNode.OperationN
 }
 
 private fun resolveIntConstant(
-    explicitType: DeclaredType?,
+    explicitType: ResolvedType?,
     expression: ExpressionNode.NumberLiteralNode.IntegerLiteralNode,
     scope: Scope
 ): Constant<Any>? {
     explicitType?.let {
-        when (val type = it.value) {
-            is ResolvedType.Int -> return Constant.IntConstant(expression.value.toLong(), type, expression.location)
-            is ResolvedType.UInt -> return Constant.UIntConstant(expression.value.toULong(), type, expression.location)
+        when (it) {
+            is ResolvedType.Int -> return Constant.IntConstant(expression.value.toLong(), it, expression.location)
+            is ResolvedType.UInt -> return Constant.UIntConstant(expression.value.toULong(), it, expression.location)
             else -> {
-                scope.error("Cannot assign integer to {}" to expression.location, it)
+                scope.error("Cannot assign integer to $it", expression.location)
                 return null;
             }
         }

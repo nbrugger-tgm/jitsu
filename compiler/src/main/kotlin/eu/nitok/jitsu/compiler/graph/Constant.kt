@@ -54,8 +54,7 @@ sealed class Constant<out T> : Expression {
     }
 
     class BooleanConstant(override val value: Boolean, override val originLocation: Range) : Constant<Boolean>() {
-        override val type: ResolvedType get() = ResolvedType.Boolean()
+        override val type: ResolvedType get() = ResolvedType.Boolean
         override val literal: String get() = value.toString()
-
     }
 }

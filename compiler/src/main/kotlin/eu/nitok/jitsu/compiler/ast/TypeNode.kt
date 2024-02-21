@@ -24,14 +24,14 @@ sealed interface TypeNode : AstNode {
 
     @Serializable
     class InterfaceTypeNode(
-        val name: IdentifierNode?,
+        val name: IdentifierNode,
         val functions: List<FunctionSignatureNode>,
         override val location: Range,
         val keywordLocation: Range,
         override val attributes: List<AttributeNodeImpl>
     ) : TypeNode, AstNodeImpl(), CanHaveAttributes, StatementNode {
         override fun toString(): String {
-            return name?.value ?: "anonymous interface"
+            return name.value ?: "anonymous interface"
         }
 
         @Serializable
@@ -66,6 +66,7 @@ sealed interface TypeNode : AstNode {
 
     @Serializable
     class EnumDeclarationNode(
+        val name: IdentifierNode,
         val constants: List<IdentifierNode>,
         override val location: Range,
         val keywordLocation: Range
@@ -86,6 +87,14 @@ sealed interface TypeNode : AstNode {
         }
     }
 
+    /**
+     * This node is used when a type is referenced by name
+     * ```
+     * type MyType = OtherType
+     * var x: Element[]
+     * ```
+     * * In this example, `OtherType` and `Element` are NamedTypeNodes
+     */
     @Serializable
     class NamedTypeNode(
         val name: IdentifierNode,
@@ -108,7 +117,7 @@ sealed interface TypeNode : AstNode {
     class StructuralInterfaceTypeNode(
         val fields: List<StructuralFieldNode>,
         override val location: Range
-    ) : TypeNode, AstNodeImpl(), StatementNode {
+    ) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
             return "{${fields.joinToString(", ") { it.toString() }}}"
         }
