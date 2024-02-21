@@ -45,7 +45,7 @@ fun StatementNode.documentSymbols(): List<DocumentSymbol> {
         is StatementNode.MethodInvocationNode -> method.symbols { it.documentSymbols() } + parameters.flatMap { it.symbols { it.documentSymbols() } }
         is StatementNode.ReturnNode -> expression?.symbols { it.documentSymbols() } ?: emptyList()
         is StatementNode.SwitchNode -> item.symbols { it.documentSymbols() } + cases.flatMap { it.symbols { it.documentSymbols() } }
-        is StatementNode.TypeDefinitionNode -> type.symbols {
+        is StatementNode.TypeAliasNode -> type.symbols {
             it.documentSymbols(
                 location,
                 name.map { it.first }.toString(),

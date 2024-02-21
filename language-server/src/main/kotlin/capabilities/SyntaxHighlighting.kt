@@ -181,7 +181,7 @@ private fun StatementNode.syntaxTokens(): List<SemanticToken> {
             )
         ) + item.syntax { it.syntaxTokens() } + cases.flatMap { it.syntax { it.syntaxTokens() } }
 
-        is StatementNode.TypeDefinitionNode ->
+        is StatementNode.TypeAliasNode ->
             listOf(
                 token(KEYWORD, keywordLocation),
                 when (val type = type) {

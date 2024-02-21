@@ -71,7 +71,7 @@ internal fun syntaxDiagnostic(rawAst: StatementNode): List<Diagnostic> {
         is StatementNode.SwitchNode -> rawAst.item.unwarp { syntaxDiagnostic(it) } +
                 rawAst.cases.flatMap { it.unwarp { innerIt -> syntaxDiagnostic(innerIt) } }
 
-        is StatementNode.TypeDefinitionNode -> rawAst.type.unwarp { syntaxDiagnostic(it) } + rawAst.name.unwarp { listOf() }
+        is StatementNode.TypeAliasNode -> rawAst.type.unwarp { syntaxDiagnostic(it) } + rawAst.name.unwarp { listOf() }
         is StatementNode.VariableDeclarationNode -> rawAst.name.unwarp { listOf() } +
                 (rawAst.type?.unwarp { syntaxDiagnostic(it) } ?: listOf()) +
                 (rawAst.value?.unwarp { syntaxDiagnostic(it) } ?: listOf())

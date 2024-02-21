@@ -21,7 +21,7 @@ sealed interface StatementNode : AstNode {
 
     @Serializable
     class FunctionDeclarationNode(
-        val name: IdentifierNode?,
+        val name: IdentifierNode,
         val parameters: List<ParameterNode>,
         val returnType: TypeNode?,
         val body: CodeBlockNode?,
@@ -143,9 +143,9 @@ sealed interface StatementNode : AstNode {
     }
 
     @Serializable
-    class TypeDefinitionNode(
-        val name: IdentifierNode?,
-        @SerialName("definition") val type: TypeNode?,
+    class TypeAliasNode(
+        val name: IdentifierNode,
+        @SerialName("definition") val type: TypeNode,
         override val location: Range,
         val keywordLocation: Range,
         override val attributes: List<AttributeNodeImpl>
