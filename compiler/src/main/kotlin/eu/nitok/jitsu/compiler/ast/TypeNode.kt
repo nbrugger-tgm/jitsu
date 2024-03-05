@@ -36,13 +36,6 @@ sealed interface TypeNode : AstNode {
     }
 
     @Serializable
-    class StringTypeNode(override val location: Range) : TypeNode, AstNodeImpl(listOf()) {
-        override fun toString(): String {
-            return "string"
-        }
-    }
-
-    @Serializable
     class ArrayTypeNode(
         @SerialName("type_definition") val type: TypeNode,
         val fixedSize: ExpressionNode?,

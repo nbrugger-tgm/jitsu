@@ -149,7 +149,6 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
                         is TypeNode.FloatTypeNode,
                         is TypeNode.IntTypeNode,
                         is TypeNode.NameTypeNode,
-                        is TypeNode.StringTypeNode,
                         is TypeNode.VoidTypeNode,
                         is TypeNode.ValueTypeNode -> TYPE
 
@@ -161,7 +160,7 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
             )
 
         is VariableDeclarationNode -> listOfNotNull(
-            token(KEYWORD, keywordLocation),
+            token(KEYWORD, keywordLocation.run { customLogger.println(this); this }),
             name?.location?.let { token(VARIABLE, it) }
         )
 
@@ -172,7 +171,6 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
                 constants.map { token(ENUMMEMBER, it.location) }
 
         is TypeNode.FloatTypeNode,
-        is TypeNode.StringTypeNode,
         is TypeNode.IntTypeNode,
         is BooleanLiteralNode,
         is TypeNode.VoidTypeNode -> listOf(token(KEYWORD, location))

@@ -40,7 +40,6 @@ fun buildGraph(it: TypeNode, scope: Scope): Lazy<ResolvedType> {
             is TypeNode.IntTypeNode -> ResolvedType.Int(it.bitSize)
             is TypeNode.ArrayTypeNode -> buildGraph(it, scope)//TODO: reduce multi dimension
             is TypeNode.FunctionTypeSignatureNode -> buildGraph(it, scope)
-            is TypeNode.StringTypeNode -> TODO()
             is TypeNode.UnionTypeNode -> TODO()
             is TypeNode.ValueTypeNode -> TODO()
             is TypeNode.VoidTypeNode -> TODO()

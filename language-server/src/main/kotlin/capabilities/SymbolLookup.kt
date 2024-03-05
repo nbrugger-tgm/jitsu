@@ -51,9 +51,7 @@ fun StatementNode.documentSymbols(): List<DocumentSymbol> {
                 range(location),
                 range(name?.location ?: location),
                 type.toString(),
-                (value?.documentSymbols() ?: emptyList()) +
-                        (type?.documentSymbols(type!!.location, "anonymous\$${getArtificalId()}", type!!.location) ?: emptyList())
-
+                value?.documentSymbols() ?: emptyList()
             )
         )
 
@@ -110,7 +108,6 @@ private fun TypeNode.documentSymbols(location: Range, name: String, nameLocation
         is TypeNode.FloatTypeNode,
         is TypeNode.IntTypeNode,
         is TypeNode.NameTypeNode,
-        is TypeNode.StringTypeNode,
         is TypeNode.ValueTypeNode -> listOf(
             DocumentSymbol(
                 name,
