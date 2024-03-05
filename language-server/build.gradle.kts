@@ -11,3 +11,7 @@ dependencies {
 application {
     mainClass.set("LauncherKt")
 }
+
+tasks.run.configure {
+    args("tcp")
+}
