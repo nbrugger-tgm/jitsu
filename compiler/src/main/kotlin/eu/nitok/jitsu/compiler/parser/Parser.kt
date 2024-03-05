@@ -19,7 +19,7 @@ fun parseFile(txt: String): SourceFileNode {
     var statements = mutableListOf<StatementNode>()
     val sourceFileNode = SourceFileNode(statements)
     while (tokens.hasNext()) {
-        tokens.skip(WHITESPACE);
+        tokens.skip(WHITESPACE, NEW_LINE);
         when (val x = parseStatement(tokens)) {
             is StatementNode -> statements.add(x);
             null -> {
@@ -114,7 +114,7 @@ fun parseExplicitType(
         messages.error("Expected a type definition starting with a ':' after the field name", tokens.location)
         tokens.location
     } else {
-        tokens.skip(WHITESPACE)
+        tokens.skip(WHITESPACE, NEW_LINE)
     }
     val type = parseType(tokens);
     return type
