@@ -4,7 +4,7 @@
 
 plugins {
     id("eu.nitok.jitsu.kotlin-library-conventions")
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.10"
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.20"
 }
 
 dependencies {

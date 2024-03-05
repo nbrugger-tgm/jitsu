@@ -12,6 +12,10 @@ repositories {
     mavenCentral()
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
 dependencies {
     constraints {
 
