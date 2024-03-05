@@ -4,20 +4,14 @@ import com.niton.jainparse.token.DefaultToken.*
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.IdentifierNode
 import eu.nitok.jitsu.compiler.ast.withMessages
-import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.parser.Tokens
 import eu.nitok.jitsu.compiler.parser.location
 import eu.nitok.jitsu.compiler.parser.range
 import kotlin.jvm.optionals.getOrElse
-import kotlin.jvm.optionals.getOrNull
 
-fun parseIdentifier(tokens: Tokens): IdentifierNode {
+fun parseIdentifier(tokens: Tokens): IdentifierNode? {
     val firstToken = tokens.range {
-        tokens.nextOptional().getOrElse {
-            val eofNode = IdentifierNode(tokens.location.toRange(), "")
-            eofNode.error(CompilerMessage("Expected identifier", tokens.location.toRange()))
-            return eofNode
-        }
+        tokens.nextOptional().getOrElse { return null }
     }
     val messages = CompilerMessages()
     when (firstToken.value.type) {
@@ -27,7 +21,7 @@ fun parseIdentifier(tokens: Tokens): IdentifierNode {
         )
 
         LETTERS -> {}
-        else -> messages.error("Identifiers have to start with letters", firstToken.location)
+        else -> return null;
     }
     var value: String = firstToken.value.value;
     while (tokens.hasNext()) {

@@ -7,6 +7,7 @@ import com.niton.jainparse.token.TokenStream
 import com.niton.jainparse.token.Tokenizer
 import eu.nitok.jitsu.compiler.ast.*
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
+import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage.Hint
 import eu.nitok.jitsu.compiler.parser.parsers.parseFunction
 import eu.nitok.jitsu.compiler.parser.parsers.parseIdentifier
 import eu.nitok.jitsu.compiler.parser.parsers.parseStructuralInterface
@@ -37,6 +38,7 @@ fun Tokens.skip(vararg toSkip: DefaultToken) {
         this.next()
     }
 }
+
 fun Tokens.skip(n: Int = 1) {
     var count = n;
     while (count-- > 0 && hasNext()) {
@@ -53,17 +55,18 @@ private fun tokenize(txt: String): Tokens {
 }
 
 private fun parseStatement(tokens: Tokens): StatementNode? {
-    return parseFunction(tokens)?: parseExecutableStatement(tokens) {
+    return parseFunction(tokens) ?: parseExecutableStatement(tokens) {
         parseVariableDeclaration(it) ?: parseAssignment(it)
     }
 }
 
 private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> StatementNode?): StatementNode? {
-    val res = statmentFn(tokens)?: return null;
+    val res = statmentFn(tokens) ?: return null;
+    val endOfStatementPos = tokens.location;
     tokens.skipWhitespace()
     val semicolon = tokens.peekOptional();
-    if(semicolon.map { it.type }.orElse(EOF) != SEMICOLON) {
-        res.error(CompilerMessage("Expect semicolon at end of statement!", tokens.location))
+    if (semicolon.map { it.type }.orElse(EOF) != SEMICOLON) {
+        res.error(CompilerMessage("Expect semicolon at end of statement!", endOfStatementPos))
     } else {
         tokens.skip()
     }
@@ -72,34 +75,29 @@ private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> Sta
 
 fun parseVariableDeclaration(tokens: Tokens): StatementNode.VariableDeclarationNode? {
     val kw = tokens.keyword("var") ?: return null;
+    val messages = CompilerMessages()
     tokens.skipWhitespace();
     val name = parseIdentifier(tokens);
     tokens.skipWhitespace();
-    val type = parseExplicitType(tokens)
+    val type = parseOptionalExplicitType(tokens, messages::error)
     tokens.skipWhitespace();
     val eq = tokens.keyword(EQUAL);
-    val messages = CompilerMessages()
-    if(eq == null) {
+    if (eq == null) {
         messages.error("Variables need an initial value!", tokens.location)
     }
     val expression = parseExpression(tokens);
     return StatementNode.VariableDeclarationNode(name, type, expression, kw.rangeTo(expression.location), kw);
 }
 
-fun parseExplicitType(tokens: Tokens): TypeNode? {
-    val colon = tokens.keyword(DefaultToken.COLON) ?: return null;
-    tokens.skipWhitespace()
-    val type = parseType(tokens);
-    return type;
-}
 
-fun Tokens.skipWhitespace(){
+
+fun Tokens.skipWhitespace() {
     skip(WHITESPACE, NEW_LINE)
 }
 
 fun Tokens.keyword(s: DefaultToken): Range? {
     elevate()
-    if(!hasNext()) return null;
+    if (!hasNext()) return null;
     val token = range { next() }
     return if (token.value.type == s) {
         commit()
@@ -110,28 +108,40 @@ fun Tokens.keyword(s: DefaultToken): Range? {
     }
 }
 
-fun parseType(tokens: Tokens): TypeNode {
-    val firstType = parseSingleType(tokens);
+fun parseType(tokens: Tokens): TypeNode? {
+    val firstType = parseSingleType(tokens) ?: return null;
     val union = parseUnion(firstType, tokens);
     return union ?: firstType;
 }
 
-fun parseSingleType(tokens: Tokens): TypeNode {
+fun parseSingleType(tokens: Tokens): TypeNode? {
     val structuralInterface = parseStructuralInterface(tokens);
     if (structuralInterface != null) {
         return structuralInterface;
     }
-    val typeReference = parseIdentifier(tokens)
+    val typeReference = parseIdentifier(tokens) ?: return null;
     val namedType = TypeNode.NameTypeNode(typeReference, listOf(), typeReference.location);
     return namedType;
 }
-
+fun parseOptionalExplicitType(tokens: Tokens, messages: (CompilerMessage) -> Unit): TypeNode? {
+    val colon = tokens.keyword(COLON) ?: return null;
+    tokens.skipWhitespace()
+    val type = parseType(tokens)
+    if (type == null) {
+        messages(
+            CompilerMessage(
+                "Expected type", tokens.location, Hint("Colon starts type definition", colon)
+            )
+        );
+    }
+    return type;
+}
 fun parseExplicitType(
     tokens: Tokens,
     messages: CompilerMessages
-): TypeNode {
+): TypeNode? {
     if (tokens.keyword(COLON) == null) {
-        messages.error("Expected a type definition starting with a ':' after the field name", tokens.location)
+        messages.error("Expected a type definition starting with a ':'", tokens.location)
         tokens.location
     } else {
         tokens.skipWhitespace()
@@ -141,26 +151,31 @@ fun parseExplicitType(
 }
 
 fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode.UnionTypeNode? {
-    if(!tokens.hasNext()) return null;
+    if (!tokens.hasNext()) return null;
     tokens.elevate()
-    val pipe = tokens.next()
+    val (pipe, pipeLocation) = tokens.range { next() }
     if (pipe.type != PIPE) {
         tokens.rollback()
         return null;
     }
     val types = mutableListOf(firstType);
-    while (true) {
+    val messages = CompilerMessages();
+    while (tokens.hasNext()) {
         tokens.skipWhitespace();
         val type = parseSingleType(tokens);
-        types.add(type);
+        if(type == null) {
+            messages.error(CompilerMessage("Expect type for union", tokens.location, Hint("Union starts here", pipeLocation)))
+        } else {
+            types.add(type);
+        }
         tokens.skipWhitespace();
-        if (tokens.peek().type == PIPE) {
+        if (tokens.peekOptional().getOrNull()?.type == PIPE) {
             tokens.next()
         } else {
             break;
         }
     }
-    return TypeNode.UnionTypeNode(types, firstType.location.rangeTo(types.last().location));
+    return TypeNode.UnionTypeNode(types);
 }
 
 fun parseExpression(tokens: TokenStream<DefaultToken>): ExpressionNode {
@@ -169,10 +184,10 @@ fun parseExpression(tokens: TokenStream<DefaultToken>): ExpressionNode {
 
 fun parseAssignment(tokens: Tokens): StatementNode.AssignmentNode? {
     tokens.elevate()
-    val kw = parseIdentifier(tokens);
+    val kw = parseIdentifier(tokens)?: return null;
     tokens.skipWhitespace();
     val eq = tokens.keyword(EQUAL);
-    if(eq == null) {
+    if (eq == null) {
         tokens.rollback()
         return null
     }
@@ -199,10 +214,7 @@ inline fun <T> Tokens.range(action: Tokens.() -> T): Located<T> {
     val start = location
     val res = action()
     val end = location
-    return object : Located<T> {
-        override val location = start.rangeTo(end);
-        override val value = res
-    };
+    return Located(res, start.rangeTo(end))
 }
 
 val Tokens.location: Location

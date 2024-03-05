@@ -21,16 +21,17 @@ sealed interface StatementNode : AstNode {
 
     @Serializable
     class FunctionDeclarationNode(
-        val name: IdentifierNode,
+        val name: IdentifierNode?,
         val parameters: List<ParameterNode>,
         val returnType: TypeNode?,
         val body: CodeBlockNode?,
         val keywordLocation: Range,
         override val attributes: List<AttributeNode>
-    ) : AstNodeImpl(parameters + name + listOfNotNull(returnType, body) + attributes), StatementNode, ExpressionNode,
+    ) : AstNodeImpl(parameters + listOfNotNull(name, returnType, body) + attributes), StatementNode, ExpressionNode,
         CanHaveAttributes {
         override val location: Range = keywordLocation.rangeTo(
-            body?.location ?: returnType?.location ?: parameters.lastOrNull()?.location ?: name.location
+            body?.location ?: returnType?.location ?:
+            parameters.lastOrNull()?.location ?: name?.location ?: keywordLocation
         )
 
         @Serializable

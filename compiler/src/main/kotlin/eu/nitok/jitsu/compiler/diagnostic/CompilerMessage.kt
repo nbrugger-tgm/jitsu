@@ -9,6 +9,7 @@ data class CompilerMessage(
     val location: Locatable,
     val hints: List<Hint> = emptyList()
 ) {
+    constructor(message: String, location: Locatable, vararg hints: Hint): this(message, location, hints.toList())
     @Serializable
     data class Hint(val message: String, val location: Locatable) {
         override fun toString(): String {

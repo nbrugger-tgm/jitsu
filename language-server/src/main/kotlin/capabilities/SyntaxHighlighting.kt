@@ -7,7 +7,6 @@ import eu.nitok.jitsu.compiler.ast.ExpressionNode.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode.ParameterNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.NamedTypeDeclarationNode.EnumDeclarationNode
-import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseBodyNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode
 import eu.nitok.jitsu.compiler.parser.Range
 import flatMap
@@ -135,7 +134,7 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
         is FunctionCallNode -> listOf(token(FUNCTION, function.location))
         is FunctionDeclarationNode -> listOfNotNull(
             token(KEYWORD, keywordLocation),
-            token(FUNCTION, name.location)
+            name?.let { token(FUNCTION, it.location) }
         )
         is IfNode -> listOf(token(KEYWORD, keywordLocation))
         is MethodInvocationNode -> listOf(token(METHOD, method.location))

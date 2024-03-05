@@ -15,19 +15,19 @@ fun StatementNode.documentSymbols(): List<DocumentSymbol> {
         is StatementNode.CodeBlockNode.SingleExpressionCodeBlock -> expression.documentSymbols()
         is StatementNode.CodeBlockNode.StatementsCodeBlock -> statements.flatMap { it.documentSymbols() }
         is StatementNode.FunctionCallNode -> listOf()
-        is StatementNode.FunctionDeclarationNode -> listOf(
+        is StatementNode.FunctionDeclarationNode -> if(name != null) listOf(
             DocumentSymbol(
-                name.value,
+                name!!.value,
                 SymbolKind.Function,
                 range(location),
-                range(name.location),
+                range(name!!.location),
                 "(${
                     parameters.joinToString(", ") { it.toString() }
                 }) ${if (returnType != null) " -> $returnType" else ""}",
                 parameters.flatMap { it.documentSymbols() } +
                         ((body as StatementNode?)?.documentSymbols() ?: listOf())
             )
-        )
+        ) else listOf()
 
         is StatementNode.IfNode -> {
             val elseNodes = elseStatement?.let {
@@ -159,7 +159,7 @@ private fun TypeNode.documentSymbols(location: Range, name: String, nameLocation
                 range(it.location),
                 range(it.name.location),
                 it.toString(),
-                it.type.documentSymbols(it.type.location, "anonymous\$structural\$interface", it.type.location)
+                it.type?.let { documentSymbols(it.location, "anonymous\$si\$${getArtificalId()}", it.location) }?: listOf()
             )
         }
     }
