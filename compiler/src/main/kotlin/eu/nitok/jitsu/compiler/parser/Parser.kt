@@ -20,7 +20,7 @@ fun parseFile(txt: String): SourceFileNode {
     var statements = mutableListOf<StatementNode>()
     val sourceFileNode = SourceFileNode(statements)
     while (tokens.hasNext()) {
-        tokens.skip(WHITESPACE, NEW_LINE);
+        tokens.skipWhitespace();
         when (val x = parseStatement(tokens)) {
             is StatementNode -> statements.add(x);
             null -> {
@@ -60,7 +60,7 @@ private fun parseStatement(tokens: Tokens): StatementNode? {
 
 private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> StatementNode?): StatementNode? {
     val res = statmentFn(tokens)?: return null;
-    tokens.skip(WHITESPACE, NEW_LINE)
+    tokens.skipWhitespace()
     val semicolon = tokens.peekOptional();
     if(semicolon.map { it.type }.orElse(EOF) != SEMICOLON) {
         res.error(CompilerMessage("Expect semicolon at end of statement!", tokens.location))
@@ -72,11 +72,11 @@ private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> Sta
 
 fun parseVariableDeclaration(tokens: Tokens): StatementNode.VariableDeclarationNode? {
     val kw = tokens.keyword("var") ?: return null;
-    tokens.skip(WHITESPACE, NEW_LINE);
+    tokens.skipWhitespace();
     val name = parseIdentifier(tokens);
-    tokens.skip(WHITESPACE, NEW_LINE);
+    tokens.skipWhitespace();
     val type = parseExplicitType(tokens)
-    tokens.skip(WHITESPACE, NEW_LINE);
+    tokens.skipWhitespace();
     val eq = tokens.keyword(EQUAL);
     val messages = CompilerMessages()
     if(eq == null) {
@@ -88,8 +88,13 @@ fun parseVariableDeclaration(tokens: Tokens): StatementNode.VariableDeclarationN
 
 fun parseExplicitType(tokens: Tokens): TypeNode? {
     val colon = tokens.keyword(DefaultToken.COLON) ?: return null;
+    tokens.skipWhitespace()
     val type = parseType(tokens);
     return type;
+}
+
+fun Tokens.skipWhitespace(){
+    skip(WHITESPACE, NEW_LINE)
 }
 
 fun Tokens.keyword(s: DefaultToken): Range? {
@@ -129,7 +134,7 @@ fun parseExplicitType(
         messages.error("Expected a type definition starting with a ':' after the field name", tokens.location)
         tokens.location
     } else {
-        tokens.skip(WHITESPACE, NEW_LINE)
+        tokens.skipWhitespace()
     }
     val type = parseType(tokens);
     return type
@@ -145,10 +150,10 @@ fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode
     }
     val types = mutableListOf(firstType);
     while (true) {
-        tokens.skip(WHITESPACE, NEW_LINE);
+        tokens.skipWhitespace();
         val type = parseSingleType(tokens);
         types.add(type);
-        tokens.skip(WHITESPACE, NEW_LINE);
+        tokens.skipWhitespace();
         if (tokens.peek().type == PIPE) {
             tokens.next()
         } else {
@@ -165,7 +170,7 @@ fun parseExpression(tokens: TokenStream<DefaultToken>): ExpressionNode {
 fun parseAssignment(tokens: Tokens): StatementNode.AssignmentNode? {
     tokens.elevate()
     val kw = parseIdentifier(tokens);
-    tokens.skip(WHITESPACE, NEW_LINE);
+    tokens.skipWhitespace();
     val eq = tokens.keyword(EQUAL);
     if(eq == null) {
         tokens.rollback()
