@@ -8,6 +8,7 @@ import com.niton.jainparse.token.Tokenizer
 import eu.nitok.jitsu.compiler.ast.*
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage.Hint
+import eu.nitok.jitsu.compiler.model.BitSize
 import eu.nitok.jitsu.compiler.parser.parsers.parseFunction
 import eu.nitok.jitsu.compiler.parser.parsers.parseIdentifier
 import eu.nitok.jitsu.compiler.parser.parsers.parseStructuralInterface
@@ -90,7 +91,6 @@ fun parseVariableDeclaration(tokens: Tokens): StatementNode.VariableDeclarationN
 }
 
 
-
 fun Tokens.skipWhitespace() {
     skip(WHITESPACE, NEW_LINE)
 }
@@ -133,6 +133,7 @@ fun parseSingleType(tokens: Tokens): TypeNode? {
     val namedType = TypeNode.NameTypeNode(typeReference, listOf(), typeReference.location);
     return namedType;
 }
+
 fun parseOptionalExplicitType(tokens: Tokens, messages: (CompilerMessage) -> Unit): TypeNode? {
     val colon = tokens.keyword(COLON) ?: return null;
     tokens.skipWhitespace()
@@ -146,6 +147,7 @@ fun parseOptionalExplicitType(tokens: Tokens, messages: (CompilerMessage) -> Uni
     }
     return type;
 }
+
 fun parseExplicitType(
     tokens: Tokens,
     messages: CompilerMessages
@@ -200,7 +202,7 @@ fun parseExpression(tokens: TokenStream<DefaultToken>): ExpressionNode {
 
 fun parseAssignment(tokens: Tokens): StatementNode.AssignmentNode? {
     tokens.elevate()
-    val kw = parseIdentifier(tokens)?: return null;
+    val kw = parseIdentifier(tokens) ?: return null;
     tokens.skipWhitespace();
     val eq = tokens.keyword(EQUAL);
     if (eq == null) {
@@ -216,10 +218,11 @@ fun parseAssignment(tokens: Tokens): StatementNode.AssignmentNode? {
  */
 fun Tokens.keyword(s: String): Range? {
     elevate()
-    val token = range { next() }
-    return if (token.value.value == s) {
+    val (token, location) = range { nextOptional().getOrNull() }
+    token ?: return null
+    return if (token.value == s) {
         commit()
-        token.location
+        location
     } else {
         rollback()
         null
@@ -229,7 +232,7 @@ fun Tokens.keyword(s: String): Range? {
 inline fun <T> Tokens.range(action: Tokens.() -> T): Located<T> {
     val start = location
     val res = action()
-    val end = location
+    val end = Location(line, column-1)
     return Located(res, start.rangeTo(end))
 }
 
