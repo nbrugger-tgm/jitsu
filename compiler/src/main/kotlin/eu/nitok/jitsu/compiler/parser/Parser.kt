@@ -173,8 +173,14 @@ fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode
     while (tokens.hasNext()) {
         tokens.skipWhitespace();
         val type = parseSingleType(tokens);
-        if(type == null) {
-            messages.error(CompilerMessage("Expect type for union", tokens.location, Hint("Union starts here", pipeLocation)))
+        if (type == null) {
+            messages.error(
+                CompilerMessage(
+                    "Expect type for union",
+                    tokens.location,
+                    Hint("Union starts here", pipeLocation)
+                )
+            )
         } else {
             types.add(type);
         }
