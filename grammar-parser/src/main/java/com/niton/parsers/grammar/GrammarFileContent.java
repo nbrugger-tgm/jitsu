@@ -1,7 +1,7 @@
 package com.niton.parsers.grammar;
 
-import com.niton.parser.grammar.api.GrammarReferenceMap;
-import com.niton.parser.token.Tokenable;
+import com.niton.jainparse.grammar.api.GrammarReferenceMap;
+import com.niton.jainparse.token.Tokenable;
 
 import java.util.Set;
 

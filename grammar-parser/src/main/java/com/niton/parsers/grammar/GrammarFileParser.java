@@ -1,14 +1,15 @@
 package com.niton.parsers.grammar;
 
-import com.niton.parser.Parser;
-import com.niton.parser.ast.AstNode;
-import com.niton.parser.ast.ReducedNode;
-import com.niton.parser.exceptions.ParsingException;
-import com.niton.parser.grammar.api.Grammar;
-import com.niton.parser.token.GenericToken;
-import com.niton.parser.token.TokenPattern;
-import com.niton.parser.token.Tokenable;
-import com.niton.parser.token.Tokenizer;
+import com.niton.jainparse.ast.AstNode;
+import com.niton.jainparse.ast.ReducedNode;
+import com.niton.jainparse.grammar.api.Grammar;
+import com.niton.jainparse.grammar.types.AnyExceptGrammar;
+import com.niton.jainparse.grammar.types.ChainGrammar;
+import com.niton.jainparse.parser.Parser;
+import com.niton.jainparse.token.GenericToken;
+import com.niton.jainparse.token.TokenPattern;
+import com.niton.jainparse.token.Tokenable;
+import com.niton.jainparse.token.Tokenizer;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -34,11 +35,10 @@ public class GrammarFileParser extends Parser<GrammarFileContent> {
     }
 
     /**
-     * @throws ParsingException
-     * @see com.niton.parser.Parser#convert(AstNode)
+     * @see com.niton.jainparse.Parser#convert(AstNode)
      */
     @Override
-    public @NotNull GrammarFileContent convert(@NotNull AstNode o) throws ParsingException {
+    public @NotNull GrammarFileContent convert(@NotNull AstNode o) {
         var root = o.reduce("GrammarFile").orElseThrow(() -> new RuntimeException("No root node"));
         var head = root.getSubNode(HEAD.id());
         var result = new GrammarFileContent();
@@ -63,17 +63,19 @@ public class GrammarFileParser extends Parser<GrammarFileContent> {
         var name = rootGrammarNode.getSubNode(NAME.id())
                 .map(ReducedNode::getValue)
                 .orElseThrow(() -> new RuntimeException("Grammar has no name"));
-        return rootGrammarNode.getSubNode(CHAIN.id())
+        final var grammars = rootGrammarNode.getSubNode(CHAIN.id())
                 .map(ReducedNode::getChildren)
                 .stream()
                 .flatMap(List::stream)
-                .map(this::parseGenericGrammar)
-                .reduce((a, b) -> {
-                    if (b.getName() != null) {
-                        return (Grammar<AstNode>) a.then(b.getName(), b);
-                    }
-                    return (Grammar<AstNode>) a.then(b);
-                }).orElseThrow().named(name);
+                .map(this::parseGenericGrammar);
+        var chain = new ChainGrammar();
+        grammars.forEach(elem -> {
+            if (elem.getName() != null) {
+                chain.addGrammar(elem, elem.getName());
+            }
+            chain.addGrammar(elem);
+        });
+        return chain.named(name);
     }
 
     private Grammar<AstNode> parseGenericGrammar(ReducedNode grammarDefinition) {
@@ -87,7 +89,7 @@ public class GrammarFileParser extends Parser<GrammarFileContent> {
         if (operator.isPresent()) {
             var operatorValue = operator.get().getValue();
             if (operatorValue.matches(ANY_EXCEPT_SIGN.regex))
-                grammar = grammar.anyExcept();
+                grammar = new AnyExceptGrammar(grammar);
             else if (operatorValue.matches(OPTIONAL_SIGN.regex))
                 grammar = grammar.optional();
             else if (operatorValue.matches(IGNORE_SIGN.regex))
@@ -146,7 +148,7 @@ public class GrammarFileParser extends Parser<GrammarFileContent> {
     }
 
     private Grammar<?> parseTokenReference(ReducedNode value) {
-        return Grammar.tokenReference(value.getSubNode(TOKEN_NAME.id()).orElseThrow().getValue());
+        return Grammar.token(value.getSubNode(TOKEN_NAME.id()).orElseThrow().getValue());
     }
 
     private Tokenable parseTokenDefiner(ReducedNode reducedNode) {
