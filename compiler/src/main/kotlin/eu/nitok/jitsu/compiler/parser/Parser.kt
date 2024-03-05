@@ -57,11 +57,11 @@ private fun parseStatement(tokens: Tokens): StatementNode? {
 
 fun parseVariableDeclaration(tokens: Tokens): StatementNode.VariableDeclarationNode? {
     val kw = tokens.keyword("var") ?: return null;
-    tokens.skip(WHITESPACE);
+    tokens.skip(WHITESPACE, NEW_LINE);
     val name = parseIdentifier(tokens);
-    tokens.skip(WHITESPACE);
+    tokens.skip(WHITESPACE, NEW_LINE);
     val type = parseExplicitType(tokens)
-    tokens.skip(WHITESPACE);
+    tokens.skip(WHITESPACE, NEW_LINE);
     val eq = tokens.keyword(EQUAL);
     val messages = CompilerMessages()
     if(eq == null) {
@@ -130,10 +130,10 @@ fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode
     }
     val types = mutableListOf(firstType);
     while (true) {
-        tokens.skip(WHITESPACE);
+        tokens.skip(WHITESPACE, NEW_LINE);
         val type = parseSingleType(tokens);
         types.add(type);
-        tokens.skip(WHITESPACE);
+        tokens.skip(WHITESPACE, NEW_LINE);
         if (tokens.peek().type == PIPE) {
             tokens.next()
         } else {
@@ -150,7 +150,7 @@ fun parseExpression(tokens: TokenStream<DefaultToken>): ExpressionNode {
 fun parseAssignment(tokens: Tokens): StatementNode.AssignmentNode? {
     tokens.elevate()
     val kw = parseIdentifier(tokens);
-    tokens.skip(WHITESPACE);
+    tokens.skip(WHITESPACE, NEW_LINE);
     val eq = tokens.keyword(EQUAL);
     if(eq == null) {
         tokens.rollback()
