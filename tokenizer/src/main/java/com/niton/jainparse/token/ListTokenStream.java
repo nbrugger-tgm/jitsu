@@ -7,6 +7,11 @@ import lombok.Setter;
 
 import java.util.LinkedList;
 import java.util.List;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * A Stream of tokens that supports stack based navigation
@@ -15,35 +20,45 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
     private final LinkedList<Integer> levelIndexes = new LinkedList<>();
     private final LinkedList<Integer> levelLines = new LinkedList<>();
     private final LinkedList<Integer> levelColumns = new LinkedList<>();
+    private final LinkedList<Integer> levelLastLineColumns = new LinkedList<>();
     private final List<AssignedToken<T>> tokens;
     @Getter
     @Setter
     private int recursionLevelLimit = 500;
+    /**
+     * The token at the current index, if it is not null it will be used instead of the token at the current index
+     * null means not cached yet -> set to null when index changes
+     */
+    @Nullable
+    private AssignedToken<T> currentCache;
 
     public ListTokenStream(List<AssignedToken<T>> tokens) {
         this.tokens = tokens;
         levelIndexes.push(0);
         levelLines.push(1);
         levelColumns.push(1);
+        levelLastLineColumns.push(0);
     }
 
     /**
      * Returns the current marked assigned token and jumps one further
      */
     @Override
-    public AssignedToken<T> next() {
+    public Optional<AssignedToken<T>> nextOptional() {
         try {
-            var tkn = tokens.get(index());
+            var tkn = currentCache != null ? currentCache : tokens.get(index());
+            currentCache = null;
             if (tkn.getValue().contains("\n")) {
                 levelLines.set(0, levelLines.get(0) + 1);
+                levelLastLineColumns.set(0, levelColumns.get(0));
                 levelColumns.set(0, 1);
             } else {
                 levelColumns.set(0, levelColumns.get(0) + tkn.getValue().length());
             }
             levelIndexes.set(0, index() + 1);
-            return tkn;
+            return Optional.of(tkn);
         } catch (IndexOutOfBoundsException e) {
-            throw new IndexOutOfBoundsException("No more tokens available");
+            return Optional.empty();
         }
     }
 
@@ -63,9 +78,14 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
         levelIndexes.push(index());
         levelColumns.push(getColumn());
         levelLines.push(getLine());
+        levelLastLineColumns.push(getLastLineColumn());
         if (levelIndexes.size() >= recursionLevelLimit) {
             throw new IllegalStateException("Max Recursions reached (" + recursionLevelLimit + ") [" + index() + "]");
         }
+    }
+
+    private Integer getLastLineColumn() {
+        return levelLastLineColumns.get(0);
     }
 
     /**
@@ -80,6 +100,7 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
         index(val);
         levelColumns.set(0, levelColumns.pop());
         levelLines.set(0, levelLines.pop());
+        levelLastLineColumns.set(0, levelLastLineColumns.pop());
     }
 
     /**
@@ -100,6 +121,8 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
         levelIndexes.pop();
         levelColumns.pop();
         levelLines.pop();
+        levelLastLineColumns.pop();
+        currentCache = null;
     }
 
     AssignedToken<T> get(int index) {
@@ -117,8 +140,14 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
     }
 
     @Override
-    public AssignedToken<T> peek() {
-        return tokens.get(index());
+    public Optional<AssignedToken<T>> peekOptional() {
+        if(currentCache == null) {
+            if(!hasNext()) {
+                return Optional.empty();
+            }
+            currentCache = tokens.get(index());
+        }
+        return Optional.of(currentCache);
     }
 
     @Override
@@ -161,6 +190,14 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
 
     @Override
     public Location currentLocation() {
+        return Location.oneChar(getLine(), getColumn());
+    }
+
+    @Override
+    public Location lastConsumedLocation() {
+        if(getColumn() == 0) {
+            return Location.oneChar(getLine()-1, getLastLineColumn());
+        }
         return Location.oneChar(getLine(), getColumn());
     }
 }
