@@ -31,8 +31,8 @@ fun parseFile(txt: String): SourceFileNode {
     return sourceFileNode;
 }
 
-fun Tokens.skip(vararg whitespace: DefaultToken) {
-    while (this.hasNext() && whitespace.contains(this.peek().type)) {
+fun Tokens.skip(vararg toSkip: DefaultToken) {
+    while (this.hasNext() && toSkip.contains(this.peek().type)) {
         this.next()
     }
 }
@@ -175,7 +175,7 @@ fun Tokens.keyword(s: String): Range? {
     }
 }
 
-fun <T> Tokens.range(action: Tokens.() -> T): Located<T> {
+inline fun <T> Tokens.range(action: Tokens.() -> T): Located<T> {
     val start = location
     val res = action()
     val end = location

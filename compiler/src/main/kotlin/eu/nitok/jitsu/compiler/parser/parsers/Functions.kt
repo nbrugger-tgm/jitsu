@@ -7,13 +7,14 @@ import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode.Paramet
 import eu.nitok.jitsu.compiler.ast.withMessages
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.parser.*
+import kotlin.jvm.optionals.getOrNull
 
 val fnKeyword = "fn"
 private val fnKeywords = listOf(fnKeyword,"fun", "func", "function")
 
 fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     tokens.elevate()
-    val kw = tokens.range { next() };
+    val kw = tokens.range { nextOptional().getOrNull()?: return null; };
     if (kw.value.type != LETTERS || !fnKeywords.contains(kw.value.value)) {
         tokens.rollback()
         return null
