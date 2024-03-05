@@ -5,16 +5,16 @@ import kotlinx.serialization.Serializable
 
 
 @Serializable
-data class AttributeNodeImpl(
+data class AttributeNode(
     var name: IdentifierNode,
     var values: List<AttributeValueNode>,
     override val location: Range
-) : AstNodeImpl() {
+) : AstNodeImpl(values + name) {
     @Serializable
     data class AttributeValueNode(
         var name: IdentifierNode,
         var value: ExpressionNode?,
-    ) : AstNodeImpl() {
+    ) : AstNodeImpl(listOfNotNull(value, name)) {
         override val location: Range
             get() = value?.let { name.location.rangeTo(it.location) } ?: name.location
     }

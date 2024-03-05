@@ -6,6 +6,7 @@ import eu.nitok.jitsu.compiler.ast.IdentifierNode
 import eu.nitok.jitsu.compiler.parser.Tokens
 import eu.nitok.jitsu.compiler.parser.location
 import eu.nitok.jitsu.compiler.parser.range
+import eu.nitok.jitsu.compiler.parser.skip
 
 fun parseIdentifier(tokens: Tokens): IdentifierNode {
     val firstToken = tokens.range { tokens.next() }
@@ -20,7 +21,7 @@ fun parseIdentifier(tokens: Tokens): IdentifierNode {
         else -> messages.error("Identifiers have to start with letters", firstToken.location)
     }
     var value: String = firstToken.value.value;
-    while (true) {
+    while (tokens.hasNext()) {
         val token = tokens.peek();
         val type = token.type
         if (type != LETTERS && type != NUMBER && type != UNDERSCORE && type != DOLLAR) {

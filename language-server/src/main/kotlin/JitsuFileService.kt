@@ -1,14 +1,11 @@
 import capabilities.documentSymbols
 import capabilities.syntaxDiagnostic
 import capabilities.syntaxHighlight
-import com.niton.jainparse.token.ListTokenStream
-import com.niton.jainparse.token.Tokenizer
-
-import eu.nitok.jitsu.compiler.ast.AstNode
-import eu.nitok.jitsu.compiler.ast.StatementNode
+import eu.nitok.jitsu.compiler.ast.SourceFileNode
 import eu.nitok.jitsu.compiler.graph.Scope
 import eu.nitok.jitsu.compiler.graph.buildGraph
-import eu.nitok.jitsu.compiler.parser.Parser
+import eu.nitok.jitsu.compiler.parser.Location
+import eu.nitok.jitsu.compiler.parser.parseFile
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.TextDocumentService
@@ -18,9 +15,8 @@ import java.util.concurrent.CompletableFuture
 
 class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
     private val rawTexts: MutableMap<String, String> = mutableMapOf();
-    private val asts = mutableMapOf<String, Lazy<List<AstNode<StatementNode>>>>()
+    private val asts = mutableMapOf<String, Lazy<SourceFileNode>>()
     private val graphs = mutableMapOf<String, Lazy<Scope?>>()
-    private val tokenizer: Tokenizer = Tokenizer()
     override fun didOpen(params: DidOpenTextDocumentParams?) {
         params?.textDocument?.let {
             rawTexts[it.uri] = it.text
@@ -33,14 +29,12 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
         asts[uri] = lazy {
             customLogger.println("parsing $uri")
             val startMs = System.currentTimeMillis()
-            val tokens = tokenizer.tokenize(text).unwrap()
-            val ast = Parser.file(ListTokenStream(tokens))
+            val ast = parseFile(text)
             val endMs = System.currentTimeMillis()
             val parsingTime = endMs - startMs
             customLogger.println("parsed in ${parsingTime}ms")
             customLogger.println("Per char: ${parsingTime / text.length}ms")
             customLogger.println("Per line: ${parsingTime / text.split("\n").size}ms")
-            customLogger.println("Per token: ${parsingTime / tokens.size}ms")
             graphs[uri] = lazy {
                 customLogger.println("build graph for $uri")
                 buildGraph(ast)
@@ -106,15 +100,11 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
     override fun documentSymbol(params: DocumentSymbolParams?): CompletableFuture<MutableList<Either<SymbolInformation, DocumentSymbol>>> {
         val ast = asts[params?.textDocument?.uri]?.value ?: return CompletableFuture.completedFuture(mutableListOf());
 
-        val flatMap = ast.flatMap {
-            when (it) {
-                is AstNode.Node -> it.value.documentSymbols()
-                is AstNode.Error<*> -> listOf()
+
+        val either = ast.statements.flatMap { it.documentSymbols() }
+            .map<DocumentSymbol, Either<SymbolInformation, DocumentSymbol>> {
+                Either.forRight(it)
             }
-        }
-        val either = flatMap.map<DocumentSymbol, Either<SymbolInformation, DocumentSymbol>> {
-            Either.forRight(it)
-        }
         return CompletableFuture.completedFuture(either.toMutableList())
     }
 
@@ -131,7 +121,7 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
 
     private fun color(it: Location, write: DocumentHighlightKind): ColorInformation {
         return ColorInformation(
-            range(it),
+            range(it.rangeTo(it)),
             Color(1.0, .0, .0, 1.0)
         )
     }
@@ -139,7 +129,7 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
     override fun diagnostic(params: DocumentDiagnosticParams?): CompletableFuture<DocumentDiagnosticReport> {
         val ast = params?.textDocument?.uri?.let { asts[it] }?.value
         return CompletableFuture.completedFuture(DocumentDiagnosticReport(RelatedFullDocumentDiagnosticReport(
-            ast?.flatMap { syntaxDiagnostic(it) } ?: listOf()
+            ast?.statements?.flatMap { syntaxDiagnostic(it) } ?: listOf()
         )))
     }
 
@@ -158,9 +148,6 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
         return CompletableFuture.completedFuture(mutableListOf())//css like color editor
     }
 }
-
-internal fun range(it: Location) =
-    Range(Position(it.fromLine - 1, it.fromColumn - 1), Position(it.toLine - 1, it.toColumn - 1))
 
 private var i: Long = 0;
 internal fun getArtificalId(): Long {

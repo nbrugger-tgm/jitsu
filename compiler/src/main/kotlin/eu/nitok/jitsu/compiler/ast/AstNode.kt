@@ -5,10 +5,13 @@ import eu.nitok.jitsu.compiler.parser.Locatable
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Serializable
 
-interface AstNode {
+@Serializable
+sealed interface AstNode {
     val location: Range
     val warnings: MutableList<CompilerMessage>
     val errors: MutableList<CompilerMessage>
+
+    abstract val children: List<AstNode>
 
     fun warning(warning: CompilerMessage) {
         warnings.add(warning)
@@ -19,11 +22,13 @@ interface AstNode {
     }
 }
 
-/**
- * A node that can be an error
- */
+fun <T: AstNode> T.withMessages(messages: CompilerMessages) : T{
+    messages.apply(this)
+    return this;
+}
+
 @Serializable
-abstract class AstNodeImpl : AstNode {
+sealed class AstNodeImpl(override val children: List<AstNode>) : AstNode {
     override val warnings: MutableList<CompilerMessage> = mutableListOf()
     override val errors: MutableList<CompilerMessage> = mutableListOf()
 }
@@ -33,14 +38,14 @@ data class CompilerMessages(
     val errors: MutableList<CompilerMessage> = mutableListOf()
 ) {
     fun warn(warning: CompilerMessage) = warnings.add(warning)
-    fun warn(message: String, location: Locatable, hints: List<CompilerMessage.Hint> = emptyList()) =
-        warnings.add(CompilerMessage(message, location, hints))
+    fun warn(message: String, location: Locatable, vararg hints: CompilerMessage.Hint) =
+        warnings.add(CompilerMessage(message, location, hints.toList()))
 
     fun error(error: CompilerMessage) = errors.add(error)
-    fun error(message: String, location: Locatable, hints: List<CompilerMessage.Hint> = emptyList()) =
-        errors.add(CompilerMessage(message, location, hints))
+    fun error(message: String, location: Locatable, vararg hints: CompilerMessage.Hint) =
+        errors.add(CompilerMessage(message, location, hints.toList()))
 
-    fun apply(node: AstNodeImpl) {
+    fun apply(node: AstNode) {
         node.warnings.addAll(warnings)
         node.errors.addAll(errors)
     }

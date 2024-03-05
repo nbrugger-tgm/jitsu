@@ -34,7 +34,8 @@ fun main() {
             post("/parse") {
                 val code = call.receiveParameters()["code"]!!
                 println("Parsing: $code")
-                val ast = parseFile(code).map {
+                val ast = parseFile(code).let {
+                    println("Parsed: ${it.statements.size}")
                     "<p>Internal AST</p><pre>${
                         try {
                             Json.encodeToString((it))
@@ -45,15 +46,7 @@ fun main() {
                             e.printStackTrace()
                             "Error: ${e.message}"
                         }
-                    }</pre><p>Diagnostics:</p><pre>${it.flatMap { syntaxDiagnostic(it) }}</pre>"
-                }.orElse { e ->
-                    val error = e.mostProminentDeepException;
-                    """Error: <pre>${error.message}</pre><pre>${
-                        error.markInText(code, 2)
-                            .replace("<", "&lt")
-                            .replace(">", "&gt")
-                    }</pre>
-                    """
+                    }</pre><p>Diagnostics:</p><pre>${syntaxDiagnostic(it)}</pre>"
                 }
                 call.respond(ast)
             }
