@@ -121,13 +121,13 @@ fun parseExplicitType(
 }
 
 fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode.UnionTypeNode? {
-    if(!tokens.hasNext()) return null;
     tokens.elevate()
     val pipe = tokens.next()
     if (pipe.type != PIPE) {
         tokens.rollback()
         return null;
     }
+    if(!tokens.hasNext()) return null;
     val types = mutableListOf(firstType);
     while (true) {
         tokens.skip(WHITESPACE, NEW_LINE);
