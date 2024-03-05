@@ -62,7 +62,7 @@ private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> Sta
     val res = statmentFn(tokens)?: return null;
     tokens.skip(WHITESPACE, NEW_LINE)
     val semicolon = tokens.peekOptional();
-    if(semicolon.map { it.type }.orElse(EOF) == SEMICOLON) {
+    if(semicolon.map { it.type }.orElse(EOF) != SEMICOLON) {
         res.error(CompilerMessage("Expect semicolon at end of statement!", tokens.location))
     } else {
         tokens.skip()
