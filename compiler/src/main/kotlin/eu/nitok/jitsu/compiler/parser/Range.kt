@@ -4,7 +4,23 @@ import kotlinx.serialization.Serializable
 import kotlin.math.max
 
 @Serializable
-data class Range(val start: Location, val end: Location) : Locatable {
+data class Range(val start: Location, val end: Location) : Locatable, Comparable<Range> {
+    companion object {
+        val byStart: Comparator<Range> = Comparator.comparingInt { obj: Range -> obj.start.line }
+            .thenComparingInt { obj: Range -> obj.start.column }
+            .thenComparingInt { obj: Range -> obj.end.line }
+            .thenComparingInt { obj: Range -> obj.end.column }
+
+        val byEnd: Comparator<Range> = Comparator.comparingInt { obj: Range -> obj.end.line }
+            .thenComparingInt { obj: Range -> obj.end.column }
+            .thenComparingInt { obj: Range -> obj.start.line }
+            .thenComparingInt { obj: Range -> obj.start.column }
+    }
+
+    override fun toRange(): Range {
+        return this;
+    }
+
     constructor(startCol: Int, startLine: Int, endCol: Int, endLine: Int) : this(
         Location(startCol, startLine),
         Location(endCol, endLine)
@@ -56,6 +72,10 @@ data class Range(val start: Location, val end: Location) : Locatable {
 
     override fun toString(): String {
         return absoluteFormat();
+    }
+
+    override fun compareTo(other: Range): Int {
+        return byStart.compare(this, other);
     }
 
     fun rangeTo(location: Location): Range {

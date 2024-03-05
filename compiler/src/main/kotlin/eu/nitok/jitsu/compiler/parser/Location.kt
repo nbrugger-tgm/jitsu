@@ -22,6 +22,10 @@ data class Location(val line: Int, val column: Int, var file: String? = null) : 
         return lines.joinToString("\n")
     }
 
+    override fun toRange(): Range {
+        return Range(this, this)
+    }
+
     override fun toString() = absoluteFormat()
 
     fun rangeTo(location: Location): Range {

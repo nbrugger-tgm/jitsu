@@ -5,7 +5,6 @@ import eu.nitok.jitsu.compiler.ast.*
 
 import eu.nitok.jitsu.compiler.ast.StatementNode.*
 
-//
 fun buildGraph(file: SourceFileNode): Scope {
     val rootScope = Scope(null)//top level scopes have no parent
     for (statement in file.statements) {
@@ -16,11 +15,11 @@ fun buildGraph(file: SourceFileNode): Scope {
             is FunctionCallNode,
             is AssignmentNode,
             is SwitchNode -> rootScope.error("Statement not allowed at root level", statement.location)
-
             is CodeBlockNode -> rootScope.error("Code block not allowed at root level", statement.location)
-            is TypeAliasNode -> buildGraph(statement, rootScope)
+            is NamedTypeDeclarationNode.EnumDeclarationNode -> buildGraph(statement)
+            is NamedTypeDeclarationNode.TypeAliasNode -> buildGraph(statement, rootScope)
+            is NamedTypeDeclarationNode.InterfaceTypeNode -> buildGraph(statement, rootScope)
             is VariableDeclarationNode -> TODO()
-            is TypeNode.InterfaceTypeNode -> TODO()
             is LineCommentNode -> TODO()
             is YieldStatement -> TODO()
             is FunctionDeclarationNode -> buildFunctionGraph(statement, rootScope)
@@ -29,7 +28,7 @@ fun buildGraph(file: SourceFileNode): Scope {
     return rootScope
 }
 
-fun buildGraph(statement: TypeAliasNode, scope: Scope) {
+fun buildGraph(statement: NamedTypeDeclarationNode.TypeAliasNode, scope: Scope) {
     val alias = ResolvedType.NamedType.Alias(statement.name, buildGraph(statement.type, scope))
     scope.register(alias);
 }
@@ -40,21 +39,19 @@ fun buildGraph(it: TypeNode, scope: Scope): Lazy<ResolvedType> {
             is TypeNode.FloatTypeNode -> ResolvedType.Float(it.bitSize)
             is TypeNode.IntTypeNode -> ResolvedType.Int(it.bitSize)
             is TypeNode.ArrayTypeNode -> buildGraph(it, scope)//TODO: reduce multi dimension
-            is TypeNode.EnumDeclarationNode -> buildGraph(it)
             is TypeNode.FunctionTypeSignatureNode -> buildGraph(it, scope)
-            is TypeNode.InterfaceTypeNode -> buildGraph(it, scope)
             is TypeNode.StringTypeNode -> TODO()
             is TypeNode.UnionTypeNode -> TODO()
             is TypeNode.ValueTypeNode -> TODO()
             is TypeNode.VoidTypeNode -> TODO()
             is TypeNode.StructuralInterfaceTypeNode -> TODO()
-            is TypeNode.NamedTypeNode -> scope.resolveType(it.name)
+            is TypeNode.NameTypeNode -> scope.resolveType(it.name)
         }
     }
 }
 
 private fun buildGraph(
-    it: TypeNode.InterfaceTypeNode,
+    it: NamedTypeDeclarationNode.InterfaceTypeNode,
     scope: Scope
 ) = ResolvedType.NamedType.Interface(
     it.name,
@@ -77,7 +74,7 @@ private fun buildGraph(
     }
 )
 
-private fun buildGraph(enum: TypeNode.EnumDeclarationNode): ResolvedType.NamedType.Enum {
+private fun buildGraph(enum: NamedTypeDeclarationNode.EnumDeclarationNode): ResolvedType.NamedType.Enum {
     return ResolvedType.NamedType.Enum(enum.name, enum.constants)
 }
 
