@@ -13,6 +13,7 @@ private val fnKeywords = listOf(fnKeyword,"fun", "func", "function")
 
 fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     tokens.elevate()
+    if(!tokens.hasNext()) return null;
     val kw = tokens.range { next() };
     if (kw.value.type != LETTERS || !fnKeywords.contains(kw.value.value)) {
         tokens.rollback()
