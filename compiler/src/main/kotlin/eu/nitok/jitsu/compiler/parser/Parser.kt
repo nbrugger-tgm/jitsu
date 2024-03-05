@@ -115,6 +115,16 @@ fun parseType(tokens: Tokens): TypeNode? {
 }
 
 fun parseSingleType(tokens: Tokens): TypeNode? {
+    tokens.keyword("int")?.let {
+        return TypeNode.IntTypeNode(BitSize.BIT_32, it)
+    }
+    tokens.keyword("void")?.let {
+        return TypeNode.VoidTypeNode(it)
+    }
+    tokens.keyword("float")?.let {
+        return TypeNode.FloatTypeNode(BitSize.BIT_32, it)
+    }
+
     val structuralInterface = parseStructuralInterface(tokens);
     if (structuralInterface != null) {
         return structuralInterface;
