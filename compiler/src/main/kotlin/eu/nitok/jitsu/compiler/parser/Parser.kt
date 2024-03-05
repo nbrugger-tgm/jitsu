@@ -11,6 +11,7 @@ import eu.nitok.jitsu.compiler.parser.parsers.parseFunction
 import eu.nitok.jitsu.compiler.parser.parsers.parseIdentifier
 import eu.nitok.jitsu.compiler.parser.parsers.parseStructuralInterface
 import java.io.StringReader
+import kotlin.jvm.optionals.getOrNull
 
 typealias Tokens = TokenStream<DefaultToken>
 
@@ -19,7 +20,7 @@ fun parseFile(txt: String): SourceFileNode {
     var statements = mutableListOf<StatementNode>()
     val sourceFileNode = SourceFileNode(statements)
     while (tokens.hasNext()) {
-        tokens.skip(WHITESPACE);
+        tokens.skip(WHITESPACE, NEW_LINE);
         when (val x = parseStatement(tokens)) {
             is StatementNode -> statements.add(x);
             null -> {
@@ -31,8 +32,8 @@ fun parseFile(txt: String): SourceFileNode {
     return sourceFileNode;
 }
 
-fun Tokens.skip(vararg whitespace: DefaultToken) {
-    while (this.hasNext() && whitespace.contains(this.peek().type)) {
+fun Tokens.skip(vararg toSkip: DefaultToken) {
+    while (this.hasNext() && toSkip.contains(this.peek().type)) {
         this.next()
     }
 }
@@ -128,13 +129,14 @@ fun parseExplicitType(
         messages.error("Expected a type definition starting with a ':' after the field name", tokens.location)
         tokens.location
     } else {
-        tokens.skip(WHITESPACE)
+        tokens.skip(WHITESPACE, NEW_LINE)
     }
     val type = parseType(tokens);
     return type
 }
 
 fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode.UnionTypeNode? {
+    if(!tokens.hasNext()) return null;
     tokens.elevate()
     val pipe = tokens.next()
     if (pipe.type != PIPE) {
@@ -188,7 +190,7 @@ fun Tokens.keyword(s: String): Range? {
     }
 }
 
-fun <T> Tokens.range(action: Tokens.() -> T): Located<T> {
+inline fun <T> Tokens.range(action: Tokens.() -> T): Located<T> {
     val start = location
     val res = action()
     val end = location

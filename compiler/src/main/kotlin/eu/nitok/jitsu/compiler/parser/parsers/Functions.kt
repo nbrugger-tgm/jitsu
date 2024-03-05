@@ -7,14 +7,14 @@ import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode.Paramet
 import eu.nitok.jitsu.compiler.ast.withMessages
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.parser.*
+import kotlin.jvm.optionals.getOrNull
 
 val fnKeyword = "fn"
 private val fnKeywords = listOf(fnKeyword,"fun", "func", "function")
 
 fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     tokens.elevate()
-    if(!tokens.hasNext()) return null;
-    val kw = tokens.range { next() };
+    val kw = tokens.range { nextOptional().getOrNull()?: return null; };
     if (kw.value.type != LETTERS || !fnKeywords.contains(kw.value.value)) {
         tokens.rollback()
         return null
@@ -24,9 +24,9 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     if (kw.value.value != fnKeyword) {
         messages.error("Functions are declared with the 'fn' keyword", kw.location);
     }
-    tokens.skip(WHITESPACE)
+    tokens.skip(WHITESPACE, NEW_LINE)
     val functionName = parseIdentifier(tokens) // Parse function name
-    tokens.skip(WHITESPACE)
+    tokens.skip(WHITESPACE, NEW_LINE)
     val returnType = parseExplicitType(tokens);
     val sep = tokens.peek()
     if (sep.type != BRACKET_OPEN) {
@@ -38,7 +38,7 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     } else {
         tokens.next()
     }
-    tokens.skip(WHITESPACE)
+    tokens.skip(WHITESPACE, NEW_LINE)
     val parameters = mutableListOf<ParameterNode>()
     while (true) {
         val next = tokens.peek()
@@ -46,13 +46,13 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
             tokens.next()
             break;
         }
-        tokens.skip(WHITESPACE)
+        tokens.skip(WHITESPACE, NEW_LINE)
         val argName = parseIdentifier(tokens)
-        tokens.skip(WHITESPACE)
+        tokens.skip(WHITESPACE, NEW_LINE)
         val type = parseExplicitType(tokens)
-        tokens.skip(WHITESPACE)
+        tokens.skip(WHITESPACE, NEW_LINE)
         parameters.add(ParameterNode(argName, type, null))
-        tokens.skip(WHITESPACE)
+        tokens.skip(WHITESPACE, NEW_LINE)
         val commaOrClose = tokens.range { peek() } // Parse either a comma or close parentheses
         if (commaOrClose.value.type == BRACKET_CLOSED) {
             tokens.next()
