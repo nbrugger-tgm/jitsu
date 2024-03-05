@@ -35,5 +35,5 @@ fun parseIdentifier(tokens: Tokens): IdentifierNode {
         }
         value += tokens.next().value;
     }
-    return IdentifierNode(firstToken.location.rangeTo(tokens.location), value)
+    return IdentifierNode(firstToken.location.rangeTo(tokens.location), value).withMessages(messages)
 }
