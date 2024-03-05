@@ -52,7 +52,21 @@ private fun tokenize(txt: String): Tokens {
 }
 
 private fun parseStatement(tokens: Tokens): StatementNode? {
-    return parseFunction(tokens)?: parseVariableDeclaration(tokens) ?: parseAssignment(tokens)
+    return parseFunction(tokens)?: parseExecutableStatement(tokens) {
+        parseVariableDeclaration(it) ?: parseAssignment(it)
+    }
+}
+
+private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> StatementNode?): StatementNode? {
+    val res = statmentFn(tokens)?: return null;
+    tokens.skip(WHITESPACE, NEW_LINE)
+    val semicolon = tokens.peekOptional();
+    if(semicolon.map { it.type }.orElse(EOF) == SEMICOLON) {
+        res.error(CompilerMessage("Expect semicolon at end of statement!", tokens.location))
+    } else {
+        tokens.skip()
+    }
+    return res;
 }
 
 fun parseVariableDeclaration(tokens: Tokens): StatementNode.VariableDeclarationNode? {
