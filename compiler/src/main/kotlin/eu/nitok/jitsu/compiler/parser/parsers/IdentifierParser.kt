@@ -7,11 +7,12 @@ import eu.nitok.jitsu.compiler.ast.withMessages
 import eu.nitok.jitsu.compiler.parser.Tokens
 import eu.nitok.jitsu.compiler.parser.location
 import eu.nitok.jitsu.compiler.parser.range
+import eu.nitok.jitsu.compiler.parser.skip
 import kotlin.jvm.optionals.getOrElse
 
 fun parseIdentifier(tokens: Tokens): IdentifierNode? {
     val firstToken = tokens.range {
-        tokens.nextOptional().getOrElse { return null }
+        tokens.peekOptional().getOrElse { return null }
     }
     val messages = CompilerMessages()
     when (firstToken.value.type) {
@@ -23,6 +24,7 @@ fun parseIdentifier(tokens: Tokens): IdentifierNode? {
         LETTERS -> {}
         else -> return null;
     }
+    tokens.skip()
     var value: String = firstToken.value.value;
     while (tokens.hasNext()) {
         val token = tokens.peek();
