@@ -116,37 +116,16 @@ private fun buildGraph(
     array: TypeNode.ArrayTypeNode
 ) = Type.Array(
     resolveType(scope, array.type),
-    array.fixedSize?.run { buildExpressionGraph(this, scope) }
+    array.fixedSize?.run { buildExpressionGraph(this, scope, Type.UInt(BitSize.BIT_32)) }
 )
 
-fun buildExpressionGraph(it: ExpressionNode?, scope: Scope): Expression {
-    return Expression.Undefined
-}
-
-fun buildFunctionGraph(functionNode: FunctionDeclarationNode, parentScope: Scope): Function {
-    val name = functionNode.name
-    val innerScope = Scope(parentScope);
-    val parameters = functionNode.parameters.map {
-            val type = resolveType(parentScope, it.type)
-            Parameter(
-                it.name.located, type,
-                it.defaultValue?.let { it1 -> resolveConstant(parentScope, it1, type) }
-            )
-        }
-    val functionBody = when (val body = functionNode.body) {
-        is CodeBlockNode.SingleExpressionCodeBlock -> TODO()//buildExpressionGraph(body.expression, function.bodyScope)
-        is CodeBlockNode.StatementsCodeBlock -> body.statements.mapNotNull { buildGraph(innerScope, it) }
-        null -> listOf();
-    }
-    return Function(innerScope, name?.located, resolveType(parentScope, functionNode.returnType), parameters, functionBody);
-}
-
-fun resolveConstant(scope: Scope, expression: ExpressionNode, explicitType: Type?): Constant<Any>? {
+fun buildExpressionGraph(expression: ExpressionNode?, scope: Scope, explicitType: Type? = null): Expression {
     return when (expression) {
+        null -> Expression.Undefined
         is ExpressionNode.BooleanLiteralNode -> Constant.BooleanConstant(expression.value, expression.location)
         is ExpressionNode.NumberLiteralNode.FloatLiteralNode -> TODO()
-        is ExpressionNode.NumberLiteralNode.IntegerLiteralNode -> resolveIntConstant(explicitType, expression, scope)
-        is ExpressionNode.OperationNode -> resolveConstantOperation(scope, expression)
+        is ExpressionNode.NumberLiteralNode.IntegerLiteralNode -> resolveIntConstant(expression)
+        is ExpressionNode.OperationNode -> TODO();
         is ExpressionNode.StringLiteralNode -> TODO()
         is ExpressionNode.VariableReferenceNode -> TODO()
         is ExpressionNode.FieldAccessNode -> TODO()
@@ -159,6 +138,24 @@ fun resolveConstant(scope: Scope, expression: ExpressionNode, explicitType: Type
         is MethodInvocationNode -> TODO()
         is SwitchNode -> TODO()
     }
+}
+
+fun buildFunctionGraph(functionNode: FunctionDeclarationNode, parentScope: Scope): Function {
+    val name = functionNode.name
+    val innerScope = Scope(parentScope);
+    val parameters = functionNode.parameters.map {
+            val type = resolveType(parentScope, it.type)
+            Parameter(
+                it.name.located, type,
+                buildExpressionGraph(it.defaultValue, parentScope, type)
+            )
+        }
+    val functionBody = when (val body = functionNode.body) {
+        is CodeBlockNode.SingleExpressionCodeBlock -> TODO()//buildExpressionGraph(body.expression, function.bodyScope)
+        is CodeBlockNode.StatementsCodeBlock -> body.statements.mapNotNull { buildGraph(innerScope, it) }
+        null -> listOf();
+    }
+    return Function(innerScope, name?.located, resolveType(parentScope, functionNode.returnType), parameters, functionBody);
 }
 
 fun resolveConstantOperation(scope: Scope, expression: ExpressionNode.OperationNode): Constant<Any>? {
@@ -297,20 +294,8 @@ fun resolveConstantOperation(scope: Scope, expression: ExpressionNode.OperationN
 }
 
 private fun resolveIntConstant(
-    explicitType: Type?,
-    expression: ExpressionNode.NumberLiteralNode.IntegerLiteralNode,
-    scope: Scope
-): Constant<Any>? {
-    explicitType?.let {
-        when (it) {
-            is Type.Int -> return Constant.IntConstant(expression.value.toLong(), it, expression.location)
-            is Type.UInt -> return Constant.UIntConstant(expression.value.toULong(), it, expression.location)
-            else -> {
-                scope.error("Cannot assign integer to $it", expression.location)
-                return null;
-            }
-        }
-    }
+    expression: ExpressionNode.NumberLiteralNode.IntegerLiteralNode
+): Constant<Any> {
     val value = expression.value
     return if (value.startsWith("-"))
         Constant.IntConstant(value.toLong(), originLocation = expression.location)

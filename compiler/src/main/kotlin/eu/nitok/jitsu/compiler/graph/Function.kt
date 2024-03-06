@@ -20,7 +20,7 @@ class Function(
 data class Parameter(
     val name: Located<String>,
     val type: Type,
-    val defaultValue: Constant<@Contextual Any>?
+    val defaultValue: Expression?
 ) {
     fun asVariable(fn: Function): Variable = Variable(false, name, type, null)
 }

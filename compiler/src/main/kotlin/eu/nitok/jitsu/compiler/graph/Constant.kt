@@ -14,6 +14,7 @@ sealed class Constant<out T> : Expression {
     abstract val type: Type
     abstract val literal: String
     abstract val originLocation: Range
+    override val isConstant: Boolean get() = true
 
     @Contextual
     abstract val value: T
