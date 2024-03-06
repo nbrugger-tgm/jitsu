@@ -238,3 +238,11 @@ inline fun <T> Tokens.range(action: Tokens.() -> T): Located<T> {
 
 val Tokens.location: Location
     get() = Location(this.line, this.column)
+fun Tokens.expect(token: DefaultToken): Range? {
+    val next = peekOptional().getOrNull()?: return null;
+    if(next.type == token) {
+        return range { next() }.location
+    }
+    return null;
+}
+
