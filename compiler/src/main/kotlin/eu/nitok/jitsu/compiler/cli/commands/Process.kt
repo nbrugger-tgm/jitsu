@@ -29,7 +29,7 @@ class Process : Callable<List<Pair<Scope, Path>>> {
         scopes.forEach {
             val cacheFile = graphCache.resolve("${it.second.nameWithoutExtension}.graph.json").ensureExistingFile()
             cacheFile.writeText(
-                Json.encodeToString(it.first)
+                cli.json.encodeToString(it.first)
             )
             spec.commandLine().out.println("Write graph to $cacheFile")
         }

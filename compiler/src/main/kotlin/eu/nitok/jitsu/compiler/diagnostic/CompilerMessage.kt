@@ -1,8 +1,6 @@
 package eu.nitok.jitsu.compiler.diagnostic
 
-import eu.nitok.jitsu.compiler.parser.Locatable
 import eu.nitok.jitsu.compiler.parser.Range
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 
 @Serializable
