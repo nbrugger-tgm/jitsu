@@ -19,7 +19,7 @@ sealed interface AstNode {
     }
 
     fun error(error: CompilerMessage) {
-        warnings.add(error)
+        errors.add(error)
     }
     fun <T> flatMap(mapper: (AstNode) -> List<T>): List<T> {
         val diagnostics: MutableList<T> = mutableListOf();
