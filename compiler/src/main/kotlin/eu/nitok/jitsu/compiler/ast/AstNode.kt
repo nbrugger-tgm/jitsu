@@ -21,6 +21,16 @@ sealed interface AstNode {
         warnings.add(error)
     }
 }
+    fun <T> flatMap(mapper: (AstNode) -> List<T>): List<T> {
+        val diagnostics: MutableList<T> = mutableListOf();
+        val nodeQueue = ArrayDeque(listOf(this))
+        while (!nodeQueue.isEmpty()) {
+            val subNode = nodeQueue.removeFirst()
+            diagnostics.addAll(mapper(subNode))
+            nodeQueue += subNode.children
+        }
+        return diagnostics
+    }
 
 fun <T: AstNode> T.withMessages(messages: CompilerMessages) : T{
     messages.apply(this)

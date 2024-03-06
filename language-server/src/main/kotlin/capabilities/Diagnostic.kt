@@ -2,7 +2,6 @@ package capabilities
 
 import eu.nitok.jitsu.compiler.ast.AstNode
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
-import flatMap
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
 import range

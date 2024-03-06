@@ -17,14 +17,3 @@ fun AstNode.visit(visitor: AstNode.() -> Unit) {
         nodeQueue += subNode.children
     }
 }
-
-fun <T> AstNode.flatMap(mapper: (AstNode) -> List<T>): List<T> {
-    val diagnostics: MutableList<T> = mutableListOf();
-    val nodeQueue = ArrayDeque(listOf(this))
-    while (!nodeQueue.isEmpty()) {
-        val subNode = nodeQueue.removeFirst()
-        diagnostics.addAll(mapper(subNode))
-        nodeQueue += subNode.children
-    }
-    return diagnostics
-}
