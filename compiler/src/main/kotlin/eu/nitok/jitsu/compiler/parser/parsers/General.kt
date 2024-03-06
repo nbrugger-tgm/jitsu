@@ -10,12 +10,12 @@ import eu.nitok.jitsu.compiler.parser.*
 import kotlin.jvm.optionals.getOrNull
 
 fun parseCodeBlock(tokens: Tokens): StatementNode.CodeBlockNode.StatementsCodeBlock? {
-    val openKw = tokens.expect(DefaultToken.ROUND_BRACKET_OPEN)?: return null;
+    val openKw = tokens.expect(DefaultToken.ROUND_BRACKET_OPEN)?.location ?: return null;
     val lst = mutableListOf<StatementNode>()
     val messages = CompilerMessages()
     parseStatements(tokens, lst, messages::error)
     tokens.skipWhitespace()
-    val closeKw = tokens.expect(DefaultToken.ROUND_BRACKET_CLOSED)
+    val closeKw = tokens.expect(DefaultToken.ROUND_BRACKET_CLOSED)?.location
     if(closeKw == null){
         messages.error("Unclosed code block, expected '}'", tokens.location, Hint(
             "Code block opened here", openKw
