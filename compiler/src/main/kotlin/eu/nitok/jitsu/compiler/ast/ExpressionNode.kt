@@ -19,7 +19,8 @@ sealed interface ExpressionNode : AstNode {
         }
 
         @Serializable
-        class FloatLiteralNode(val value: Double, override val location: Range) : AstNodeImpl(listOf()), NumberLiteralNode {
+        class FloatLiteralNode(val value: Double, override val location: Range) : AstNodeImpl(listOf()),
+            NumberLiteralNode {
             override fun toString(): String {
                 return value.toString() + "f"
             }
@@ -49,6 +50,7 @@ sealed interface ExpressionNode : AstNode {
                     return "\$$literal"
                 }
             }
+
             /**
              * the `${me.age}` part in "I am $abc and i am ${me.age} years old"
              */
@@ -69,14 +71,16 @@ sealed interface ExpressionNode : AstNode {
              * the `I am `, ` and i am ` and ` years old` parts in "I am $abc and i am ${me.age} years old"
              */
             @Serializable
-            data class CharSequence(val value: String, override val location: Range) : AstNodeImpl(listOf()), StringPart {
+            data class CharSequence(val value: String, override val location: Range) : AstNodeImpl(listOf()),
+                StringPart {
                 override fun toString(): String {
                     return value
                 }
             }
 
             @Serializable
-            data class EscapeSequence(val value: String, override val location: Range) : AstNodeImpl(listOf()), StringPart {
+            data class EscapeSequence(val value: String, override val location: Range) : AstNodeImpl(listOf()),
+                StringPart {
                 override fun toString(): String {
                     return "\\$value"
                 }
@@ -96,10 +100,11 @@ sealed interface ExpressionNode : AstNode {
     }
 
     @Serializable
-    class VariableReferenceNode(val name: String, override val location: Range) :
-        AstNodeImpl(listOf()), ExpressionNode, AssignmentTarget {
+    class VariableReferenceNode(val variable: IdentifierNode) :
+        AstNodeImpl(listOf(variable)), ExpressionNode, AssignmentTarget {
+        override val location: Range = variable.location
         override fun toString(): String {
-            return name
+            return variable.value
         }
     }
 
@@ -107,9 +112,10 @@ sealed interface ExpressionNode : AstNode {
     class OperationNode(
         val left: ExpressionNode,
         val operator: Located<BiOperator>,
-        val right: ExpressionNode?,
-        override val location: Range
-    ) : AstNodeImpl(listOfNotNull(left, right)), ExpressionNode
+        val right: ExpressionNode?
+    ) : AstNodeImpl(listOfNotNull(left, right)), ExpressionNode {
+        override val location: Range = left.location.rangeTo(right?.location?: operator.location)
+    }
 
     @Serializable
     class FieldAccessNode(

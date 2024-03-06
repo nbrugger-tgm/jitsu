@@ -39,7 +39,7 @@ fun parseStatements(
                 tokens.skipWhitespace()
                 val lastToken = tokens.index()
                 val invalid = tokens.skipUntil(ROUND_BRACKET_CLOSED, SEMICOLON, NEW_LINE)
-                if(lastToken == tokens.index()) {
+                if (lastToken == tokens.index()) {
                     //nothing invalid was skipped - so end of block
                     break;
                 }
@@ -79,16 +79,15 @@ private fun tokenize(txt: String): Tokens {
 
 private fun parseStatement(tokens: Tokens): StatementNode? {
     return parseFunction(tokens) ?: parseExecutableStatement(tokens) {
-        parseVariableDeclaration(it) ?: parseAssignment(it) ?:
-        parseReturnStatement(it)
+        parseVariableDeclaration(it) ?: parseAssignment(it) ?: parseReturnStatement(it)
     }
 }
 
 fun parseReturnStatement(tokens: Tokens): StatementNode? {
-    val kw = tokens.keyword("return")?: return null;
+    val kw = tokens.keyword("return") ?: return null;
     tokens.skipWhitespace()
     val value = parseExpression(tokens);
-    return StatementNode.ReturnNode(value, kw.rangeTo(value?.location?:kw), kw)
+    return StatementNode.ReturnNode(value, kw.rangeTo(value?.location ?: kw), kw)
 }
 
 
@@ -121,7 +120,7 @@ fun parseVariableDeclaration(tokens: Tokens): StatementNode.VariableDeclarationN
     }
     val expression = parseExpression(tokens);
 
-    if(expression == null)
+    if (expression == null)
         messages.error("Expected value to assign to '${name?.value}'", tokens.location)
     return StatementNode.VariableDeclarationNode(
         name,
@@ -239,7 +238,45 @@ fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode
 }
 
 fun parseExpression(tokens: Tokens): ExpressionNode? {
-    return parseIntLiteral(tokens);
+    var expressionNode = parseSingleExpression(tokens)
+    while(expressionNode != null) {
+        val composite = parseCompositExpression(tokens, expressionNode) ?: return expressionNode;
+        expressionNode = composite;
+    }
+    return expressionNode;
+}
+
+private fun parseCompositExpression(
+    tokens: Tokens,
+    expressionNode: ExpressionNode
+) = parseOperation(tokens, expressionNode)
+
+private fun parseSingleExpression(tokens: Tokens) =
+    parseIntLiteral(tokens) ?: parseVariableReference(tokens)
+
+fun parseOperation(tokens: Tokens, left: ExpressionNode): ExpressionNode? {
+    tokens.elevate()
+    tokens.skipWhitespace()
+    val op = tokens.expect(PLUS, MINUS, STAR, SLASH)
+    if (op == null) {
+        tokens.rollback();
+        return null
+    }
+    tokens.commit();
+    tokens.skipWhitespace()
+    val right = parseSingleExpression(tokens);
+    return ExpressionNode.OperationNode(
+        left,
+        Located(
+            BiOperator.byRune(op.value.value)
+                ?: throw IllegalStateException("No operator found for rune ${op.value.value}!"), op.location
+        ),
+        right
+    )
+}
+
+fun parseVariableReference(tokens: Tokens): ExpressionNode? {
+    return parseIdentifier(tokens)?.let { ExpressionNode.VariableReferenceNode(it) }
 }
 
 fun parseIntLiteral(tokens: Tokens): ExpressionNode? {
@@ -250,7 +287,7 @@ fun parseIntLiteral(tokens: Tokens): ExpressionNode? {
 fun parseAssignment(tokens: Tokens): StatementNode.AssignmentNode? {
     tokens.elevate()
     val kw = parseIdentifier(tokens)
-    if(kw == null){
+    if (kw == null) {
         tokens.rollback()
         return null
     }
@@ -262,8 +299,8 @@ fun parseAssignment(tokens: Tokens): StatementNode.AssignmentNode? {
     }
     tokens.skipWhitespace();
     val expression = parseExpression(tokens);
-    return StatementNode.AssignmentNode(ExpressionNode.VariableReferenceNode(kw.value, kw.location), expression).run {
-        if(expression == null)
+    return StatementNode.AssignmentNode(ExpressionNode.VariableReferenceNode(kw), expression).run {
+        if (expression == null)
             this.error(CompilerMessage("Expected value to assign to '${kw.value}'", tokens.location))
         this
     };
@@ -292,9 +329,9 @@ inline fun <T> Tokens.range(action: Tokens.() -> T): Located<T> {
     return Located(res, start.rangeTo(end))
 }
 
-fun Tokens.expect(token: DefaultToken): Located<AssignedToken<DefaultToken>>? {
+fun Tokens.expect(vararg token: DefaultToken): Located<AssignedToken<DefaultToken>>? {
     val next = peekOptional().getOrNull() ?: return null;
-    if (next.type == token) {
+    if (token.contains(next.type)) {
         return range { next() }
     }
     return null;

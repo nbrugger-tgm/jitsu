@@ -12,4 +12,10 @@ enum class BiOperator(val rune: String) {
     MODULO("%"),
     GREATER(">"),
     LESS("<");
+
+    companion object {
+        fun byRune(rune: String): BiOperator? {
+            return entries.find { it.rune == rune }
+        }
+    }
 }
