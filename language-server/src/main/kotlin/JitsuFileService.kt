@@ -29,7 +29,7 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
         asts[uri] = lazy {
             customLogger.println("parsing $uri")
             val startMs = System.currentTimeMillis()
-            val ast = parseFile(text)
+            val ast = parseFile(text, URI(uri))
             val endMs = System.currentTimeMillis()
             val parsingTime = endMs - startMs
             customLogger.println("parsed in ${parsingTime}ms")

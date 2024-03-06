@@ -13,15 +13,26 @@ import eu.nitok.jitsu.compiler.model.BitSize
 import eu.nitok.jitsu.compiler.parser.parsers.parseFunction
 import eu.nitok.jitsu.compiler.parser.parsers.parseIdentifier
 import eu.nitok.jitsu.compiler.parser.parsers.parseStructuralInterface
+import java.io.Reader
 import java.io.StringReader
+import java.net.URI
 import kotlin.jvm.optionals.getOrNull
 
 typealias Tokens = TokenStream<DefaultToken>
 
-fun parseFile(txt: String): SourceFileNode {
+fun parseFile(input: Reader, uri: URI): SourceFileNode {
+    val tokenSource = TokenSource(input, tokenizer);
+    val tokens = TokenStream.of(tokenSource)
+    val statements = mutableListOf<StatementNode>()
+    val sourceFileNode = SourceFileNode(uri.toString(), statements)
+    parseStatements(tokens, statements, sourceFileNode::error)
+    return sourceFileNode;
+}
+
+fun parseFile(txt: String, uri: URI): SourceFileNode {
     val tokens = tokenize(txt)
     var statements = mutableListOf<StatementNode>()
-    val sourceFileNode = SourceFileNode(statements)
+    val sourceFileNode = SourceFileNode(uri.toString(), statements)
     parseStatements(tokens, statements, sourceFileNode::error)
     return sourceFileNode;
 }
@@ -126,7 +137,6 @@ fun parseVariableDeclaration(tokens: Tokens): StatementNode.VariableDeclarationN
         name,
         type,
         expression,
-        kw.rangeTo(expression?.location ?: eq ?: type?.location ?: name?.location ?: kw),
         kw
     ).withMessages(messages);
 }

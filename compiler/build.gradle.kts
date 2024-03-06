@@ -13,5 +13,3 @@ dependencies {
     implementation("info.picocli:picocli:4.6.1")
 }
 
-
-}
