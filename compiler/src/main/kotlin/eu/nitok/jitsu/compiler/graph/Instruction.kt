@@ -4,6 +4,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 sealed interface Instruction {
+    data class Return(val value: Expression?): Instruction
+
     @Serializable
     data class VariableDeclaration(val variable: Variable, val value: Expression): Instruction
 }

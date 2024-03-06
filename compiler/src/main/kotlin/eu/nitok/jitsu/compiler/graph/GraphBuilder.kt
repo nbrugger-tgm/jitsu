@@ -39,6 +39,7 @@ fun buildGraph(scope: Scope, statement: StatementNode): Instruction? {
         is CodeBlockNode,
         is YieldStatement,
         is SwitchNode -> TODO()
+        is ReturnNode -> Instruction.Return(buildExpressionGraph(statement.expression, scope))
 
         is VariableDeclarationNode -> buildGraph(scope, statement)
 
