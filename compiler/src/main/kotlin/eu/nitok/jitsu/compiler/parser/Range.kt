@@ -117,19 +117,19 @@ data class Range(val start: Location, val end: Location) : Locatable, Comparable
             val string = decoder.decodeString()
             val locs = string.split("-");
             var loc1 = run {
-                val parts = string.split(":")
+                val parts = locs[0].split(":")
                 if (parts.size == 3) Location(
                     file = parts[0],
                     line = parts[1].toInt(),
                     column = parts[2].toInt()
                 )
                 else Location(
-                    line = parts[1].toInt(),
-                    column = parts[2].toInt()
+                    line = parts[0].toInt(),
+                    column = parts[1].toInt()
                 )
             }
             var loc2 = run {
-                val parts = string.split(":")
+                val parts = locs[1].split(":")
                 Location(
                     file = loc1.file,
                     line = parts[0].toInt(),
