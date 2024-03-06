@@ -4,7 +4,6 @@ import eu.nitok.jitsu.compiler.ast.*
 
 
 import eu.nitok.jitsu.compiler.ast.StatementNode.*
-import eu.nitok.jitsu.compiler.model.BitSize
 
 fun buildGraph(file: SourceFileNode): Scope {
     val rootScope = Scope()//top level scopes have no parent
@@ -39,6 +38,7 @@ fun buildGraph(scope: Scope, statement: StatementNode): Instruction? {
         is CodeBlockNode,
         is YieldStatement,
         is SwitchNode -> TODO()
+
         is ReturnNode -> Instruction.Return(buildExpressionGraph(statement.expression, scope))
 
         is VariableDeclarationNode -> buildGraph(scope, statement)
@@ -69,7 +69,7 @@ fun buildGraph(scope: Scope, statement: StatementNode): Instruction? {
 
 fun buildGraph(scope: Scope, statement: VariableDeclarationNode): Instruction {
     val explicitType = resolveType(scope, statement.type)
-    val initialValue = buildExpressionGraph(statement.value, scope, statement.type?.let { explicitType })
+    val initialValue = buildExpressionGraph(statement.value, scope)
     return Instruction.VariableDeclaration(
         Variable(
             false,
@@ -117,16 +117,20 @@ private fun buildGraph(
     array: TypeNode.ArrayTypeNode
 ) = Type.Array(
     resolveType(scope, array.type),
-    array.fixedSize?.run { buildExpressionGraph(this, scope, Type.UInt(BitSize.BIT_32)) }
+    array.fixedSize?.run { buildExpressionGraph(this, scope) }
 )
 
-fun buildExpressionGraph(expression: ExpressionNode?, scope: Scope, explicitType: Type? = null): Expression {
+fun buildExpressionGraph(expression: ExpressionNode?, scope: Scope): Expression {
     return when (expression) {
         null -> Expression.Undefined
         is ExpressionNode.BooleanLiteralNode -> Constant.BooleanConstant(expression.value, expression.location)
         is ExpressionNode.NumberLiteralNode.FloatLiteralNode -> TODO()
         is ExpressionNode.NumberLiteralNode.IntegerLiteralNode -> resolveIntConstant(expression)
-        is ExpressionNode.OperationNode -> TODO();
+        is ExpressionNode.OperationNode -> Expression.Operation(
+            buildExpressionGraph(expression.left, scope),
+            expression.operator.value,
+            buildExpressionGraph(expression.right, scope)
+        );
         is ExpressionNode.StringLiteralNode -> TODO()
         is ExpressionNode.VariableReferenceNode -> TODO()
         is ExpressionNode.FieldAccessNode -> TODO()
@@ -141,22 +145,32 @@ fun buildExpressionGraph(expression: ExpressionNode?, scope: Scope, explicitType
     }
 }
 
+fun resolveVariableReference(expression: ExpressionNode.VariableReferenceNode): Expression {
+
+}
+
 fun buildFunctionGraph(functionNode: FunctionDeclarationNode, parentScope: Scope): Function {
     val name = functionNode.name
     val innerScope = Scope(parentScope);
     val parameters = functionNode.parameters.map {
-            val type = resolveType(parentScope, it.type)
-            Parameter(
-                it.name.located, type,
-                buildExpressionGraph(it.defaultValue, parentScope, type)
-            )
-        }
+        val type = resolveType(parentScope, it.type)
+        Parameter(
+            it.name.located, type,
+            buildExpressionGraph(it.defaultValue, parentScope)
+        )
+    }
     val functionBody = when (val body = functionNode.body) {
         is CodeBlockNode.SingleExpressionCodeBlock -> TODO()//buildExpressionGraph(body.expression, function.bodyScope)
         is CodeBlockNode.StatementsCodeBlock -> body.statements.mapNotNull { buildGraph(innerScope, it) }
         null -> listOf();
     }
-    return Function(innerScope, name?.located, resolveType(parentScope, functionNode.returnType), parameters, functionBody);
+    return Function(
+        innerScope,
+        name?.located,
+        resolveType(parentScope, functionNode.returnType),
+        parameters,
+        functionBody
+    );
 }
 
 fun resolveConstantOperation(scope: Scope, expression: ExpressionNode.OperationNode): Constant<Any>? {
