@@ -8,7 +8,7 @@ import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
 import range
 
-//
+
 fun StatementNode.documentSymbols(): List<DocumentSymbol> {
     return when (this) {
         is StatementNode.AssignmentNode -> value?.documentSymbols()?: listOf()
@@ -215,7 +215,7 @@ private fun ExpressionNode.documentSymbols(): List<DocumentSymbol> {
         is ExpressionNode.NumberLiteralNode.IntegerLiteralNode -> listOf()
         is ExpressionNode.OperationNode -> left.documentSymbols() + (right?.documentSymbols() ?: listOf())
         is ExpressionNode.StringLiteralNode -> emptyList()
-        is ExpressionNode.VariableLiteralNode -> listOf()
+        is ExpressionNode.VariableReferenceNode -> listOf()
         is ExpressionNode.FieldAccessNode -> emptyList()
         is ExpressionNode.IndexAccessNode -> emptyList()
         is StatementNode -> (this as StatementNode).documentSymbols()

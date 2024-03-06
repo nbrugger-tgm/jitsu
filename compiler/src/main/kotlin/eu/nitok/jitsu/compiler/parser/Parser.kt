@@ -9,7 +9,6 @@ import com.niton.jainparse.token.Tokenizer.AssignedToken
 import eu.nitok.jitsu.compiler.ast.*
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage.Hint
-import eu.nitok.jitsu.compiler.graph.resolveType
 import eu.nitok.jitsu.compiler.model.BitSize
 import eu.nitok.jitsu.compiler.parser.parsers.parseFunction
 import eu.nitok.jitsu.compiler.parser.parsers.parseIdentifier
@@ -84,13 +83,13 @@ private fun parseStatement(tokens: Tokens): StatementNode? {
         parseReturnStatement(it)
     }
 }
+
 fun parseReturnStatement(tokens: Tokens): StatementNode? {
     val kw = tokens.keyword("return")?: return null;
     tokens.skipWhitespace()
     val value = parseExpression(tokens);
     return StatementNode.ReturnNode(value, kw.rangeTo(value?.location?:kw), kw)
 }
-
 
 
 private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> StatementNode?): StatementNode? {
@@ -263,7 +262,7 @@ fun parseAssignment(tokens: Tokens): StatementNode.AssignmentNode? {
     }
     tokens.skipWhitespace();
     val expression = parseExpression(tokens);
-    return StatementNode.AssignmentNode(ExpressionNode.VariableLiteralNode(kw.value, kw.location), expression).run {
+    return StatementNode.AssignmentNode(ExpressionNode.VariableReferenceNode(kw.value, kw.location), expression).run {
         if(expression == null)
             this.error(CompilerMessage("Expected value to assign to '${kw.value}'", tokens.location))
         this

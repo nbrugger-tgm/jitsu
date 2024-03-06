@@ -166,7 +166,7 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
 
         is LineCommentNode -> listOf(token(COMMENT, location))
         is YieldStatement -> listOf(token(KEYWORD, keywordLocation))
-        is VariableLiteralNode -> listOf(token(VARIABLE, location))
+        is VariableReferenceNode -> listOf(token(VARIABLE, location))
         is EnumDeclarationNode -> listOf(token(KEYWORD, keywordLocation)) +
                 constants.map { token(ENUMMEMBER, it.location) }
 

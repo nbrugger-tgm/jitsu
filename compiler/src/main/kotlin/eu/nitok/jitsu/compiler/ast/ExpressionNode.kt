@@ -96,7 +96,7 @@ sealed interface ExpressionNode : AstNode {
     }
 
     @Serializable
-    class VariableLiteralNode(val name: String, override val location: Range) :
+    class VariableReferenceNode(val name: String, override val location: Range) :
         AstNodeImpl(listOf()), ExpressionNode, AssignmentTarget {
         override fun toString(): String {
             return name
