@@ -8,26 +8,26 @@ import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
 import range
 
-//
+
 fun StatementNode.documentSymbols(): List<DocumentSymbol> {
     return when (this) {
-        is StatementNode.AssignmentNode -> value.documentSymbols()
+        is StatementNode.AssignmentNode -> value?.documentSymbols()?: listOf()
         is StatementNode.CodeBlockNode.SingleExpressionCodeBlock -> expression.documentSymbols()
         is StatementNode.CodeBlockNode.StatementsCodeBlock -> statements.flatMap { it.documentSymbols() }
         is StatementNode.FunctionCallNode -> listOf()
-        is StatementNode.FunctionDeclarationNode -> listOf(
+        is StatementNode.FunctionDeclarationNode -> if(name != null) listOf(
             DocumentSymbol(
-                name.value,
+                name!!.value,
                 SymbolKind.Function,
                 range(location),
-                range(name.location),
+                range(name!!.location),
                 "(${
                     parameters.joinToString(", ") { it.toString() }
                 }) ${if (returnType != null) " -> $returnType" else ""}",
                 parameters.flatMap { it.documentSymbols() } +
                         ((body as StatementNode?)?.documentSymbols() ?: listOf())
             )
-        )
+        ) else listOf()
 
         is StatementNode.IfNode -> {
             val elseNodes = elseStatement?.let {
@@ -51,9 +51,7 @@ fun StatementNode.documentSymbols(): List<DocumentSymbol> {
                 range(location),
                 range(name?.location ?: location),
                 type.toString(),
-                (value?.documentSymbols() ?: emptyList()) +
-                        (type?.documentSymbols(type!!.location, "anonymous\$${getArtificalId()}", type!!.location) ?: emptyList())
-
+                value?.documentSymbols() ?: emptyList()
             )
         )
 
@@ -110,7 +108,6 @@ private fun TypeNode.documentSymbols(location: Range, name: String, nameLocation
         is TypeNode.FloatTypeNode,
         is TypeNode.IntTypeNode,
         is TypeNode.NameTypeNode,
-        is TypeNode.StringTypeNode,
         is TypeNode.ValueTypeNode -> listOf(
             DocumentSymbol(
                 name,
@@ -159,7 +156,7 @@ private fun TypeNode.documentSymbols(location: Range, name: String, nameLocation
                 range(it.location),
                 range(it.name.location),
                 it.toString(),
-                it.type.documentSymbols(it.type.location, "anonymous\$structural\$interface", it.type.location)
+                it.type?.let { documentSymbols(it.location, "anonymous\$si\$${getArtificalId()}", it.location) }?: listOf()
             )
         }
     }
@@ -218,7 +215,7 @@ private fun ExpressionNode.documentSymbols(): List<DocumentSymbol> {
         is ExpressionNode.NumberLiteralNode.IntegerLiteralNode -> listOf()
         is ExpressionNode.OperationNode -> left.documentSymbols() + (right?.documentSymbols() ?: listOf())
         is ExpressionNode.StringLiteralNode -> emptyList()
-        is ExpressionNode.VariableLiteralNode -> listOf()
+        is ExpressionNode.VariableReferenceNode -> listOf()
         is ExpressionNode.FieldAccessNode -> emptyList()
         is ExpressionNode.IndexAccessNode -> emptyList()
         is StatementNode -> (this as StatementNode).documentSymbols()

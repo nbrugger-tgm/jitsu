@@ -1,10 +1,8 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.compiler.ast.IdentifierNode
 import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.parser.Locatable
-import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 

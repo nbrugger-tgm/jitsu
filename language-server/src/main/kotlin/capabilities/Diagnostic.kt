@@ -20,6 +20,6 @@ private fun errorDiagnostic(err: CompilerMessage): Diagnostic {
         range(err.location.toRange()),
         err.message,
         DiagnosticSeverity.Error,
-        "SRC ?? jainparse"
+        "jitsu"
     )
 }

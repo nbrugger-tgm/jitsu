@@ -36,13 +36,6 @@ sealed interface TypeNode : AstNode {
     }
 
     @Serializable
-    class StringTypeNode(override val location: Range) : TypeNode, AstNodeImpl(listOf()) {
-        override fun toString(): String {
-            return "string"
-        }
-    }
-
-    @Serializable
     class ArrayTypeNode(
         @SerialName("type_definition") val type: TypeNode,
         val fixedSize: ExpressionNode?,
@@ -76,7 +69,13 @@ sealed interface TypeNode : AstNode {
     }
 
     @Serializable
-    class UnionTypeNode(val types: List<TypeNode>, override val location: Range) : TypeNode, AstNodeImpl(types) {
+    data class UnionTypeNode(val types: List<TypeNode>) : TypeNode, AstNodeImpl(types) {
+        init {
+            require(types.isNotEmpty()) {
+                "union types cannot be empty"
+            }
+        }
+        override val location: Range = types.first().location.rangeTo(types.last().location)
         override fun toString(): String {
             return types.joinToString(" | ")
         }
@@ -94,9 +93,9 @@ sealed interface TypeNode : AstNode {
         @Serializable
         class StructuralFieldNode(
             val name: IdentifierNode,
-            val type: TypeNode
-        ) : AstNodeImpl( listOf(name, type)) {
-            override val location: Range = name.location.rangeTo(type.location)
+            val type: TypeNode?
+        ) : AstNodeImpl( listOfNotNull(name, type)) {
+            override val location: Range = name.location.rangeTo(type?.location ?: name.location)
             override fun toString(): String {
                 return "${name.value}: $type"
             }

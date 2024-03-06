@@ -4,8 +4,8 @@ import org.eclipse.lsp4j.Range
 
 fun range(it: eu.nitok.jitsu.compiler.parser.Range): Range {
     return Range(
-        Position(it.start.line, it.start.column),
-        Position(it.end.line, it.end.column)
+        Position(it.start.line-1, it.start.column-1),
+        Position(it.end.line-1, it.end.column-1)
     )
 }
 

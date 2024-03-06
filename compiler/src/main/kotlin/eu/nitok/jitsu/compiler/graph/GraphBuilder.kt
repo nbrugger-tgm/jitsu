@@ -29,7 +29,7 @@ fun buildGraph(file: SourceFileNode): Scope {
 }
 
 fun buildGraph(statement: NamedTypeDeclarationNode.TypeAliasNode, scope: Scope) {
-    val alias = ResolvedType.NamedType.Alias(statement.name, buildGraph(statement.type, scope))
+    val alias = ResolvedType.NamedType.Alias(statement.name.located, buildGraph(statement.type, scope))
     scope.register(alias);
 }
 
@@ -40,12 +40,11 @@ fun buildGraph(it: TypeNode, scope: Scope): Lazy<ResolvedType> {
             is TypeNode.IntTypeNode -> ResolvedType.Int(it.bitSize)
             is TypeNode.ArrayTypeNode -> buildGraph(it, scope)//TODO: reduce multi dimension
             is TypeNode.FunctionTypeSignatureNode -> buildGraph(it, scope)
-            is TypeNode.StringTypeNode -> TODO()
             is TypeNode.UnionTypeNode -> TODO()
             is TypeNode.ValueTypeNode -> TODO()
             is TypeNode.VoidTypeNode -> TODO()
             is TypeNode.StructuralInterfaceTypeNode -> TODO()
-            is TypeNode.NameTypeNode -> scope.resolveType(it.name)
+            is TypeNode.NameTypeNode -> scope.resolveType(it.name.located)
         }
     }
 }
@@ -54,10 +53,10 @@ private fun buildGraph(
     it: NamedTypeDeclarationNode.InterfaceTypeNode,
     scope: Scope
 ) = ResolvedType.NamedType.Interface(
-    it.name,
+    it.name.located,
     it.functions.associateBy(
         { func -> func.name.value },
-        { func -> LocatedImpl(func.typeSignature.location, buildGraph(func.typeSignature, scope)) }
+        { func -> Located(buildGraph(func.typeSignature, scope), func.typeSignature.location) }
     )
 )
 
@@ -69,13 +68,13 @@ private fun buildGraph(
     it.parameters.map {
         it.run {
             val type = type?.run { buildGraph(this, scope) } ?: lazy { ResolvedType.Undefined };
-            ResolvedType.FunctionTypeSignature.Parameter(name, type)
+            ResolvedType.FunctionTypeSignature.Parameter(name.located, type)
         }
     }
 )
 
 private fun buildGraph(enum: NamedTypeDeclarationNode.EnumDeclarationNode): ResolvedType.NamedType.Enum {
-    return ResolvedType.NamedType.Enum(enum.name, enum.constants)
+    return ResolvedType.NamedType.Enum(enum.name.located, enum.constants.map { it.located })
 }
 
 private fun buildGraph(
@@ -283,6 +282,8 @@ private fun resolveIntConstant(
     else
         Constant.UIntConstant(value.toULong(), originLocation = expression.location)
 }
+
+val IdentifierNode.located : Located<String> get() = Located(value, location)
 
 fun resolveType(type: TypeNode): ResolvedType {
     TODO("Not yet implemented")
