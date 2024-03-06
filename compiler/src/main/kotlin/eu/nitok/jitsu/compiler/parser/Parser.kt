@@ -87,7 +87,16 @@ fun parseVariableDeclaration(tokens: Tokens): StatementNode.VariableDeclarationN
         messages.error("Variables need an initial value!", tokens.location)
     }
     val expression = parseExpression(tokens);
-    return StatementNode.VariableDeclarationNode(name, type, expression, kw.rangeTo(expression.location), kw);
+
+    if(expression == null)
+        messages.error("Expected value to assign to '${name?.value}'", tokens.location)
+    return StatementNode.VariableDeclarationNode(
+        name,
+        type,
+        expression,
+        kw.rangeTo(expression?.location ?: eq ?: type?.location ?: name?.location ?: kw),
+        kw
+    ).withMessages(messages);
 }
 
 
@@ -210,7 +219,11 @@ fun parseAssignment(tokens: Tokens): StatementNode.AssignmentNode? {
         return null
     }
     val expression = parseExpression(tokens);
-    return StatementNode.AssignmentNode(ExpressionNode.VariableLiteralNode(kw.value, kw.location), expression);
+    return StatementNode.AssignmentNode(ExpressionNode.VariableLiteralNode(kw.value, kw.location), expression).run {
+        if(expression == null)
+            this.error(CompilerMessage("Expected value to assign to '${kw.value}'", tokens.location))
+        this
+    };
 }
 
 /**

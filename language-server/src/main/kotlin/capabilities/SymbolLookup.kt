@@ -11,7 +11,7 @@ import range
 //
 fun StatementNode.documentSymbols(): List<DocumentSymbol> {
     return when (this) {
-        is StatementNode.AssignmentNode -> value.documentSymbols()
+        is StatementNode.AssignmentNode -> value?.documentSymbols()?: listOf()
         is StatementNode.CodeBlockNode.SingleExpressionCodeBlock -> expression.documentSymbols()
         is StatementNode.CodeBlockNode.StatementsCodeBlock -> statements.flatMap { it.documentSymbols() }
         is StatementNode.FunctionCallNode -> listOf()

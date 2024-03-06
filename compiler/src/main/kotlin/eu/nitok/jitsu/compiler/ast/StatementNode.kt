@@ -193,13 +193,13 @@ sealed interface StatementNode : AstNode {
     @Serializable
     class AssignmentNode(
         val target: AssignmentTarget,
-        val value: ExpressionNode,
-    ) : StatementNode, AstNodeImpl(listOf(target, value)) {
+        val value: ExpressionNode?,
+    ) : StatementNode, AstNodeImpl(listOfNotNull(target, value)) {
         @Serializable
         sealed interface AssignmentTarget : AstNode
 
         override val location: Range
-            get() = target.location.rangeTo(value.location)
+            get() = target.location.rangeTo(value?.location?: target.location)
     }
 
     @Serializable
