@@ -4,6 +4,7 @@ import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.parser.Locatable
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 sealed interface AstNode {
@@ -11,7 +12,7 @@ sealed interface AstNode {
     val warnings: MutableList<CompilerMessage>
     val errors: MutableList<CompilerMessage>
 
-    abstract val children: List<AstNode>
+    val children: List<AstNode>
 
     fun warning(warning: CompilerMessage) {
         warnings.add(warning)
@@ -20,7 +21,6 @@ sealed interface AstNode {
     fun error(error: CompilerMessage) {
         warnings.add(error)
     }
-}
     fun <T> flatMap(mapper: (AstNode) -> List<T>): List<T> {
         val diagnostics: MutableList<T> = mutableListOf();
         val nodeQueue = ArrayDeque(listOf(this))
@@ -31,14 +31,14 @@ sealed interface AstNode {
         }
         return diagnostics
     }
-
+}
 fun <T: AstNode> T.withMessages(messages: CompilerMessages) : T{
     messages.apply(this)
     return this;
 }
 
 @Serializable
-sealed class AstNodeImpl(override val children: List<AstNode>) : AstNode {
+sealed class AstNodeImpl : AstNode {
     override val warnings: MutableList<CompilerMessage> = mutableListOf()
     override val errors: MutableList<CompilerMessage> = mutableListOf()
 }

@@ -8,18 +8,24 @@ import kotlinx.serialization.Serializable;
 @Serializable
 sealed interface TypeNode : AstNode {
     @Serializable
-    class IntTypeNode(val bitSize: BitSize, override val location: Range) : TypeNode, AstNodeImpl(listOf()) {
+    class IntTypeNode(val bitSize: BitSize, override val location: Range) : TypeNode, AstNodeImpl() {
 
         override fun toString(): String {
             return "i${bitSize.bits}"
         }
+
+        override val children: List<AstNode>
+            get() = listOf()
     }
 
     @Serializable
-    class FloatTypeNode(val bitSize: BitSize, override val location: Range) : TypeNode, AstNodeImpl(listOf()) {
+    class FloatTypeNode(val bitSize: BitSize, override val location: Range) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
             return "f${bitSize.bits}"
         }
+
+        override val children: List<AstNode>
+            get() = listOf()
     }
 
     @Serializable
@@ -27,7 +33,9 @@ sealed interface TypeNode : AstNode {
         val returnType: TypeNode?,
         var parameters: List<StatementNode.FunctionDeclarationNode.ParameterNode>,
         override val location: Range
-    ) : TypeNode, AstNodeImpl(parameters + listOfNotNull(returnType)) {
+    ) : TypeNode, AstNodeImpl() {
+        override val children: List<AstNode>
+            get() = parameters + listOfNotNull(returnType)
         override fun toString(): String {
             return "(${
                 parameters.joinToString(", ") { it.type?.toString() ?: "<invalid>" }
@@ -40,7 +48,9 @@ sealed interface TypeNode : AstNode {
         @SerialName("type_definition") val type: TypeNode,
         val fixedSize: ExpressionNode?,
         override val location: Range
-    ) : TypeNode, AstNodeImpl(listOfNotNull(type, fixedSize)) {
+    ) : TypeNode, AstNodeImpl() {
+        override val children: List<AstNode>
+            get() = listOfNotNull(type, fixedSize)
         override fun toString(): String {
             return "$type[${fixedSize?.toString() ?: ""}]"
         }
@@ -62,19 +72,26 @@ sealed interface TypeNode : AstNode {
         val name: IdentifierNode,
         val genericTypes: List<TypeNode>,
         override val location: Range
-    ) : TypeNode, AstNodeImpl(genericTypes + name) {
+    ) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
-            return "$name${if (genericTypes.isNotEmpty())"<${genericTypes.joinToString(", ")}>" else ""}"
+            return "$name${if (genericTypes.isNotEmpty()) "<${genericTypes.joinToString(", ")}>" else ""}"
         }
+
+        override val children: List<AstNode>
+            get() = genericTypes + name
     }
 
     @Serializable
-    data class UnionTypeNode(val types: List<TypeNode>) : TypeNode, AstNodeImpl(types) {
+    data class UnionTypeNode(val types: List<TypeNode>) : TypeNode, AstNodeImpl() {
+        override val children: List<AstNode>
+            get() = types
+
         init {
             require(types.isNotEmpty()) {
                 "union types cannot be empty"
             }
         }
+
         override val location: Range = types.first().location.rangeTo(types.last().location)
         override fun toString(): String {
             return types.joinToString(" | ")
@@ -85,7 +102,10 @@ sealed interface TypeNode : AstNode {
     class StructuralInterfaceTypeNode(
         val fields: List<StructuralFieldNode>,
         override val location: Range
-    ) : TypeNode, AstNodeImpl(fields) {
+    ) : TypeNode, AstNodeImpl() {
+        override val children: List<AstNode>
+            get() = fields
+
         override fun toString(): String {
             return "{${fields.joinToString(", ") { it.toString() }}}"
         }
@@ -94,21 +114,30 @@ sealed interface TypeNode : AstNode {
         class StructuralFieldNode(
             val name: IdentifierNode,
             val type: TypeNode?
-        ) : AstNodeImpl( listOfNotNull(name, type)) {
+        ) : AstNodeImpl() {
             override val location: Range = name.location.rangeTo(type?.location ?: name.location)
             override fun toString(): String {
                 return "${name.value}: $type"
             }
+
+            override val children: List<AstNode>
+                get() = listOfNotNull(name, type)
         }
     }
 
     @Serializable
-    class ValueTypeNode(val value: ExpressionNode, override val location: Range) : TypeNode, AstNodeImpl(listOf(value)) {
+    class ValueTypeNode(val value: ExpressionNode, override val location: Range) : TypeNode, AstNodeImpl() {
         override fun toString(): String {
             return value.toString()
         }
+
+        override val children: List<AstNode>
+            get() = listOf(value)
     }
 
     @Serializable
-    class VoidTypeNode(override val location: Range) : TypeNode, AstNodeImpl(listOf())
+    class VoidTypeNode(override val location: Range) : TypeNode, AstNodeImpl() {
+        override val children: List<AstNode>
+            get() = listOf()
+    }
 }
