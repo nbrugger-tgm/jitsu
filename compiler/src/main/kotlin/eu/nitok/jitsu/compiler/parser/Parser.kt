@@ -80,9 +80,17 @@ private fun tokenize(txt: String): Tokens {
 
 private fun parseStatement(tokens: Tokens): StatementNode? {
     return parseFunction(tokens) ?: parseExecutableStatement(tokens) {
-        parseVariableDeclaration(it) ?: parseAssignment(it)
+        parseVariableDeclaration(it) ?: parseAssignment(it) ?:
+        parseReturnStatement(it)
     }
 }
+fun parseReturnStatement(tokens: Tokens): StatementNode? {
+    val kw = tokens.keyword("return")?: return null;
+    tokens.skipWhitespace()
+    val value = parseExpression(tokens);
+    return StatementNode.ReturnNode(value, kw.rangeTo(value?.location?:kw), kw)
+}
+
 
 
 private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> StatementNode?): StatementNode? {
