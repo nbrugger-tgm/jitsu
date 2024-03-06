@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.compiler.ast.IdentifierNode
 import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.parser.Range
@@ -56,11 +57,10 @@ class Scope {
         warnings.add(CompilerMessage(message, location, hints))
     }
 
-    fun resolveType(reference: Located<String>) : TypeDefinition {
-        val type = types[reference.value]
-        if (type == null) {
+    fun resolveType(reference: IdentifierNode) : TypeDefinition {
+        return types[reference.value]?: run {
             error("Type with name '$reference' does not exist", reference.location)
+            TypeDefinition.Alias(reference.located, listOf(), lazy { Type.Undefined })
         }
-        return TypeDefinition.Alias(reference, lazy { Type.Undefined })
     }
 }

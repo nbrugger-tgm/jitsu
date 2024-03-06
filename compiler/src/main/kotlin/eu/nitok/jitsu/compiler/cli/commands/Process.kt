@@ -4,7 +4,6 @@ import eu.nitok.jitsu.compiler.graph.Scope
 import eu.nitok.jitsu.compiler.graph.buildGraph
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.encodeToStream
 import picocli.CommandLine.*
 import picocli.CommandLine.Model.CommandSpec
 import java.nio.file.Path

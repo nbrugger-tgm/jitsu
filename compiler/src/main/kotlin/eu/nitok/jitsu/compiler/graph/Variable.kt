@@ -1,12 +1,12 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.compiler.ast.Located
 import kotlinx.serialization.Serializable
 
 @Serializable
 open class Variable(
-    open val spawnScope: Scope,
     val reassignable: Boolean = false,
-    open val name: String,
+    open val name: Located<String>,
     val declaredType: Type?,
     var actualType: Type?,
 ) : Accessible<Access.VariableAccess> {

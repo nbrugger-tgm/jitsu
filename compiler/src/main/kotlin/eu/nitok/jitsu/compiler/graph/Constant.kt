@@ -48,7 +48,7 @@ sealed class Constant<out T> : Expression {
 
     @Serializable
     data class StringConstant(override val value: String, override val originLocation: Range) : Constant<String>() {
-        override val type: Type = Type.String
+        override val type: Type = Type.TypeReference(lazy { TODO("here should be resolved from scope") }, mapOf())
         override val literal: String get() = "\"${value}\""
     }
 
