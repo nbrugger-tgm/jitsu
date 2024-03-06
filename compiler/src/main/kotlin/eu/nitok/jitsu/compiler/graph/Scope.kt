@@ -2,7 +2,6 @@ package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
-import eu.nitok.jitsu.compiler.parser.Locatable
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
@@ -19,12 +18,12 @@ class Scope {
     }
     @Transient var parent: Scope? = null
     private val contants: MutableList<Constant<@Contextual Any>> = mutableListOf();
-    private val types: MutableMap<String, ResolvedType.NamedType> = mutableMapOf()
+    private val types: MutableMap<String, TypeDefinition> = mutableMapOf()
     private val functions: MutableList<Function> = mutableListOf()
     private val variable: MutableList<Variable> = mutableListOf()
     val errors: MutableList<CompilerMessage> = mutableListOf()
     val warnings: MutableList<CompilerMessage> = mutableListOf()
-    fun register(type: ResolvedType.NamedType) {
+    fun register(type: TypeDefinition) {
         val existing = types[type.name.value];
         if (existing != null) {
             error(
@@ -57,11 +56,11 @@ class Scope {
         warnings.add(CompilerMessage(message, location, hints))
     }
 
-    fun resolveType(reference: Located<String>) : ResolvedType.NamedType {
+    fun resolveType(reference: Located<String>) : TypeDefinition {
         val type = types[reference.value]
         if (type == null) {
             error("Type with name '$reference' does not exist", reference.location)
         }
-        return ResolvedType.NamedType.Alias(reference, lazy { ResolvedType.Undefined })
+        return TypeDefinition.Alias(reference, lazy { Type.Undefined })
     }
 }

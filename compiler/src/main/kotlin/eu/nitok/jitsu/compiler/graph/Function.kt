@@ -20,7 +20,7 @@ class Function(
 data class Parameter(
     val owner: Function,
     val name: String,
-    val type: ResolvedType,
+    val type: Type,
     val defaultValue: Constant<@Contextual Any>?
 ) {
     val variable: Variable get() = Variable(owner.bodyScope, false, name, type, null)

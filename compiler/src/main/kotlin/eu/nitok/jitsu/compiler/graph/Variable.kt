@@ -7,8 +7,8 @@ open class Variable(
     open val spawnScope: Scope,
     val reassignable: Boolean = false,
     open val name: String,
-    val declaredType: ResolvedType?,
-    var actualType: ResolvedType?,
+    val declaredType: Type?,
+    var actualType: Type?,
 ) : Accessible<Access.VariableAccess> {
     var initialized: Boolean = false
     override val accessToSelf: MutableList<Access.VariableAccess> = mutableListOf()
