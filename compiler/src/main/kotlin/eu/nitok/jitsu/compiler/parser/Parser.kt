@@ -281,7 +281,7 @@ fun parseVariableReference(tokens: Tokens): ExpressionNode? {
 
 fun parseIntLiteral(tokens: Tokens): ExpressionNode? {
     val next = tokens.expect(NUMBER) ?: return null;
-    return ExpressionNode.NumberLiteralNode.IntegerLiteralNode(next.value.value, tokens.location.toRange())
+    return ExpressionNode.NumberLiteralNode.IntegerLiteralNode(next.value.value, next.location)
 }
 
 fun parseAssignment(tokens: Tokens): StatementNode.AssignmentNode? {

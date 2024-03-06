@@ -189,8 +189,7 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
         is IfNode.ElseNode -> listOf(token(KEYWORD, keywordLocation))
         is ParameterNode -> listOf(token(PARAMETER, name.location))
         is FieldAccessNode -> this.field?.let { listOf(token(PROPERTY, it.location)) } ?: listOf()
-        is NumberLiteralNode.FloatLiteralNode -> listOf(token(NUMBER, location))
-        is NumberLiteralNode.IntegerLiteralNode -> listOf(token(NUMBER, location))
+        is NumberLiteralNode -> listOf(token(NUMBER, location))
         is OperationNode -> listOf(token(OPERATOR, operator.location))
         is StringLiteralNode.StringPart.Literal -> listOf(
             token(symbolismType, keywordLocation),
@@ -203,6 +202,7 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
 
         is StringLiteralNode.StringPart.CharSequence -> listOf(token(STRING, location))
         is StringLiteralNode.StringPart.EscapeSequence -> listOf(token(symbolismType, location))
+
         else -> listOf()
     }
 }
