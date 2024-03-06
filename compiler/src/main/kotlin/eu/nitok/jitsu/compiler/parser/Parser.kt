@@ -5,9 +5,11 @@ import com.niton.jainparse.token.DefaultToken.*
 import com.niton.jainparse.token.TokenSource
 import com.niton.jainparse.token.TokenStream
 import com.niton.jainparse.token.Tokenizer
+import com.niton.jainparse.token.Tokenizer.AssignedToken
 import eu.nitok.jitsu.compiler.ast.*
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage.Hint
+import eu.nitok.jitsu.compiler.graph.resolveType
 import eu.nitok.jitsu.compiler.model.BitSize
 import eu.nitok.jitsu.compiler.parser.parsers.parseFunction
 import eu.nitok.jitsu.compiler.parser.parsers.parseIdentifier
@@ -21,17 +23,38 @@ fun parseFile(txt: String): SourceFileNode {
     val tokens = tokenize(txt)
     var statements = mutableListOf<StatementNode>()
     val sourceFileNode = SourceFileNode(statements)
+    parseStatements(tokens, statements, sourceFileNode::error)
+    return sourceFileNode;
+}
+
+fun parseStatements(
+    tokens: Tokens,
+    statements: MutableList<StatementNode>,
+    containerNode: (CompilerMessage) -> Unit
+) {
     while (tokens.hasNext()) {
         tokens.skipWhitespace();
         when (val x = parseStatement(tokens)) {
             is StatementNode -> statements.add(x);
             null -> {
-                sourceFileNode.error(CompilerMessage("Expected a statement", tokens.location))
-                tokens.skip()
+                tokens.skipWhitespace()
+                val lastToken = tokens.index()
+                val invalid = tokens.skipUntil(ROUND_BRACKET_CLOSED, SEMICOLON, NEW_LINE)
+                if(lastToken == tokens.index()) {
+                    //nothing invalid was skipped - so end of block
+                    break;
+                }
+                tokens.skip(SEMICOLON)
+                containerNode(CompilerMessage("Expected a statement", invalid))
             };
         }
     }
-    return sourceFileNode;
+}
+
+private fun Tokens.skipUntil(vararg stoppers: DefaultToken): Range {
+    return range {
+        while (peekOptional().map { !stoppers.contains(it.type) }.orElse(false)) skip()
+    }.location
 }
 
 fun Tokens.skip(vararg toSkip: DefaultToken) {
@@ -61,12 +84,13 @@ private fun parseStatement(tokens: Tokens): StatementNode? {
     }
 }
 
+
 private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> StatementNode?): StatementNode? {
     val res = statmentFn(tokens) ?: return null;
     val endOfStatementPos = tokens.location;
     tokens.skipWhitespace()
     val semicolon = tokens.peekOptional();
-    if (semicolon.map { it.type }.orElse(EOF) != SEMICOLON) {
+    if (semicolon.map { it.type }.orElse(null) != SEMICOLON) {
         res.error(CompilerMessage("Expect semicolon at end of statement!", endOfStatementPos))
     } else {
         tokens.skip()
@@ -85,6 +109,8 @@ fun parseVariableDeclaration(tokens: Tokens): StatementNode.VariableDeclarationN
     val eq = tokens.keyword(EQUAL);
     if (eq == null) {
         messages.error("Variables need an initial value!", tokens.location)
+    } else {
+        tokens.skipWhitespace()
     }
     val expression = parseExpression(tokens);
 
@@ -205,19 +231,29 @@ fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode
     return TypeNode.UnionTypeNode(types);
 }
 
-fun parseExpression(tokens: TokenStream<DefaultToken>): ExpressionNode {
-    return ExpressionNode.NumberLiteralNode.IntegerLiteralNode("0", tokens.location.toRange());
+fun parseExpression(tokens: Tokens): ExpressionNode? {
+    return parseIntLiteral(tokens);
+}
+
+fun parseIntLiteral(tokens: Tokens): ExpressionNode? {
+    val next = tokens.expect(NUMBER) ?: return null;
+    return ExpressionNode.NumberLiteralNode.IntegerLiteralNode(next.value.value, tokens.location.toRange())
 }
 
 fun parseAssignment(tokens: Tokens): StatementNode.AssignmentNode? {
     tokens.elevate()
-    val kw = parseIdentifier(tokens) ?: return null;
+    val kw = parseIdentifier(tokens)
+    if(kw == null){
+        tokens.rollback()
+        return null
+    }
     tokens.skipWhitespace();
     val eq = tokens.keyword(EQUAL);
     if (eq == null) {
         tokens.rollback()
         return null
     }
+    tokens.skipWhitespace();
     val expression = parseExpression(tokens);
     return StatementNode.AssignmentNode(ExpressionNode.VariableLiteralNode(kw.value, kw.location), expression).run {
         if(expression == null)
@@ -245,17 +281,22 @@ fun Tokens.keyword(s: String): Range? {
 inline fun <T> Tokens.range(action: Tokens.() -> T): Located<T> {
     val start = location
     val res = action()
-    val end = Location(line, column-1)
+    val end = lastConsumedLocation
     return Located(res, start.rangeTo(end))
 }
 
-val Tokens.location: Location
-    get() = Location(this.line, this.column)
-fun Tokens.expect(token: DefaultToken): Range? {
-    val next = peekOptional().getOrNull()?: return null;
-    if(next.type == token) {
-        return range { next() }.location
+fun Tokens.expect(token: DefaultToken): Located<AssignedToken<DefaultToken>>? {
+    val next = peekOptional().getOrNull() ?: return null;
+    if (next.type == token) {
+        return range { next() }
     }
     return null;
 }
 
+val Tokens.lastConsumedLocation: Location
+    get() {
+        val loc = this.lastConsumedLocation();
+        return Location(loc.fromLine, loc.fromColumn)
+    }
+val Tokens.location: Location
+    get() = Location(this.line, this.column)
