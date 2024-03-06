@@ -1,7 +1,10 @@
 package eu.nitok.jitsu.compiler.parser.parsers
 
+import com.niton.jainparse.token.DefaultToken
 import com.niton.jainparse.token.DefaultToken.*
+import com.niton.jainparse.token.Tokenizer
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
+import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode.ParameterNode
 import eu.nitok.jitsu.compiler.ast.withMessages
@@ -37,7 +40,24 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
         )
     }
     tokens.skipWhitespace()
+    val parameters = parseParameters(tokens, messages, kw)
+    tokens.skipWhitespace()
     val returnType = parseOptionalExplicitType(tokens, messages::error);
+    tokens.skipWhitespace()
+    val body = parseCodeBlock(tokens)
+    if(body == null) {
+        messages.error("Expected function body (starting with '{')", tokens.location)
+    }
+    return FunctionDeclarationNode(functionName, parameters, returnType, body, kw.location, listOf()).withMessages(
+        messages
+    )
+}
+
+private fun parseParameters(
+    tokens: Tokens,
+    messages: CompilerMessages,
+    kw: Located<Tokenizer.AssignedToken<DefaultToken>>
+): MutableList<ParameterNode> {
     val sep = tokens.peekOptional().getOrNull()
     if (sep?.type != BRACKET_OPEN) {
         messages.error(
@@ -45,7 +65,7 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
             tokens.location,
             Hint("function start", kw.location)
         )
-    }
+    } else tokens.skip()
     val parameters = mutableListOf<ParameterNode>()
     var nonParameterTokens = 0;
     paramsLoop@ while (tokens.hasNext()) {
@@ -58,10 +78,10 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
         tokens.skipWhitespace()
         val argName = parseIdentifier(tokens)
         if (argName == null) {
-            val invalid = tokens.range { next() };
+            val invalid = tokens.range { nextOptional().getOrNull() };
             messages.error("Expected parameter name", invalid.location);
             nonParameterTokens++
-            if (nonParameterTokens > 2) break
+            if (nonParameterTokens > 2 || invalid.value == null) break
             else continue
         } else nonParameterTokens = 0
 
@@ -81,7 +101,5 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
             tokens.next()
         }
     }
-    return FunctionDeclarationNode(functionName, parameters, returnType, null, kw.location, listOf()).withMessages(
-        messages
-    )
+    return parameters
 }
