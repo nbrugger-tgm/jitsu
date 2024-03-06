@@ -22,5 +22,5 @@ data class Parameter(
     val type: Type,
     val defaultValue: Expression?
 ) {
-    fun asVariable(fn: Function): Variable = Variable(false, name, type, null)
+    fun asVariable(fn: Function): Variable = Variable(false, name, type)
 }

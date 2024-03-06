@@ -76,4 +76,15 @@ class Scope constructor(
     fun resolveFunction(s: String): Function? {
         return functions.find { it.name?.value?.equals(s) ?: false }
     }
+
+    fun resolveVariable(located: Located<String>): Variable? {
+        return variable.find { it.name.value == located.value }?: run {
+            error("No variable named '${located.value}'", located.location)
+            null
+        }
+    }
+
+    fun register(variable: Variable) {
+
+    }
 }

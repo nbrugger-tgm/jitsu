@@ -19,4 +19,10 @@ sealed interface Expression {
                     else if(right.isConstant is ReasonedBoolean.False) ReasonedBoolean.False("Right expression is not constant : ${(right.isConstant as ReasonedBoolean.False).message}")
                     else ReasonedBoolean.True
     }
+
+    @Serializable
+     class VariableReference(var variable: Variable):Expression {
+        override val isConstant: ReasonedBoolean
+            get() = ReasonedBoolean.False("Cuz not implemented yet")
+    }
 }

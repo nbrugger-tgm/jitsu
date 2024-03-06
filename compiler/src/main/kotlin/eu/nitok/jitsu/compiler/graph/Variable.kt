@@ -4,11 +4,10 @@ import eu.nitok.jitsu.compiler.ast.Located
 import kotlinx.serialization.Serializable
 
 @Serializable
-open class Variable(
+data class Variable(
     val reassignable: Boolean = false,
-    open val name: Located<String>,
+    val name: Located<String>,
     val declaredType: Type?,
-    var actualType: Type?,
 ) : Accessible<Access.VariableAccess> {
     var initialized: Boolean = false
     override val accessToSelf: MutableList<Access.VariableAccess> = mutableListOf()

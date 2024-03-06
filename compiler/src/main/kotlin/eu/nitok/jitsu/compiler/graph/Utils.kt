@@ -1,9 +1,6 @@
 package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
-import eu.nitok.jitsu.compiler.parser.Range
-import kotlinx.serialization.Serializable
-import java.io.Reader
 
 sealed interface ReasonedBoolean {
     data object True: ReasonedBoolean
@@ -13,9 +10,4 @@ sealed interface ReasonedBoolean {
             hints.toList()
         )
     }
-}
-
-
-sealed interface Reference {
-    val referenced: String
 }

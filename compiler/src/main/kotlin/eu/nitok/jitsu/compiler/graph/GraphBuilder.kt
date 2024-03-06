@@ -70,13 +70,14 @@ fun buildGraph(scope: Scope, statement: StatementNode): Instruction? {
 fun buildGraph(scope: Scope, statement: VariableDeclarationNode): Instruction {
     val explicitType = resolveType(scope, statement.type)
     val initialValue = buildExpressionGraph(statement.value, scope)
+    val variable = Variable(
+        false,
+        statement.name?.located ?: Located("unnamed", statement.keywordLocation),
+        explicitType
+    )
+    scope.register(variable)
     return Instruction.VariableDeclaration(
-        Variable(
-            false,
-            statement.name?.located ?: Located("unnamed", statement.keywordLocation),
-            explicitType,
-            explicitType
-        ),
+        variable,
         initialValue
     )
 }
@@ -132,7 +133,7 @@ fun buildExpressionGraph(expression: ExpressionNode?, scope: Scope): Expression 
             buildExpressionGraph(expression.right, scope)
         );
         is ExpressionNode.StringLiteralNode -> TODO()
-        is ExpressionNode.VariableReferenceNode -> TODO()
+        is ExpressionNode.VariableReferenceNode -> resolveVariableReference(scope, expression)
         is ExpressionNode.FieldAccessNode -> TODO()
         is ExpressionNode.IndexAccessNode -> TODO()
         is CodeBlockNode.SingleExpressionCodeBlock -> TODO()
@@ -145,8 +146,9 @@ fun buildExpressionGraph(expression: ExpressionNode?, scope: Scope): Expression 
     }
 }
 
-fun resolveVariableReference(expression: ExpressionNode.VariableReferenceNode): Expression {
-
+fun resolveVariableReference(scope: Scope, expression: ExpressionNode.VariableReferenceNode): Expression {
+    return scope.resolveVariable(expression.variable.located)?.let { Expression.VariableReference(it) }
+        ?: Expression.Undefined
 }
 
 fun buildFunctionGraph(functionNode: FunctionDeclarationNode, parentScope: Scope): Function {
