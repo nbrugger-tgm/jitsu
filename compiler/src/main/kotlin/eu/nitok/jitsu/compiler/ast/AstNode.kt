@@ -48,11 +48,11 @@ data class CompilerMessages(
     val errors: MutableList<CompilerMessage> = mutableListOf()
 ) {
     fun warn(warning: CompilerMessage) = warnings.add(warning)
-    fun warn(message: String, location: Locatable, vararg hints: CompilerMessage.Hint) =
+    fun warn(message: String, location: Range, vararg hints: CompilerMessage.Hint) =
         warnings.add(CompilerMessage(message, location, hints.toList()))
 
     fun error(error: CompilerMessage) = errors.add(error)
-    fun error(message: String, location: Locatable, vararg hints: CompilerMessage.Hint) =
+    fun error(message: String, location: Range, vararg hints: CompilerMessage.Hint) =
         errors.add(CompilerMessage(message, location, hints.toList()))
 
     fun apply(node: AstNode) {

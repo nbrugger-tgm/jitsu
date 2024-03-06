@@ -3,6 +3,7 @@ package eu.nitok.jitsu.compiler.graph
 import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.parser.Locatable
+import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 
@@ -34,7 +35,7 @@ class Scope(val parent: Scope?) {
         errors.add(message)
     }
 
-    fun error(message: String, location: Locatable, hints: List<CompilerMessage.Hint> = emptyList()) {
+    fun error(message: String, location: Range, hints: List<CompilerMessage.Hint> = emptyList()) {
         errors.add(CompilerMessage(message, location, hints))
     }
 
@@ -42,7 +43,7 @@ class Scope(val parent: Scope?) {
         warnings.add(message)
     }
 
-    fun warning(message: String, location: Locatable, hints: List<CompilerMessage.Hint> = emptyList()) {
+    fun warning(message: String, location: Range, hints: List<CompilerMessage.Hint> = emptyList()) {
         warnings.add(CompilerMessage(message, location, hints))
     }
 

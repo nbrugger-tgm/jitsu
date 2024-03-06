@@ -1,17 +1,19 @@
 package eu.nitok.jitsu.compiler.diagnostic
 
 import eu.nitok.jitsu.compiler.parser.Locatable
+import eu.nitok.jitsu.compiler.parser.Range
+import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class CompilerMessage(
     var message: String,
-    val location: Locatable,
+    val location: Range,
     val hints: List<Hint> = emptyList()
 ) {
-    constructor(message: String, location: Locatable, vararg hints: Hint): this(message, location, hints.toList())
+    constructor(message: String, location: Range, vararg hints: Hint): this(message, location, hints.toList())
     @Serializable
-    data class Hint(val message: String, val location: Locatable) {
+    data class Hint(val message: String, val location: Range) {
         override fun toString(): String {
             return "$message ($location)"
         }

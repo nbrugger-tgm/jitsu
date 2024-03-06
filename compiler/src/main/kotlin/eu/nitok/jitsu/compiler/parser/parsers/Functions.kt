@@ -34,7 +34,7 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
         messages.error(
             CompilerMessage(
                 "function requires a name",
-                tokens.location,
+                tokens.location.toRange(),
                 Hint("Function to name", kw.location)
             )
         )
@@ -46,7 +46,7 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     tokens.skipWhitespace()
     val body = parseCodeBlock(tokens)
     if(body == null) {
-        messages.error("Expected function body (starting with '{')", tokens.location)
+        messages.error("Expected function body (starting with '{')", tokens.location.toRange())
     }
     return FunctionDeclarationNode(functionName, parameters, returnType, body, kw.location, listOf()).withMessages(
         messages
@@ -62,7 +62,7 @@ private fun parseParameters(
     if (sep?.type != BRACKET_OPEN) {
         messages.error(
             "Expected '(' after function name",
-            tokens.location,
+            tokens.location.toRange(),
             Hint("function start", kw.location)
         )
     } else tokens.skip()
