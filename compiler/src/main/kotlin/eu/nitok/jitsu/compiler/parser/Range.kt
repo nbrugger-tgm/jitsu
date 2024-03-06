@@ -45,12 +45,10 @@ data class Range(val start: Location, val end: Location) : Locatable, Comparable
 
 
     override fun mark(text: String, note: String?): String {
-        val builder = StringBuilder();
         val lines = text.split("\n").toMutableList();
         val oneLine = start.line == end.line;
         if (oneLine) {
-            singleLineMark(builder, note);
-            lines.add(start.line, builder.toString());
+            lines.add(start.line, singleLineMark(note));
         } else {
             var startLine = lines[start.line - 1];
             var endLine = lines[end.line - 1];
@@ -62,23 +60,31 @@ data class Range(val start: Location, val end: Location) : Locatable, Comparable
             lines.subList(start.line, end.line - 1)
                 .replaceAll { line -> line + " ".repeat(vcol - 1 - line.length) + "|" }
         }
-        return builder.toString();
+        return lines.joinToString("\n" );
     }
 
-    private fun singleLineMark(builder: StringBuilder, note: String?) {
+    private fun singleLineMark(note: String?): String {
+        val builder = StringBuilder();
         builder.append(" ".repeat(start.column - 1));
         builder.append("^");
-        val dashes = end.column - start.column - 1;
-        val dashesWithNote = dashes - (note?.length ?: dashes);
-        if (dashesWithNote >= 2) {
-            builder.append("-".repeat(dashesWithNote / 2));
-            builder.append(note);
-            builder.append("-".repeat(dashesWithNote / 2));
+        if(end.isAfter(start)) {
+            val dashes = end.column - start.column - 1;
+            val dashesWithNote = dashes - (note?.length ?: dashes);
+            if (dashesWithNote >= 2) {
+                builder.append("-".repeat(dashesWithNote / 2));
+                builder.append(note);
+                builder.append("-".repeat(dashesWithNote / 2));
+            } else {
+                builder.append("-".repeat(dashes));
+            };
+            builder.append("^");
+            if(dashesWithNote<2) {
+                builder.append(note);
+            }
         } else {
-            builder.append("-".repeat(dashes));
-        };
-        builder.append("^");
-        builder.append("\n");
+            builder.append(" $note")
+        }
+        return builder.toString();
     }
 
     override fun toString(): String {
