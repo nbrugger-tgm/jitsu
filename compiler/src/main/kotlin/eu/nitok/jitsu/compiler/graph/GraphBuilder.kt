@@ -6,7 +6,7 @@ import eu.nitok.jitsu.compiler.ast.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.*
 
 fun buildGraph(file: SourceFileNode): Scope {
-    val rootScope = Scope(null)//top level scopes have no parent
+    val rootScope = Scope()//top level scopes have no parent
     for (statement in file.statements) {
         when (statement) {
             is IfNode,
@@ -91,40 +91,39 @@ fun buildExpressionGraph(it: ExpressionNode, scope: Scope): Expression {
 }
 
 fun buildFunctionGraph(functionNode: FunctionDeclarationNode, parentScope: Scope) {
-//    val bodyScope = Scope(parentScope);
-//    val function = Function(bodyScope, functionNode.name.or)
-//    function.parameters.addAll(
-//        functionNode.parameters.map {
-//            val type = resolveType(it.type)
-//            Parameter(
-//                function, it.name, type,
-//                it.defaultValue?.let { it1 -> resolveConstant(parentScope, it1, type) }
-//            )
-//        }
-//    )
-//    val functionBody = mutableListOf<Instruction>()
-    TODO();
+    val name = functionNode.name ?: return
+    val function = Function(Scope(parentScope), name.value)
+    function.parameters.addAll(
+        functionNode.parameters.map {
+            val type = resolveType(it.type)
+            Parameter(
+                function, it.name.value, type,
+                it.defaultValue?.let { it1 -> resolveConstant(parentScope, it1, type) }
+            )
+        }
+    )
+    val functionBody = mutableListOf<Instruction>()
 }
 
-//fun resolveConstant(scope: Scope, expression: ExpressionNode, explicitType: ResolvedType?): Constant<Any>? {
-//    return when (expression) {
-//        is ExpressionNode.BooleanLiteralNode -> Constant.BooleanConstant(expression.value)
-//        is ExpressionNode.NumberLiteralNode.FloatLiteralNode -> TODO()
-//        is ExpressionNode.NumberLiteralNode.IntegerLiteralNode -> resolveIntConstant(explicitType, expression, scope)
-//        is ExpressionNode.OperationNode -> resolveConstantOperation(scope, expression)
-//        is ExpressionNode.StringLiteralNode -> TODO()
-//        is ExpressionNode.VariableLiteralNode -> TODO()
-//        is ExpressionNode.FieldAccessNode -> TODO()
-//        is ExpressionNode.IndexAccessNode -> TODO()
-//        is CodeBlockNode.SingleExpressionCodeBlock -> TODO()
-//        is CodeBlockNode.StatementsCodeBlock -> TODO()
-//        is FunctionCallNode -> TODO()
-//        is FunctionDeclarationNode -> TODO()
-//        is IfNode -> TODO()
-//        is MethodInvocationNode -> TODO()
-//        is SwitchNode -> TODO()
-//    }
-//}
+fun resolveConstant(scope: Scope, expression: ExpressionNode, explicitType: ResolvedType?): Constant<Any>? {
+    return when (expression) {
+        is ExpressionNode.BooleanLiteralNode -> Constant.BooleanConstant(expression.value, expression.location)
+        is ExpressionNode.NumberLiteralNode.FloatLiteralNode -> TODO()
+        is ExpressionNode.NumberLiteralNode.IntegerLiteralNode -> resolveIntConstant(explicitType, expression, scope)
+        is ExpressionNode.OperationNode -> resolveConstantOperation(scope, expression)
+        is ExpressionNode.StringLiteralNode -> TODO()
+        is ExpressionNode.VariableReferenceNode -> TODO()
+        is ExpressionNode.FieldAccessNode -> TODO()
+        is ExpressionNode.IndexAccessNode -> TODO()
+        is CodeBlockNode.SingleExpressionCodeBlock -> TODO()
+        is CodeBlockNode.StatementsCodeBlock -> TODO()
+        is FunctionCallNode -> TODO()
+        is FunctionDeclarationNode -> TODO()
+        is IfNode -> TODO()
+        is MethodInvocationNode -> TODO()
+        is SwitchNode -> TODO()
+    }
+}
 
 fun resolveConstantOperation(scope: Scope, expression: ExpressionNode.OperationNode): Constant<Any>? {
 //    val left = resolveConstant(scope, expression.left, null)
@@ -285,6 +284,17 @@ private fun resolveIntConstant(
 
 val IdentifierNode.located : Located<String> get() = Located(value, location)
 
-fun resolveType(type: TypeNode): ResolvedType {
-    TODO("Not yet implemented")
+fun resolveType(type: TypeNode?): ResolvedType {
+    if(type == null) return ResolvedType.Undefined
+    return when(type) {
+        is TypeNode.ArrayTypeNode -> TODO()
+        is TypeNode.FloatTypeNode -> TODO()
+        is TypeNode.FunctionTypeSignatureNode -> TODO()
+        is TypeNode.IntTypeNode -> ResolvedType.Int(type.bitSize)
+        is TypeNode.NameTypeNode -> TODO()
+        is TypeNode.StructuralInterfaceTypeNode -> TODO()
+        is TypeNode.UnionTypeNode -> TODO()
+        is TypeNode.ValueTypeNode -> TODO()
+        is TypeNode.VoidTypeNode -> TODO()
+    }
 }

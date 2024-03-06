@@ -6,16 +6,22 @@ import eu.nitok.jitsu.compiler.parser.Locatable
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /**
  * Content of a file or everything that is between { and }
  */
 @Serializable
-class Scope(val parent: Scope?) {
-    val contants: MutableList<Constant<@Contextual Any>> = mutableListOf();
-    val types: MutableMap<String, ResolvedType.NamedType> = mutableMapOf()
-    val functions: MutableList<eu.nitok.jitsu.compiler.graph.Function> = mutableListOf()
-    val variable: MutableList<Variable> = mutableListOf()
+class Scope {
+    constructor()
+    constructor(parent: Scope) {
+        this.parent = parent;
+    }
+    @Transient var parent: Scope? = null
+    private val contants: MutableList<Constant<@Contextual Any>> = mutableListOf();
+    private val types: MutableMap<String, ResolvedType.NamedType> = mutableMapOf()
+    private val functions: MutableList<Function> = mutableListOf()
+    private val variable: MutableList<Variable> = mutableListOf()
     val errors: MutableList<CompilerMessage> = mutableListOf()
     val warnings: MutableList<CompilerMessage> = mutableListOf()
     fun register(type: ResolvedType.NamedType) {
@@ -29,6 +35,10 @@ class Scope(val parent: Scope?) {
             return
         }
         types[type.name.value] = type
+    }
+    
+    fun register(func: Function) {
+        functions.add(func);
     }
 
     fun error(message: CompilerMessage) {
