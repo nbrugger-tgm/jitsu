@@ -6,7 +6,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 sealed interface ExpressionNode : AstNode {
-
     @Serializable
     sealed interface NumberLiteralNode : ExpressionNode {
         @Serializable

@@ -4,6 +4,7 @@ import eu.nitok.jitsu.compiler.ast.*
 
 
 import eu.nitok.jitsu.compiler.ast.StatementNode.*
+import eu.nitok.jitsu.compiler.model.BitSize
 
 fun buildGraph(file: SourceFileNode): Scope {
     val rootScope = Scope()//top level scopes have no parent
@@ -32,7 +33,6 @@ fun buildGraph(file: SourceFileNode): Scope {
 fun buildGraph(scope: Scope, statement: StatementNode): Instruction? {
     return when (statement) {
         is IfNode,
-        is ReturnNode,
         is MethodInvocationNode,
         is FunctionCallNode,
         is AssignmentNode,
@@ -68,13 +68,14 @@ fun buildGraph(scope: Scope, statement: StatementNode): Instruction? {
 }
 
 fun buildGraph(scope: Scope, statement: VariableDeclarationNode): Instruction {
-    val initialValue = buildExpressionGraph(statement.value, scope)
+    val explicitType = resolveType(scope, statement.type)
+    val initialValue = buildExpressionGraph(statement.value, scope, statement.type?.let { explicitType })
     return Instruction.VariableDeclaration(
         Variable(
             false,
             statement.name?.located ?: Located("unnamed", statement.keywordLocation),
-            resolveType(scope, statement.type),
-            resolveType(scope, statement.type)
+            explicitType,
+            explicitType
         ),
         initialValue
     )
