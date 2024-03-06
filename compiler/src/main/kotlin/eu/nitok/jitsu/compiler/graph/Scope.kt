@@ -16,7 +16,7 @@ class Scope constructor(
     private val contants: MutableList<Constant<@Contextual Any>> = mutableListOf(),
     private val types: MutableMap<String, TypeDefinition> = mutableMapOf(),
     private val functions: MutableList<Function> = mutableListOf(),
-    private val variable: MutableList<Variable> = mutableListOf(),
+    private val variables: MutableList<Variable> = mutableListOf(),
     val errors: MutableList<CompilerMessage> = mutableListOf(),
     val warnings: MutableList<CompilerMessage> = mutableListOf()
 ) {
@@ -46,6 +46,15 @@ class Scope constructor(
     }
 
     fun register(func: Function) {
+        val existing = if (func.name != null) functions.find { func.name.value == it.name?.value } else null
+        if (existing != null) {
+            error(
+                "Function with name '${func.name?.value}' already exists : {}",
+                existing.name!!.location,
+                listOf(CompilerMessage.Hint("Already defined here", existing.name!!.location))
+            )
+            return
+        }
         functions.add(func);
         func.bodyScope.parent = this;
     }
@@ -78,13 +87,22 @@ class Scope constructor(
     }
 
     fun resolveVariable(located: Located<String>): Variable? {
-        return variable.find { it.name.value == located.value }?: run {
+        return variables.find { it.name.value == located.value } ?: run {
             error("No variable named '${located.value}'", located.location)
             null
         }
     }
 
     fun register(variable: Variable) {
-
+        val existing = variables.find { variable.name.value == it.name.value }
+        if (existing != null) {
+            error(
+                "Variable with name '${variable.name.value}' already exists : {}",
+                existing.name.location,
+                listOf(CompilerMessage.Hint("Already defined here", existing.name.location))
+            )
+            return
+        }
+        variables.add(variable)
     }
 }
