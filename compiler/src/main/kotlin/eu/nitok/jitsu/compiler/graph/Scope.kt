@@ -12,18 +12,26 @@ import kotlinx.serialization.Transient
  * Content of a file or everything that is between { and }
  */
 @Serializable
-class Scope {
-    constructor()
-    constructor(parent: Scope) {
+class Scope constructor(
+    private val contants: MutableList<Constant<@Contextual Any>> = mutableListOf(),
+    private val types: MutableMap<String, TypeDefinition> = mutableMapOf(),
+    private val functions: MutableList<Function> = mutableListOf(),
+    private val variable: MutableList<Variable> = mutableListOf(),
+    val errors: MutableList<CompilerMessage> = mutableListOf(),
+    val warnings: MutableList<CompilerMessage> = mutableListOf()
+) {
+    init {
+        functions.forEach { it.bodyScope.parent = this }
+    }
+
+    constructor(parent: Scope) : this() {
         this.parent = parent;
     }
-    @Transient var parent: Scope? = null
-    private val contants: MutableList<Constant<@Contextual Any>> = mutableListOf();
-    private val types: MutableMap<String, TypeDefinition> = mutableMapOf()
-    private val functions: MutableList<Function> = mutableListOf()
-    private val variable: MutableList<Variable> = mutableListOf()
-    val errors: MutableList<CompilerMessage> = mutableListOf()
-    val warnings: MutableList<CompilerMessage> = mutableListOf()
+
+
+    @Transient
+    var parent: Scope? = null
+
     fun register(type: TypeDefinition) {
         val existing = types[type.name.value];
         if (existing != null) {
@@ -36,9 +44,10 @@ class Scope {
         }
         types[type.name.value] = type
     }
-    
+
     fun register(func: Function) {
         functions.add(func);
+        func.bodyScope.parent = this;
     }
 
     fun error(message: CompilerMessage) {
@@ -57,10 +66,14 @@ class Scope {
         warnings.add(CompilerMessage(message, location, hints))
     }
 
-    fun resolveType(reference: IdentifierNode) : TypeDefinition {
-        return types[reference.value]?: run {
+    fun resolveType(reference: IdentifierNode): TypeDefinition {
+        return types[reference.value] ?: run {
             error("Type with name '$reference' does not exist", reference.location)
             TypeDefinition.Alias(reference.located, listOf(), lazy { Type.Undefined })
         }
+    }
+
+    fun resolveFunction(s: String): Function? {
+        return functions.find { it.name?.value?.equals(s) ?: false }
     }
 }
