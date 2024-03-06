@@ -14,7 +14,7 @@ sealed class Constant<out T> : Expression {
     abstract val type: Type
     abstract val literal: String
     abstract val originLocation: Range
-    override val isConstant: Boolean get() = true
+    override val isConstant: ReasonedBoolean get() = ReasonedBoolean.True
 
     @Contextual
     abstract val value: T
