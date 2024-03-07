@@ -49,12 +49,9 @@ class Parse : Callable<List<Pair<SourceFileNode, Path>>> {
         val asts = sourcepath.map {
             parseFile(it.bufferedReader(bufferSize = 100 * 40), it.toUri()) to it
         }
-        if (!cacheDirectory.exists()) cacheDirectory.createParentDirectories().createDirectory()
-        val parsedCache = cacheDirectory.resolve("ast")
-        if (!parsedCache.exists()) parsedCache.createDirectory()
+        val parsedCache = cacheDirectory.resolve("ast").ensureExistingDir()
         asts.forEach {
-            val cache = parsedCache.resolve("${it.second.nameWithoutExtension}.ast.json");
-            if (!cache.exists()) cache.createFile()
+            val cache = parsedCache.resolve("${it.second.nameWithoutExtension}.ast.json").ensureExistingFile()
             cache.writeText(json.encodeToString(it.first))
             spec.commandLine().out.println("Write ast cache to ${cache.absolutePathString()}")
         }
@@ -78,4 +75,14 @@ class Parse : Callable<List<Pair<SourceFileNode, Path>>> {
             if (errors.isNotEmpty()) throw IllegalStateException()
         }
     }
+}
+
+fun Path.ensureExistingDir(): Path {
+    if (!exists()) createParentDirectories().createDirectory()
+    return this
+}
+
+fun Path.ensureExistingFile(): Path {
+    if (!exists()) createParentDirectories().createFile()
+    return this
 }

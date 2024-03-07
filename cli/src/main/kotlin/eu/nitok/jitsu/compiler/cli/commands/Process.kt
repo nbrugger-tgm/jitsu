@@ -39,14 +39,4 @@ class Process : Callable<List<Pair<JitsuFile, Path>>> {
         }
         return scopes
     }
-
-    private fun Path.ensureExistingDir(): Path {
-        if (!exists()) createParentDirectories().createDirectory()
-        return this
-    }
-
-    private fun Path.ensureExistingFile(): Path {
-        if (!exists()) createParentDirectories().createFile()
-        return this
-    }
 }
