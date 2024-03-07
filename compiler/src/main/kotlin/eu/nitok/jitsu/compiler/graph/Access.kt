@@ -25,4 +25,5 @@ sealed interface Access<T: Accessible<T>> {
     sealed interface FunctionAccess : Access<Function>
 
     sealed interface VariableAccess : Access<Variable>
+    sealed interface TypeAccess : Access<TypeDefinition>
 }

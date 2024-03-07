@@ -78,10 +78,10 @@ class Scope constructor(
         warnings.add(CompilerMessage(message, location, hints))
     }
 
-    fun resolveType(reference: IdentifierNode): TypeDefinition {
+    fun resolveType(reference: Located<String>): TypeDefinition {
         return types[reference.value] ?: run {
-            error("Type with name '$reference' does not exist", reference.location)
-            TypeDefinition.Alias(reference.located, listOf(), lazy { Type.Undefined })
+            error("Type with name '${reference.value}' does not exist", reference.location)
+            TypeDefinition.Alias(reference, listOf(), lazy { Type.Undefined })
         }
     }
 

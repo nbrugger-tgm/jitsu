@@ -331,7 +331,7 @@ fun resolveType(scope: Scope, type: TypeNode?): Type {
         is TypeNode.FloatTypeNode -> TODO()
         is TypeNode.FunctionTypeSignatureNode -> TODO()
         is TypeNode.IntTypeNode -> Type.Int(type.bitSize)
-        is TypeNode.NameTypeNode -> Type.TypeReference(lazy { scope.resolveType(type.name) }, mapOf())
+        is TypeNode.NameTypeNode -> Type.TypeReference(type.name.located, mapOf())
         is TypeNode.StructuralInterfaceTypeNode -> TODO()
         is TypeNode.UnionTypeNode -> TODO()
         is TypeNode.ValueTypeNode -> TODO()
