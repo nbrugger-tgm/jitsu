@@ -69,7 +69,7 @@ fun buildGraph(scope: Scope, statement: StatementNode): Instruction? {
 }
 
 fun buildGraph(scope: Scope, statement: VariableDeclarationNode): Instruction {
-    val explicitType = resolveType(scope, statement.type)
+    val explicitType = statement.type?.let { resolveType(scope, it) }
     val initialValue = buildExpressionGraph(statement.value, scope)
     val variable = Variable(
         false,
@@ -336,5 +336,6 @@ fun resolveType(scope: Scope, type: TypeNode?): Type {
         is TypeNode.UnionTypeNode -> TODO()
         is TypeNode.ValueTypeNode -> TODO()
         is TypeNode.VoidTypeNode -> TODO()
+        is TypeNode.UIntTypeNode -> Type.UInt(type.bitSize)
     }
 }

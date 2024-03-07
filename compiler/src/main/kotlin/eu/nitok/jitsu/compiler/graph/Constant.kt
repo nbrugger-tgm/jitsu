@@ -1,6 +1,7 @@
 package eu.nitok.jitsu.compiler.graph
 
 
+import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.model.BitSize
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Contextual
@@ -53,7 +54,7 @@ sealed class Constant<out T> : Expression {
 
     @Serializable
     data class StringConstant(override val value: String, override val originLocation: Range) : Constant<String>() {
-        override val type: Type = Type.TypeReference(lazy { TODO("here should be resolved from scope") }, mapOf())
+        override val type: Type = Type.TypeReference(Located(value, originLocation), mapOf())
         override val literal: String get() = "\"${value}\""
         @Transient override val children: List<Element> = listOfNotNull()
     }

@@ -28,16 +28,14 @@ include(
     "compiler",
     "playground",
     "language-server",
-    "wrapper"
+    "wrapper",
+    "cli"
 )
 
 include(
-    "backend:rust",
-    "backend:llvm",
-    "backend:c"
+    "backend:rust"
 )
 
 include(
     "vs-extension",
 )
-include("cli")

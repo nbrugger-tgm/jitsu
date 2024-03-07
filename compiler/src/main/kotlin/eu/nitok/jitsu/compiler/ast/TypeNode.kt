@@ -17,6 +17,16 @@ sealed interface TypeNode : AstNode {
         override val children: List<AstNode>
             get() = listOf()
     }
+    @Serializable
+    class UIntTypeNode(val bitSize: BitSize, override val location: Range) : TypeNode, AstNodeImpl() {
+
+        override fun toString(): String {
+            return "u${bitSize.bits}"
+        }
+
+        override val children: List<AstNode>
+            get() = listOf()
+    }
 
     @Serializable
     class FloatTypeNode(val bitSize: BitSize, override val location: Range) : TypeNode, AstNodeImpl() {

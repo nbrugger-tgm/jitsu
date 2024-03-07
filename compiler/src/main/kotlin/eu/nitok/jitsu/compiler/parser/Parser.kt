@@ -175,6 +175,9 @@ fun parseSingleType(tokens: Tokens): TypeNode? {
     tokens.keyword("float")?.let {
         return TypeNode.FloatTypeNode(BitSize.BIT_32, it)
     }
+    parseBitsizedNumberType(tokens)?.let {
+        return it
+    }
 
     val structuralInterface = parseStructuralInterface(tokens);
     if (structuralInterface != null) {
@@ -183,6 +186,33 @@ fun parseSingleType(tokens: Tokens): TypeNode? {
     val typeReference = parseIdentifier(tokens) ?: return null;
     val namedType = TypeNode.NameTypeNode(typeReference, listOf(), typeReference.location);
     return namedType;
+}
+
+fun parseBitsizedNumberType(tokens: TokenStream<DefaultToken>): TypeNode? {
+    tokens.elevate()
+    val letterToken = tokens.expect(LETTERS)
+    if (letterToken == null) {
+        tokens.rollback();
+        return null
+    }
+    val bitSize = {
+        tokens.expect(NUMBER)?.let { numberToken ->
+            BitSize.byBits(numberToken.value.value.toInt())?.let { it to numberToken.location }
+        }
+    }
+    val type = when (letterToken.value.value) {
+        "i" -> bitSize()?.let { TypeNode.IntTypeNode(it.first, letterToken.location.rangeTo(it.second)) }
+        "u" -> bitSize()?.let { TypeNode.UIntTypeNode(it.first, letterToken.location.rangeTo(it.second)) }
+        "f" -> bitSize()?.let { TypeNode.FloatTypeNode(it.first, letterToken.location.rangeTo(it.second)) }
+        else -> null
+    }
+
+    if (type == null) {
+        tokens.rollback();
+        return null
+    }
+    tokens.commit()
+    return type
 }
 
 fun parseOptionalExplicitType(tokens: Tokens, messages: (CompilerMessage) -> Unit): TypeNode? {
@@ -249,7 +279,7 @@ fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode
 
 fun parseExpression(tokens: Tokens): ExpressionNode? {
     var expressionNode = parseSingleExpression(tokens)
-    while(expressionNode != null) {
+    while (expressionNode != null) {
         val composite = parseCompositExpression(tokens, expressionNode) ?: return expressionNode;
         expressionNode = composite;
     }
