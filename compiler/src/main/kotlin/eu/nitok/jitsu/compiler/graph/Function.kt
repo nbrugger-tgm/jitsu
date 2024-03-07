@@ -8,7 +8,7 @@ import kotlinx.serialization.Transient
 @Serializable
 class Function(
     override val scope: Scope,
-    val name: Located<String>?,
+    override val name: Located<String>?,
     val returnType: Type?,
     val parameters: List<Parameter>,
     val body: List<Instruction>,

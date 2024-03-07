@@ -20,7 +20,7 @@ class Scope constructor(
     private val variables: MutableList<Variable> = mutableListOf(),
     val errors: MutableList<CompilerMessage> = mutableListOf(),
     val warnings: MutableList<CompilerMessage> = mutableListOf()
-) : Walkable<Scope> {
+) : Walkable<Scope>, Accessor {
     init {
         functions.forEach { it.scope.parent = this }
     }
@@ -108,4 +108,7 @@ class Scope constructor(
         }
         variables.add(variable)
     }
+
+    override val accessFromSelf: List<Access<*>> get() = functions.flatMap { it.accessFromSelf }
+    override val scope: Scope get() = this
 }
