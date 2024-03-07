@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.backend.rust.eu.nitok.jitsu.backend.rust
 
+import eu.nitok.jitsu.compiler.analysis.isMain
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.compiler.transpile.Backend
@@ -32,11 +33,13 @@ class RustBackend : Backend {
 }
 
 private fun Function.transpile(writer: BufferedWriter) {
+    if (name?.value == "main") writer.appendLine("use std::process::ExitCode;")
     writer.append("fn ${this.name?.value}(")
     this.parameters.joinToString(", ") { it.transpile() }
     writer.append(") ")
     this.returnType?.let {
-        writer.append("-> ${it.transpile()} ")
+        if(name?.value == "main") writer.append("-> ExitCode ")
+        else writer.append("-> ${it.transpile()} ")
     }
     writer.append("{\n")
     writer.append(this.body.joinToString("\n") { "  ${it.transpile()}" })
@@ -45,8 +48,11 @@ private fun Function.transpile(writer: BufferedWriter) {
 
 private fun Instruction.transpile(): String {
     return when (this) {
-        is Instruction.Return -> this.value?.transpile() ?: "return"
-        is Instruction.VariableDeclaration -> "let mut ${this.variable.name.value}${
+        is Instruction.Return -> {
+            if(this.function.isMain && this.value != null) return "ExitCode::from(${this.value!!.transpile()})"
+            this.value?.transpile() ?: "return"
+        }
+        is Instruction.VariableDeclaration -> "let ${this.variable.name.value}${
             this.variable.declaredType?.transpile()?.let { ": $it" }?: ""
         } = ${this.value.transpile()};"
     }
