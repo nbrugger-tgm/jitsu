@@ -90,8 +90,75 @@ private fun tokenize(txt: String): Tokens {
 
 private fun parseStatement(tokens: Tokens): StatementNode? {
     return parseFunction(tokens) ?: parseExecutableStatement(tokens) {
-        parseVariableDeclaration(it) ?: parseAssignment(it) ?: parseReturnStatement(it)
+        parseVariableDeclaration(it) ?: parseReturnStatement(it) ?: parseIdentifierBasedStatement(it, tokens)
     }
+}
+
+private fun parseIdentifierBasedStatement(it: Tokens, tokens: Tokens) : StatementNode? {
+    it.elevate()
+    val id = parseIdentifier(it) ?: return null
+    tokens.skipWhitespace()
+    val res = parseAssignment(it, id) ?: parseFunctionCall(it, id)
+    if (res == null) it.rollback()
+    else it.commit()
+    return res
+}
+
+fun parseFunctionCall(tokens: Tokens, id: IdentifierNode): StatementNode.FunctionCallNode? {
+    val messages = CompilerMessages()
+    val params = tokens.range {
+        enclosedRepetition(
+            ROUND_BRACKET_OPEN,
+            COMMA,
+            ROUND_BRACKET_CLOSED,
+            messages,
+            "parameter list",
+            "parameter"
+        ) { parseExpression(it) }
+    }
+    if(params.value == null) return null
+    return StatementNode.FunctionCallNode(id, params.value, id.location.rangeTo(params.location))
+}
+
+private fun <T> Tokens.enclosedRepetition(
+    start: DefaultToken,
+    delimitter: DefaultToken,
+    end: DefaultToken,
+    messages: CompilerMessages,
+    subject: String,
+    elementName: String,
+    function: (Tokens) -> T?
+): List<T>? {
+    val openKw = expect(start)?.location ?: return null;
+    val lst = mutableListOf<T>()
+
+    while (hasNext()) {
+        skipWhitespace();
+        when (val x = function(this)) {
+            null -> {
+                skipWhitespace()
+                val lastToken = index()
+                val invalid = skipUntil(end, delimitter, NEW_LINE)
+                if (lastToken == index()) {
+                    //nothing invalid was skipped - so end of block
+                    break;
+                }
+                skip(delimitter)
+                messages.error(CompilerMessage("Expected a $elementName", invalid))
+            }
+
+            else -> lst.add(x);
+        }
+    }
+
+    skipWhitespace()
+
+    expect(end) ?: messages.error(
+        "Unclosed $subject, expected $end", location.toRange(), Hint(
+            "$subject started here", openKw
+        )
+    )
+    return lst
 }
 
 fun parseReturnStatement(tokens: Tokens): StatementNode? {
@@ -324,13 +391,7 @@ fun parseIntLiteral(tokens: Tokens): ExpressionNode? {
     return ExpressionNode.NumberLiteralNode.IntegerLiteralNode(next.value.value, next.location)
 }
 
-fun parseAssignment(tokens: Tokens): StatementNode.AssignmentNode? {
-    tokens.elevate()
-    val kw = parseIdentifier(tokens)
-    if (kw == null) {
-        tokens.rollback()
-        return null
-    }
+fun parseAssignment(tokens: Tokens, kw: IdentifierNode): StatementNode.AssignmentNode? {
     tokens.skipWhitespace();
     val eq = tokens.keyword(EQUAL);
     if (eq == null) {
