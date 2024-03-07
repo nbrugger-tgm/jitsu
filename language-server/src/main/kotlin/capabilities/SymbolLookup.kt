@@ -108,7 +108,8 @@ private fun TypeNode.documentSymbols(location: Range, name: String, nameLocation
         is TypeNode.FloatTypeNode,
         is TypeNode.IntTypeNode,
         is TypeNode.NameTypeNode,
-        is TypeNode.ValueTypeNode -> listOf(
+        is TypeNode.ValueTypeNode,
+        is TypeNode.UIntTypeNode -> listOf(
             DocumentSymbol(
                 name,
                 SymbolKind.Variable,
