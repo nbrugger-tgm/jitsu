@@ -45,5 +45,7 @@ sealed interface Expression : Element {
                 variable = (accessor.scope.resolveVariable(name) ?: Variable(false, name, Type.Undefined))
                     .apply { accessToSelf.add(this@VariableReference) }
             }
+        override val reference: Located<String>
+            get() = name
     }
 }

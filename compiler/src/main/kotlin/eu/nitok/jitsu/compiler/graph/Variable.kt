@@ -7,7 +7,7 @@ import kotlinx.serialization.Transient
 @Serializable
 data class Variable(
     val reassignable: Boolean = false,
-    val name: Located<String>,
+    override val name: Located<String>,
     val declaredType: Type?,
 ) : Element, Accessible<Variable> {
     @Transient override val accessToSelf: MutableList<Access<Variable>> = mutableListOf()

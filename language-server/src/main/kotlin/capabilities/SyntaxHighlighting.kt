@@ -161,7 +161,7 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
             )
 
         is VariableDeclarationNode -> listOfNotNull(
-            token(KEYWORD, keywordLocation.run { customLogger.println(this); this }),
+            token(KEYWORD, keywordLocation),
             name?.location?.let { token(VARIABLE, it) }
         )
 

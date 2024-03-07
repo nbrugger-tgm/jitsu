@@ -106,6 +106,11 @@ data class Range(val start: Location, val end: Location) : Locatable, Comparable
     fun span(range: Range): Range {
         return Range(if (start.isBefore(range.start)) start else range.start, range.end)
     }
+
+    fun contains(location: Location): Boolean {
+        return !location.isBefore(start) && !location.isAfter(end)
+    }
+
     object Serializer : KSerializer<Range> {
         override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("jitsu.Range", PrimitiveKind.STRING)
 

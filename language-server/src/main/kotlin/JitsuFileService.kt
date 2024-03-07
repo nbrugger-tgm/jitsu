@@ -2,9 +2,8 @@ import capabilities.documentSymbols
 import capabilities.syntaxDiagnostic
 import capabilities.syntaxHighlight
 import eu.nitok.jitsu.compiler.ast.SourceFileNode
-import eu.nitok.jitsu.compiler.graph.JitsuFile
-import eu.nitok.jitsu.compiler.graph.Scope
-import eu.nitok.jitsu.compiler.graph.buildGraph
+import eu.nitok.jitsu.compiler.graph.*
+import eu.nitok.jitsu.compiler.model.sequence
 import eu.nitok.jitsu.compiler.parser.Location
 import eu.nitok.jitsu.compiler.parser.parseFile
 import org.eclipse.lsp4j.*
@@ -125,6 +124,17 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
             range(it.rangeTo(it)),
             Color(1.0, .0, .0, 1.0)
         )
+    }
+
+    override fun definition(params: DefinitionParams): CompletableFuture<Either<MutableList<out org.eclipse.lsp4j.Location>, MutableList<out LocationLink>>> {
+        return CompletableFuture.supplyAsync {
+            val referencePos = location(params.position)
+            val graph = graphs[params.textDocument.uri]?.value?.let {
+                it.scope.sequence().flatMap { it.accessFromSelf }
+                    .find { it.reference.location.contains(referencePos) }
+            }?.target?.name?.location?.let { range(it, params.textDocument.uri) }
+            Either.forLeft(listOfNotNull(graph).toMutableList())
+        }
     }
 
     override fun diagnostic(params: DocumentDiagnosticParams?): CompletableFuture<DocumentDiagnosticReport> {

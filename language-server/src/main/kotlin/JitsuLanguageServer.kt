@@ -33,6 +33,8 @@ class JitsuLanguageServer : LanguageServer, LanguageClientAware{
         result.capabilities.diagnosticProvider = DiagnosticRegistrationOptions();
         result.capabilities.diagnosticProvider.isInterFileDependencies = true;
         result.capabilities.diagnosticProvider.isWorkspaceDiagnostics = false;
+
+        result.capabilities.definitionProvider = Either.forLeft(true)
         return CompletableFuture.completedFuture(result)
     }
 
