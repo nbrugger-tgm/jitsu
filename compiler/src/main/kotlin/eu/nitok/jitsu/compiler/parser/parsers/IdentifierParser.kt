@@ -4,10 +4,7 @@ import com.niton.jainparse.token.DefaultToken.*
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.IdentifierNode
 import eu.nitok.jitsu.compiler.ast.withMessages
-import eu.nitok.jitsu.compiler.parser.Tokens
-import eu.nitok.jitsu.compiler.parser.location
-import eu.nitok.jitsu.compiler.parser.range
-import eu.nitok.jitsu.compiler.parser.skip
+import eu.nitok.jitsu.compiler.parser.*
 import kotlin.jvm.optionals.getOrElse
 
 fun parseIdentifier(tokens: Tokens): IdentifierNode? {
@@ -40,5 +37,5 @@ fun parseIdentifier(tokens: Tokens): IdentifierNode? {
         }
         value += tokens.next().value;
     }
-    return IdentifierNode(firstToken.location.rangeTo(tokens.location), value).withMessages(messages)
+    return IdentifierNode(firstToken.location.rangeTo(tokens.lastConsumedLocation), value).withMessages(messages)
 }

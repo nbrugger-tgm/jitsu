@@ -33,8 +33,8 @@ data class Range(val start: Location, val end: Location) : Locatable, Comparable
     }
 
     constructor(startCol: Int, startLine: Int, endCol: Int, endLine: Int) : this(
-        Location(startCol, startLine),
-        Location(endCol, endLine)
+        Location(startLine, startCol),
+        Location(endLine, endCol)
     )
 
     override fun format(): String = "${start.format()}-${end.format()}"
