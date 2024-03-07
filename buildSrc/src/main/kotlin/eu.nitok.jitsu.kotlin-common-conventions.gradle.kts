@@ -7,6 +7,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("org.jetbrains.kotlin.kapt")
+    id("eu.nitok.jitsu.common-conventions")
 }
 
 repositories {
@@ -15,7 +16,11 @@ repositories {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(20)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 dependencies {
