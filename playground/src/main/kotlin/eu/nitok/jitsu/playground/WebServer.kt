@@ -15,6 +15,7 @@ import kotlinx.html.title
 import kotlinx.html.unsafe
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.net.URI
 
 
 fun main() {
@@ -34,7 +35,7 @@ fun main() {
             post("/parse") {
                 val code = call.receiveParameters()["code"]!!
                 println("Parsing: $code")
-                val ast = parseFile(code).let {
+                val ast = parseFile(code, URI("memory://root.jit")).let {
                     println("Parsed: ${it.statements.size}")
                     "<p>Internal AST</p><pre>${
                         try {

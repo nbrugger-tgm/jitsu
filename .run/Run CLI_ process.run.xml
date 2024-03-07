@@ -1,7 +1,8 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run CLI: process" type="JetRunConfigurationType">
+    <option name="ALTERNATIVE_JRE_PATH" value="21" />
     <option name="MAIN_CLASS_NAME" value="eu.nitok.jitsu.compiler.cli.CliKt" />
-    <module name="jitsu.compiler.main" />
+    <module name="jitsu.cli.main" />
     <option name="PROGRAM_PARAMETERS" value="process -o $PROJECT_DIR$/examples/single-file-program/build $PROJECT_DIR$/examples/single-file-program/simple_syntax.jit" />
     <shortenClasspath name="NONE" />
     <method v="2">
