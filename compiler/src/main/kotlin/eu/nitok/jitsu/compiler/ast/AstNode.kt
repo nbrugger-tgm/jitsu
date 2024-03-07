@@ -1,18 +1,17 @@
 package eu.nitok.jitsu.compiler.ast
 
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
+import eu.nitok.jitsu.compiler.model.Walkable
 import eu.nitok.jitsu.compiler.parser.Locatable
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
 @Serializable
-sealed interface AstNode {
+sealed interface AstNode : Walkable<AstNode> {
     val location: Range
     val warnings: MutableList<CompilerMessage>
     val errors: MutableList<CompilerMessage>
-
-    val children: List<AstNode>
 
     fun warning(warning: CompilerMessage) {
         warnings.add(warning)
@@ -20,16 +19,6 @@ sealed interface AstNode {
 
     fun error(error: CompilerMessage) {
         errors.add(error)
-    }
-    fun <T> flatMap(mapper: (AstNode) -> List<T>): List<T> {
-        val diagnostics: MutableList<T> = mutableListOf();
-        val nodeQueue = ArrayDeque(listOf(this))
-        while (!nodeQueue.isEmpty()) {
-            val subNode = nodeQueue.removeFirst()
-            diagnostics.addAll(mapper(subNode))
-            nodeQueue += subNode.children
-        }
-        return diagnostics
     }
 }
 fun <T: AstNode> T.withMessages(messages: CompilerMessages) : T{

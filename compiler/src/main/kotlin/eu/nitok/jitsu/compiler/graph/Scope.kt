@@ -3,6 +3,7 @@ package eu.nitok.jitsu.compiler.graph
 import eu.nitok.jitsu.compiler.ast.IdentifierNode
 import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
+import eu.nitok.jitsu.compiler.model.Walkable
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
@@ -19,15 +20,17 @@ class Scope constructor(
     private val variables: MutableList<Variable> = mutableListOf(),
     val errors: MutableList<CompilerMessage> = mutableListOf(),
     val warnings: MutableList<CompilerMessage> = mutableListOf()
-) {
+) : Walkable<Scope> {
     init {
-        functions.forEach { it.bodyScope.parent = this }
+        functions.forEach { it.scope.parent = this }
     }
+    fun getFunctions(): List<Function> = functions
 
     constructor(parent: Scope) : this() {
         this.parent = parent;
     }
 
+    override val children: List<Scope> get() = functions.map { it.scope }
 
     @Transient
     var parent: Scope? = null
@@ -36,7 +39,7 @@ class Scope constructor(
         val existing = types[type.name.value];
         if (existing != null) {
             error(
-                "Type with name '${type.name.value}' already exists : {}",
+                "Type with name '${type.name.value}' already exists",
                 type.name.location,
                 listOf(CompilerMessage.Hint("Already defined here", existing.name.location))
             )
@@ -50,13 +53,13 @@ class Scope constructor(
         if (existing != null) {
             error(
                 "Function with name '${func.name?.value}' already exists : {}",
-                existing.name!!.location,
+                func.name!!.location,
                 listOf(CompilerMessage.Hint("Already defined here", existing.name!!.location))
             )
             return
         }
         functions.add(func);
-        func.bodyScope.parent = this;
+        func.scope.parent = this;
     }
 
     fun error(message: CompilerMessage) {
@@ -97,8 +100,8 @@ class Scope constructor(
         val existing = variables.find { variable.name.value == it.name.value }
         if (existing != null) {
             error(
-                "Variable with name '${variable.name.value}' already exists : {}",
-                existing.name.location,
+                "Variable with name '${variable.name.value}' already exists",
+                variable.name.location,
                 listOf(CompilerMessage.Hint("Already defined here", existing.name.location))
             )
             return

@@ -6,6 +6,7 @@ import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import java.lang.IllegalArgumentException
 
 @Serializable
@@ -14,10 +15,11 @@ sealed class Constant<out T> : Expression {
     abstract val type: Type
     abstract val literal: String
     abstract val originLocation: Range
-    override val isConstant: ReasonedBoolean get() = ReasonedBoolean.True
+    @Transient override val isConstant: ReasonedBoolean = ReasonedBoolean.True
 
     @Contextual
     abstract val value: T
+
 
     @Serializable
     data class IntConstant(override val value: Long, val explicitType: Type.Int? = null, override val originLocation: Range) : Constant<Long>() {
@@ -30,6 +32,7 @@ sealed class Constant<out T> : Expression {
                 else -> throw IllegalStateException("Int value $value is too large")
             };
         override val literal: String get() = value.toString()
+        @Transient override val children: List<Element> = listOfNotNull(explicitType)
     }
 
     @Serializable
@@ -45,16 +48,19 @@ sealed class Constant<out T> : Expression {
             }
         };
         override val literal: String get() = value.toString()
+        @Transient override val children: List<Element> = listOfNotNull(explicitType)
     }
 
     @Serializable
     data class StringConstant(override val value: String, override val originLocation: Range) : Constant<String>() {
         override val type: Type = Type.TypeReference(lazy { TODO("here should be resolved from scope") }, mapOf())
         override val literal: String get() = "\"${value}\""
+        @Transient override val children: List<Element> = listOfNotNull()
     }
 
     class BooleanConstant(override val value: Boolean, override val originLocation: Range) : Constant<Boolean>() {
         override val type: Type get() = Type.Boolean
         override val literal: String get() = value.toString()
+        @Transient override val children: List<Element> = listOfNotNull()
     }
 }

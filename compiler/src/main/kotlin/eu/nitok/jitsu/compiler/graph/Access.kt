@@ -1,37 +1,25 @@
 package eu.nitok.jitsu.compiler.graph
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
-sealed interface Accessible<T : Access> {
-    val accessToSelf: MutableList<T>
+sealed interface Accessible<T: Accessible<T>> {
+    @Transient val accessToSelf: MutableList<in Access<T>>
 }
 
 @Serializable
 sealed interface Accessor {
-    val accessFromSelf: MutableList<Access>
+    @Transient val accessFromSelf: List<Access<*>>
+    val scope: Scope
 }
 
 @Serializable
-sealed interface Access {
+sealed interface Access<T: Accessible<T>> {
+    @Transient val target: T
+    @Transient var accessor: Accessor
 
-    val target: Accessible<*>
-    val accessor: Accessor
+    sealed interface FunctionAccess : Access<Function>
 
-    sealed interface FunctionAccess : Access {
-        override val target: Function;
-
-        data class Invocation(override val target: Function, override val accessor: Accessor) : FunctionAccess {
-        }
-    }
-
-    sealed interface VariableAccess : Access {
-        data class Read(override val target: Accessible<VariableAccess>, override val accessor: Accessor) :
-            VariableAccess {
-        }
-
-        data class Write(override val target: Accessible<VariableAccess>, override val accessor: Accessor) :
-            VariableAccess {
-        }
-    }
+    sealed interface VariableAccess : Access<Variable>
 }

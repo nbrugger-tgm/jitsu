@@ -5,9 +5,10 @@ import eu.nitok.jitsu.compiler.ast.*
 
 import eu.nitok.jitsu.compiler.ast.StatementNode.*
 
-fun buildGraph(file: SourceFileNode): Scope {
+fun buildGraph(srcFile: SourceFileNode): JitsuFile {
     val rootScope = Scope()//top level scopes have no parent
-    for (statement in file.statements) {
+    val file = JitsuFile(rootScope);
+    for (statement in srcFile.statements) {
         when (statement) {
             is IfNode,
             is ReturnNode,
@@ -26,7 +27,7 @@ fun buildGraph(file: SourceFileNode): Scope {
             is FunctionDeclarationNode -> rootScope.register(buildFunctionGraph(statement, rootScope))
         }
     }
-    return rootScope
+    return file
 }
 
 fun buildGraph(scope: Scope, statement: StatementNode): Instruction? {
@@ -133,7 +134,7 @@ fun buildExpressionGraph(expression: ExpressionNode?, scope: Scope): Expression 
             buildExpressionGraph(expression.right, scope)
         );
         is ExpressionNode.StringLiteralNode -> TODO()
-        is ExpressionNode.VariableReferenceNode -> resolveVariableReference(scope, expression)
+        is ExpressionNode.VariableReferenceNode -> resolveVariableReference(expression)
         is ExpressionNode.FieldAccessNode -> TODO()
         is ExpressionNode.IndexAccessNode -> TODO()
         is CodeBlockNode.SingleExpressionCodeBlock -> TODO()
@@ -146,9 +147,10 @@ fun buildExpressionGraph(expression: ExpressionNode?, scope: Scope): Expression 
     }
 }
 
-fun resolveVariableReference(scope: Scope, expression: ExpressionNode.VariableReferenceNode): Expression {
-    return scope.resolveVariable(expression.variable.located)?.let { Expression.VariableReference(it) }
-        ?: Expression.Undefined
+fun resolveVariableReference(
+    expression: ExpressionNode.VariableReferenceNode
+): Expression {
+    return Expression.VariableReference(expression.variable.located)
 }
 
 fun buildFunctionGraph(functionNode: FunctionDeclarationNode, parentScope: Scope): Function {
@@ -156,7 +158,7 @@ fun buildFunctionGraph(functionNode: FunctionDeclarationNode, parentScope: Scope
     val innerScope = Scope(parentScope);
     val parameters = functionNode.parameters.map {
         val type = resolveType(parentScope, it.type)
-        Parameter(
+        Function.Parameter(
             it.name.located, type,
             buildExpressionGraph(it.defaultValue, parentScope)
         )
