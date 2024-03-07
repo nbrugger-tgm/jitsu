@@ -336,5 +336,6 @@ fun resolveType(scope: Scope, type: TypeNode?): Type {
         is TypeNode.UnionTypeNode -> TODO()
         is TypeNode.ValueTypeNode -> TODO()
         is TypeNode.VoidTypeNode -> TODO()
+        is TypeNode.UIntTypeNode -> Type.UInt(type.bitSize)
     }
 }

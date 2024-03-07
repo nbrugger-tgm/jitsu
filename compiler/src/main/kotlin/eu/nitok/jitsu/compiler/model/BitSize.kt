@@ -6,5 +6,11 @@ enum class BitSize(val bits: Int) {
     BIT_32(32),
     BIT_64(64),
     BIT_128(128),
-    BIT_256(256)
+    BIT_256(256);
+
+    companion object {
+        fun byBits(bits: Int): BitSize? {
+            return entries.find { it.bits == bits }
+        }
+    }
 }
