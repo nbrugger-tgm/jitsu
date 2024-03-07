@@ -151,11 +151,13 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
                         is TypeNode.IntTypeNode,
                         is TypeNode.NameTypeNode,
                         is TypeNode.VoidTypeNode,
+                        is TypeNode.UIntTypeNode,
                         is TypeNode.ValueTypeNode -> TYPE
 
                         is TypeNode.UnionTypeNode -> ENUM
                         is TypeNode.FunctionTypeSignatureNode -> FUNCTION
                         is TypeNode.StructuralInterfaceTypeNode -> INTERFACE
+
                     }, name.location
                 )
             )
