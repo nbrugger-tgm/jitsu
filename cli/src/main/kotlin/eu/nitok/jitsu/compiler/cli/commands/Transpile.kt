@@ -19,8 +19,10 @@ class Transpile: Callable<List<Path>> {
     override fun call(): List<Path> {
         val graphs = cli.call()
         val backend = BackendRegistry.create(backendName)
-        return backend.run {
+        val files = backend.run {
             transpile(graphs, cli.cli.outpurDir.resolve(backendName))
         }
+        cli.spec.commandLine().out.println("Transpiled to $files")
+        return files
     }
 }
