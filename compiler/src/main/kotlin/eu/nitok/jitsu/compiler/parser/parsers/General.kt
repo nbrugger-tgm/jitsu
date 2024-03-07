@@ -17,7 +17,7 @@ fun parseCodeBlock(tokens: Tokens): StatementNode.CodeBlockNode.StatementsCodeBl
     tokens.skipWhitespace()
     val closeKw = tokens.expect(DefaultToken.ROUND_BRACKET_CLOSED)?.location
     if(closeKw == null){
-        messages.error("Unclosed code block, expected '}'", tokens.location, Hint(
+        messages.error("Unclosed code block, expected '}'", tokens.location.toRange(), Hint(
             "Code block opened here", openKw
         ))
     }

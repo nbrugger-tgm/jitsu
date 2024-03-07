@@ -35,7 +35,7 @@ fun parseIdentifier(tokens: Tokens): IdentifierNode? {
         if (type == DOLLAR) {
             messages.warn(
                 "Dollar signs are allowed in identifiers, but are discouraged since they are used in auto-generation",
-                tokens.location
+                tokens.location.toRange()
             )
         }
         value += tokens.next().value;

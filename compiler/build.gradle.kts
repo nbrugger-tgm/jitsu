@@ -4,10 +4,12 @@
 
 plugins {
     id("eu.nitok.jitsu.kotlin-library-conventions")
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.20"
 }
 
 dependencies {
     api("com.niton.jainparse:tokenizer")
     api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
+    kapt("info.picocli:picocli-codegen:4.6.1")
+    implementation("info.picocli:picocli:4.6.1")
 }
+

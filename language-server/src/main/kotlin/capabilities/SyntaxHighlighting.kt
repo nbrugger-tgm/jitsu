@@ -8,8 +8,9 @@ import eu.nitok.jitsu.compiler.ast.StatementNode.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode.ParameterNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.NamedTypeDeclarationNode.EnumDeclarationNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode
+import eu.nitok.jitsu.compiler.model.flatMap
 import eu.nitok.jitsu.compiler.parser.Range
-import flatMap
+
 import java.util.concurrent.atomic.AtomicInteger
 
 

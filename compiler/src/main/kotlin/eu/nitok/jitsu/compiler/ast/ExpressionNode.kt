@@ -6,21 +6,24 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 sealed interface ExpressionNode : AstNode {
-
     @Serializable
     sealed interface NumberLiteralNode : ExpressionNode {
         @Serializable
         //Long because of unsigned values
-        class IntegerLiteralNode(val value: String, override val location: Range) : AstNodeImpl(listOf()),
+        class IntegerLiteralNode(val value: String, override val location: Range) : AstNodeImpl(),
             NumberLiteralNode {
+            override val children: List<AstNode>
+                get() = listOf()
             override fun toString(): String {
                 return value
             }
         }
 
         @Serializable
-        class FloatLiteralNode(val value: Double, override val location: Range) : AstNodeImpl(listOf()),
+        class FloatLiteralNode(val value: Double, override val location: Range) : AstNodeImpl(),
             NumberLiteralNode {
+            override val children: List<AstNode>
+                get() = listOf()
             override fun toString(): String {
                 return value.toString() + "f"
             }
@@ -30,7 +33,9 @@ sealed interface ExpressionNode : AstNode {
     @Serializable
     class StringLiteralNode(
         val content: List<StringPart>
-    ) : ExpressionNode, AstNodeImpl(listOf()) {
+    ) : ExpressionNode, AstNodeImpl() {
+        override val children: List<AstNode>
+            get() = listOf()
         override val location: Range get() = content.first().location.rangeTo(content.last().location)
 
         @Serializable
@@ -43,7 +48,9 @@ sealed interface ExpressionNode : AstNode {
             data class Literal(
                 val literal: IdentifierNode,
                 val keywordLocation: Range
-            ) : AstNodeImpl(listOf(literal)), StringPart {
+            ) : AstNodeImpl(), StringPart {
+                override val children: List<AstNode>
+                    get() = listOf(literal)
                 override val location: Range get() = keywordLocation.rangeTo(literal.location)
 
                 override fun toString(): String {
@@ -59,7 +66,9 @@ sealed interface ExpressionNode : AstNode {
                 val expression: ExpressionNode?,
                 val startKeywordLocation: Range,
                 val endKeywordLocation: Range
-            ) : AstNodeImpl(listOfNotNull(expression)), StringPart {
+            ) : AstNodeImpl(), StringPart {
+                override val children: List<AstNode>
+                    get() = listOfNotNull(expression)
                 override val location: Range get() = startKeywordLocation.rangeTo(endKeywordLocation)
 
                 override fun toString(): String {
@@ -71,16 +80,20 @@ sealed interface ExpressionNode : AstNode {
              * the `I am `, ` and i am ` and ` years old` parts in "I am $abc and i am ${me.age} years old"
              */
             @Serializable
-            data class CharSequence(val value: String, override val location: Range) : AstNodeImpl(listOf()),
+            data class CharSequence(val value: String, override val location: Range) : AstNodeImpl(),
                 StringPart {
+                override val children: List<AstNode>
+                    get() = listOf()
                 override fun toString(): String {
                     return value
                 }
             }
 
             @Serializable
-            data class EscapeSequence(val value: String, override val location: Range) : AstNodeImpl(listOf()),
+            data class EscapeSequence(val value: String, override val location: Range) : AstNodeImpl(),
                 StringPart {
+                override val children: List<AstNode>
+                    get() = listOf()
                 override fun toString(): String {
                     return "\\$value"
                 }
@@ -93,7 +106,9 @@ sealed interface ExpressionNode : AstNode {
     }
 
     @Serializable
-    class BooleanLiteralNode(val value: Boolean, override val location: Range) : AstNodeImpl(listOf()), ExpressionNode {
+    class BooleanLiteralNode(val value: Boolean, override val location: Range) : AstNodeImpl(), ExpressionNode {
+        override val children: List<AstNode>
+            get() = listOf()
         override fun toString(): String {
             return value.toString()
         }
@@ -101,7 +116,9 @@ sealed interface ExpressionNode : AstNode {
 
     @Serializable
     class VariableReferenceNode(val variable: IdentifierNode) :
-        AstNodeImpl(listOf(variable)), ExpressionNode, AssignmentTarget {
+        AstNodeImpl(), ExpressionNode, AssignmentTarget {
+        override val children: List<AstNode>
+            get() = listOf(variable)
         override val location: Range = variable.location
         override fun toString(): String {
             return variable.value
@@ -113,7 +130,9 @@ sealed interface ExpressionNode : AstNode {
         val left: ExpressionNode,
         val operator: Located<BiOperator>,
         val right: ExpressionNode?
-    ) : AstNodeImpl(listOfNotNull(left, right)), ExpressionNode {
+    ) : AstNodeImpl(), ExpressionNode {
+        override val children: List<AstNode>
+            get() = listOfNotNull(left, right)
         override val location: Range = left.location.rangeTo(right?.location?: operator.location)
     }
 
@@ -122,12 +141,18 @@ sealed interface ExpressionNode : AstNode {
         val target: ExpressionNode,
         val field: IdentifierNode?,
         override val location: Range
-    ) : AstNodeImpl(listOfNotNull(target, field)), ExpressionNode, AssignmentTarget
+    ) : AstNodeImpl(), ExpressionNode, AssignmentTarget {
+        override val children: List<AstNode>
+            get() = listOfNotNull(target, this.field)
+    }
 
     @Serializable
     class IndexAccessNode(
         val target: ExpressionNode,
         val index: ExpressionNode?,
         override val location: Range
-    ) : AstNodeImpl(listOfNotNull(target, index)), ExpressionNode, AssignmentTarget
+    ) : AstNodeImpl(), ExpressionNode, AssignmentTarget {
+        override val children: List<AstNode>
+            get() = listOfNotNull(target, index)
+    }
 }

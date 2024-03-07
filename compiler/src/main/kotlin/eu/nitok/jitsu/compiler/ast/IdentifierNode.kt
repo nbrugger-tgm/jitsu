@@ -7,6 +7,8 @@ import kotlinx.serialization.Serializable
 class IdentifierNode(
     override val location: Range,
     val value: String
-) : AstNodeImpl(listOf()) {
+) : AstNodeImpl() {
+    override val children: List<AstNode>
+        get() = listOf()
     override fun toString() = value
 }

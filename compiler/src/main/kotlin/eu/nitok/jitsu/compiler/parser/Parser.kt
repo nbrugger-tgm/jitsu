@@ -13,15 +13,26 @@ import eu.nitok.jitsu.compiler.model.BitSize
 import eu.nitok.jitsu.compiler.parser.parsers.parseFunction
 import eu.nitok.jitsu.compiler.parser.parsers.parseIdentifier
 import eu.nitok.jitsu.compiler.parser.parsers.parseStructuralInterface
+import java.io.Reader
 import java.io.StringReader
+import java.net.URI
 import kotlin.jvm.optionals.getOrNull
 
 typealias Tokens = TokenStream<DefaultToken>
 
-fun parseFile(txt: String): SourceFileNode {
+fun parseFile(input: Reader, uri: URI): SourceFileNode {
+    val tokenSource = TokenSource(input, tokenizer);
+    val tokens = TokenStream.of(tokenSource)
+    val statements = mutableListOf<StatementNode>()
+    val sourceFileNode = SourceFileNode(uri.toString(), statements)
+    parseStatements(tokens, statements, sourceFileNode::error)
+    return sourceFileNode;
+}
+
+fun parseFile(txt: String, uri: URI): SourceFileNode {
     val tokens = tokenize(txt)
     var statements = mutableListOf<StatementNode>()
-    val sourceFileNode = SourceFileNode(statements)
+    val sourceFileNode = SourceFileNode(uri.toString(), statements)
     parseStatements(tokens, statements, sourceFileNode::error)
     return sourceFileNode;
 }
@@ -93,7 +104,7 @@ fun parseReturnStatement(tokens: Tokens): StatementNode? {
 
 private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> StatementNode?): StatementNode? {
     val res = statmentFn(tokens) ?: return null;
-    val endOfStatementPos = tokens.location;
+    val endOfStatementPos = tokens.location.toRange();
     tokens.skipWhitespace()
     val semicolon = tokens.peekOptional();
     if (semicolon.map { it.type }.orElse(null) != SEMICOLON) {
@@ -114,19 +125,18 @@ fun parseVariableDeclaration(tokens: Tokens): StatementNode.VariableDeclarationN
     tokens.skipWhitespace();
     val eq = tokens.keyword(EQUAL);
     if (eq == null) {
-        messages.error("Variables need an initial value!", tokens.location)
+        messages.error("Variables need an initial value!", tokens.location.toRange())
     } else {
         tokens.skipWhitespace()
     }
     val expression = parseExpression(tokens);
 
     if (expression == null)
-        messages.error("Expected value to assign to '${name?.value}'", tokens.location)
+        messages.error("Expected value to assign to '${name?.value}'", tokens.location.toRange())
     return StatementNode.VariableDeclarationNode(
         name,
         type,
         expression,
-        kw.rangeTo(expression?.location ?: eq ?: type?.location ?: name?.location ?: kw),
         kw
     ).withMessages(messages);
 }
@@ -182,7 +192,7 @@ fun parseOptionalExplicitType(tokens: Tokens, messages: (CompilerMessage) -> Uni
     if (type == null) {
         messages(
             CompilerMessage(
-                "Expected type", tokens.location, Hint("Colon starts type definition", colon)
+                "Expected type", tokens.location.toRange(), Hint("Colon starts type definition", colon)
             )
         );
     }
@@ -194,7 +204,7 @@ fun parseExplicitType(
     messages: CompilerMessages
 ): TypeNode? {
     if (tokens.keyword(COLON) == null) {
-        messages.error("Expected a type definition starting with a ':'", tokens.location)
+        messages.error("Expected a type definition starting with a ':'", tokens.location.toRange())
         tokens.location
     } else {
         tokens.skipWhitespace()
@@ -220,7 +230,7 @@ fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode
             messages.error(
                 CompilerMessage(
                     "Expect type for union",
-                    tokens.location,
+                    tokens.location.toRange(),
                     Hint("Union starts here", pipeLocation)
                 )
             )
@@ -301,7 +311,7 @@ fun parseAssignment(tokens: Tokens): StatementNode.AssignmentNode? {
     val expression = parseExpression(tokens);
     return StatementNode.AssignmentNode(ExpressionNode.VariableReferenceNode(kw), expression).run {
         if (expression == null)
-            this.error(CompilerMessage("Expected value to assign to '${kw.value}'", tokens.location))
+            this.error(CompilerMessage("Expected value to assign to '${kw.value}'", tokens.location.toRange()))
         this
     };
 }

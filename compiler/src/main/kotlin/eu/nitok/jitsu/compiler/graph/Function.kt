@@ -1,30 +1,36 @@
 package eu.nitok.jitsu.compiler.graph
 
-import kotlinx.serialization.Contextual
+import eu.nitok.jitsu.compiler.ast.Located
+import eu.nitok.jitsu.compiler.model.sequence
 import kotlinx.serialization.Serializable;
+import kotlinx.serialization.Transient
 
 @Serializable
 class Function(
-    val bodyScope: Scope,
-    val name: String?,
-) : Accessor, Accessible<Access.FunctionAccess> {
-    val spawnScope get(): Scope = bodyScope.parent!!
+    override val scope: Scope,
+    val name: Located<String>?,
+    val returnType: Type?,
+    val parameters: List<Parameter>,
+    val body: List<Instruction>,
+) : Element, Accessor, Accessible<Function> {
 
-    init {
-        spawnScope.functions.add(this)
+    override val children: List<Element> get() = listOfNotNull(returnType) + parameters
+
+    @Transient
+    override val accessToSelf: MutableList<Access<Function>> = mutableListOf()
+
+    @Transient
+    override val accessFromSelf: List<Access<*>> = body.flatMap {
+        it.sequence().filterIsInstance<Access<*>>()
+    }.onEach { it.accessor = this }
+
+    @Serializable
+    data class Parameter(
+        val name: Located<String>,
+        val type: Type,
+        val defaultValue: Expression?
+    ) : Element {
+        fun asVariable(fn: Function): Variable = Variable(false, name, type)
+        override val children: List<Element> get() = listOfNotNull(type, defaultValue)
     }
-
-    val parameters: MutableList<Parameter> = mutableListOf()
-    override val accessToSelf: MutableList<Access.FunctionAccess> = mutableListOf()
-    override val accessFromSelf: MutableList<Access> = mutableListOf()
-}
-
-@Serializable
-data class Parameter(
-    val owner: Function,
-    val name: String,
-    val type: ResolvedType?,
-    val defaultValue: Constant<@Contextual Any>?
-) {
-    val variable: Variable get() = Variable(owner.bodyScope, false, name, type, null)
 }

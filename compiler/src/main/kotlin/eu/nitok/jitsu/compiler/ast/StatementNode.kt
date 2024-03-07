@@ -14,10 +14,12 @@ sealed interface StatementNode : AstNode {
         @SerialName("type_definition")
         val type: TypeNode?,
         val value: ExpressionNode?,
-        override val location: Range,
         val keywordLocation: Range
-    ) : AstNodeImpl(listOfNotNull(name, type, value)), StatementNode
-
+    ) : AstNodeImpl(), StatementNode {
+        override val location: Range get() = keywordLocation.rangeTo(value?.location?: type?.location?:keywordLocation)
+        override val children: List<AstNode>
+            get() = listOfNotNull(name, type, value)
+    }
 
     @Serializable
     class FunctionDeclarationNode(
@@ -27,11 +29,13 @@ sealed interface StatementNode : AstNode {
         val body: CodeBlockNode?,
         val keywordLocation: Range,
         override val attributes: List<AttributeNode>
-    ) : AstNodeImpl(parameters + listOfNotNull(name, returnType, body) + attributes), StatementNode, ExpressionNode,
+    ) : AstNodeImpl(), StatementNode, ExpressionNode,
         CanHaveAttributes {
+        override val children: List<AstNode>
+            get() = parameters + listOfNotNull(name, returnType, body) + attributes
         override val location: Range = keywordLocation.rangeTo(
-            body?.location ?: returnType?.location ?:
-            parameters.lastOrNull()?.location ?: name?.location ?: keywordLocation
+            body?.location ?: returnType?.location ?: parameters.lastOrNull()?.location ?: name?.location
+            ?: keywordLocation
         )
 
         @Serializable
@@ -39,16 +43,24 @@ sealed interface StatementNode : AstNode {
             val name: IdentifierNode,
             val type: TypeNode?,
             val defaultValue: ExpressionNode?,
-        ) : AstNodeImpl(listOfNotNull(name, type, defaultValue)) {
+        ) : AstNodeImpl() {
             override fun toString() = "${name.value} : $type${if (defaultValue != null) " = $defaultValue" else ""}"
             override val location: Range =
                 name.location.rangeTo(defaultValue?.location ?: type?.location ?: name.location)
+            override val children: List<AstNode>
+                get() = listOfNotNull(name, type, defaultValue)
         }
+
     }
 
     @Serializable
     class ReturnNode(val expression: ExpressionNode?, override val location: Range, val keywordLocation: Range) :
-        AstNodeImpl(listOfNotNull(expression)), StatementNode
+        AstNodeImpl(), StatementNode {
+
+
+        override val children: List<AstNode>
+            get() = listOfNotNull(expression)
+    }
 
     @Serializable
     class IfNode(
@@ -57,21 +69,28 @@ sealed interface StatementNode : AstNode {
         val elseStatement: ElseNode?,
         override val location: Range,
         val keywordLocation: Range
-    ) : AstNodeImpl(listOfNotNull(condition, thenCodeBlockNode, elseStatement)), StatementNode, ExpressionNode {
+    ) : AstNodeImpl(), StatementNode, ExpressionNode {
+        override val children: List<AstNode>
+            get() = listOfNotNull(condition, thenCodeBlockNode, elseStatement)
+
         @Serializable
         sealed interface ElseNode : AstNode {
             val keywordLocation: Range
 
             @Serializable
-            class ElseIfNode(val ifNode: IfNode, override val keywordLocation: Range) : AstNodeImpl(listOf(ifNode)),
+            class ElseIfNode(val ifNode: IfNode, override val keywordLocation: Range) : AstNodeImpl(),
                 ElseNode {
+                override val children: List<AstNode>
+                    get() = listOf(ifNode)
                 override val location: Range
                     get() = keywordLocation.rangeTo(ifNode.location)
             }
 
             @Serializable
             class ElseBlockNode(val codeBlock: CodeBlockNode?, override val keywordLocation: Range) :
-                AstNodeImpl(listOfNotNull(codeBlock)), ElseNode {
+                AstNodeImpl(), ElseNode {
+                override val children: List<AstNode>
+                    get() = listOfNotNull(codeBlock)
                 override val location: Range
                     get() = if (codeBlock == null) keywordLocation else keywordLocation.rangeTo(codeBlock.location)
             }
@@ -92,11 +111,18 @@ sealed interface StatementNode : AstNode {
     sealed interface CodeBlockNode : StatementNode, ExpressionNode, CaseBodyNode {
         @Serializable
         class SingleExpressionCodeBlock(val expression: ExpressionNode, override val location: Range) :
-            AstNodeImpl(listOf(expression)), CodeBlockNode
+            AstNodeImpl(), CodeBlockNode {
+            override val children: List<AstNode>
+                get() = listOf(expression)
+        }
 
         @Serializable
         class StatementsCodeBlock(val statements: List<StatementNode>, override val location: Range) :
-            AstNodeImpl(statements), CodeBlockNode
+            AstNodeImpl(), CodeBlockNode {
+
+            override val children: List<AstNode>
+                get() = statements
+        }
     }
 
     @Serializable
@@ -105,7 +131,10 @@ sealed interface StatementNode : AstNode {
         val cases: List<CaseNode>,
         override val location: Range,
         val keywordLocation: Range
-    ) : AstNodeImpl(cases + listOfNotNull(item)), StatementNode, ExpressionNode {
+    ) : AstNodeImpl(), StatementNode, ExpressionNode {
+        override val children: List<AstNode>
+            get() = cases + listOfNotNull(item)
+
         @Serializable
         abstract class CaseNode(val matcher: CaseMatchNode, val body: CaseBodyNode?, val keywordLocation: Range) :
             AstNode {
@@ -117,7 +146,12 @@ sealed interface StatementNode : AstNode {
                     val keywordLocation: Range,
                     override val location: Range
                 ) : CaseMatchNode,
-                    AstNodeImpl(listOf(value))
+                    AstNodeImpl() {
+
+
+                    override val children: List<AstNode>
+                        get() = listOf(value)
+                }
 
                 @Serializable
                 class TypeCaseNode(
@@ -125,10 +159,18 @@ sealed interface StatementNode : AstNode {
                     val type: TypeNode.NameTypeNode,
                     val keywordLocation: Range,
                     override val location: Range
-                ) : CaseMatchNode, AstNodeImpl(listOf(type))
+                ) : CaseMatchNode, AstNodeImpl() {
+
+
+                    override val children: List<AstNode>
+                        get() = listOf(type)
+                }
 
                 @Serializable
-                class DefaultCaseNode(override val location: Range) : CaseMatchNode, AstNodeImpl(listOf())
+                class DefaultCaseNode(override val location: Range) : CaseMatchNode, AstNodeImpl()
+
+                override val children: List<AstNode>
+                    get() = listOf()
             }
 
             @Serializable
@@ -147,7 +189,12 @@ sealed interface StatementNode : AstNode {
             override val location: Range,
             val keywordLocation: Range,
             override val attributes: List<AttributeNode>
-        ) : NamedTypeDeclarationNode, AstNodeImpl(attributes + name + type), StatementNode, CanHaveAttributes
+        ) : NamedTypeDeclarationNode, AstNodeImpl(), StatementNode, CanHaveAttributes {
+
+
+            override val children: List<AstNode>
+                get() = attributes + name + type
+        }
 
         @Serializable
         data class EnumDeclarationNode(
@@ -155,7 +202,10 @@ sealed interface StatementNode : AstNode {
             val constants: List<IdentifierNode>,
             override val location: Range,
             val keywordLocation: Range
-        ) : NamedTypeDeclarationNode, AstNodeImpl(constants + name) {
+        ) : NamedTypeDeclarationNode, AstNodeImpl() {
+            override val children: List<AstNode>
+                get() = constants + name
+
             override fun toString(): String {
                 return "enum {${constants.joinToString(", ") { it.value }}}"
             }
@@ -168,7 +218,10 @@ sealed interface StatementNode : AstNode {
             override val location: Range,
             val keywordLocation: Range,
             override val attributes: List<AttributeNode>
-        ) : NamedTypeDeclarationNode, AstNodeImpl(functions + attributes + name), CanHaveAttributes, StatementNode {
+        ) : NamedTypeDeclarationNode, AstNodeImpl(), CanHaveAttributes, StatementNode {
+            override val children: List<AstNode>
+                get() = functions + attributes + name
+
             override fun toString(): String {
                 return name.value
             }
@@ -177,9 +230,12 @@ sealed interface StatementNode : AstNode {
             class FunctionSignatureNode(
                 val name: IdentifierNode,
                 val typeSignature: TypeNode.FunctionTypeSignatureNode,
-            ) : AstNodeImpl(listOf(name, typeSignature)) {
+            ) : AstNodeImpl() {
                 override val location: Range get() = name.location.rangeTo(typeSignature.location)
+                override val children: List<AstNode>
+                    get() = listOf(name, typeSignature)
             }
+
         }
     }
 
@@ -188,18 +244,26 @@ sealed interface StatementNode : AstNode {
         val function: IdentifierNode,
         val parameters: List<ExpressionNode>,
         override val location: Range
-    ) : AstNodeImpl(parameters + function), StatementNode, ExpressionNode
+    ) : AstNodeImpl(), StatementNode, ExpressionNode {
+
+
+        override val children: List<AstNode>
+            get() = parameters + function
+    }
 
     @Serializable
     class AssignmentNode(
         val target: AssignmentTarget,
         val value: ExpressionNode?,
-    ) : StatementNode, AstNodeImpl(listOfNotNull(target, value)) {
+    ) : StatementNode, AstNodeImpl() {
+        override val children: List<AstNode>
+            get() = listOfNotNull(target, value)
+
         @Serializable
         sealed interface AssignmentTarget : AstNode
 
         override val location: Range
-            get() = target.location.rangeTo(value?.location?: target.location)
+            get() = target.location.rangeTo(value?.location ?: target.location)
     }
 
     @Serializable
@@ -207,17 +271,29 @@ sealed interface StatementNode : AstNode {
         val method: ExpressionNode.FieldAccessNode,
         val parameters: List<ExpressionNode>,
         override val location: Range
-    ) : StatementNode, ExpressionNode, AstNodeImpl(parameters + method)
+    ) : StatementNode, ExpressionNode, AstNodeImpl() {
+
+
+        override val children: List<AstNode>
+            get() = parameters + method
+    }
 
     @Serializable
     data class LineCommentNode(val content: Located<String>, override val location: Range) : StatementNode,
-        AstNodeImpl(listOf())
+        AstNodeImpl() {
+
+
+        override val children: List<AstNode>
+            get() = listOf()
+    }
 
     @Serializable
     data class YieldStatement(
         val expression: ExpressionNode?,
         val keywordLocation: Range
-    ) : StatementNode, AstNodeImpl(listOfNotNull(expression)) {
+    ) : StatementNode, AstNodeImpl() {
+        override val children: List<AstNode>
+            get() = listOfNotNull(expression)
         override val location: Range
             get() = if (expression == null) keywordLocation else keywordLocation.rangeTo(expression.location)
     }

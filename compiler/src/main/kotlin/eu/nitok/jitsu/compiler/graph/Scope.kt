@@ -1,27 +1,45 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.compiler.ast.IdentifierNode
 import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
-import eu.nitok.jitsu.compiler.parser.Locatable
+import eu.nitok.jitsu.compiler.model.Walkable
+import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /**
  * Content of a file or everything that is between { and }
  */
 @Serializable
-class Scope(val parent: Scope?) {
-    val contants: MutableList<Constant<@Contextual Any>> = mutableListOf();
-    val types: MutableMap<String, ResolvedType.NamedType> = mutableMapOf()
-    val functions: MutableList<eu.nitok.jitsu.compiler.graph.Function> = mutableListOf()
-    val variable: MutableList<Variable> = mutableListOf()
-    val errors: MutableList<CompilerMessage> = mutableListOf()
+class Scope constructor(
+    private val contants: MutableList<Constant<@Contextual Any>> = mutableListOf(),
+    private val types: MutableMap<String, TypeDefinition> = mutableMapOf(),
+    private val functions: MutableList<Function> = mutableListOf(),
+    private val variables: MutableList<Variable> = mutableListOf(),
+    val errors: MutableList<CompilerMessage> = mutableListOf(),
     val warnings: MutableList<CompilerMessage> = mutableListOf()
-    fun register(type: ResolvedType.NamedType) {
+) : Walkable<Scope> {
+    init {
+        functions.forEach { it.scope.parent = this }
+    }
+    fun getFunctions(): List<Function> = functions
+
+    constructor(parent: Scope) : this() {
+        this.parent = parent;
+    }
+
+    override val children: List<Scope> get() = functions.map { it.scope }
+
+    @Transient
+    var parent: Scope? = null
+
+    fun register(type: TypeDefinition) {
         val existing = types[type.name.value];
         if (existing != null) {
             error(
-                "Type with name '${type.name.value}' already exists : {}",
+                "Type with name '${type.name.value}' already exists",
                 type.name.location,
                 listOf(CompilerMessage.Hint("Already defined here", existing.name.location))
             )
@@ -30,11 +48,25 @@ class Scope(val parent: Scope?) {
         types[type.name.value] = type
     }
 
+    fun register(func: Function) {
+        val existing = if (func.name != null) functions.find { func.name.value == it.name?.value } else null
+        if (existing != null) {
+            error(
+                "Function with name '${func.name?.value}' already exists : {}",
+                func.name!!.location,
+                listOf(CompilerMessage.Hint("Already defined here", existing.name!!.location))
+            )
+            return
+        }
+        functions.add(func);
+        func.scope.parent = this;
+    }
+
     fun error(message: CompilerMessage) {
         errors.add(message)
     }
 
-    fun error(message: String, location: Locatable, hints: List<CompilerMessage.Hint> = emptyList()) {
+    fun error(message: String, location: Range, hints: List<CompilerMessage.Hint> = emptyList()) {
         errors.add(CompilerMessage(message, location, hints))
     }
 
@@ -42,15 +74,38 @@ class Scope(val parent: Scope?) {
         warnings.add(message)
     }
 
-    fun warning(message: String, location: Locatable, hints: List<CompilerMessage.Hint> = emptyList()) {
+    fun warning(message: String, location: Range, hints: List<CompilerMessage.Hint> = emptyList()) {
         warnings.add(CompilerMessage(message, location, hints))
     }
 
-    fun resolveType(reference: Located<String>) : ResolvedType.NamedType {
-        val type = types[reference.value]
-        if (type == null) {
+    fun resolveType(reference: IdentifierNode): TypeDefinition {
+        return types[reference.value] ?: run {
             error("Type with name '$reference' does not exist", reference.location)
+            TypeDefinition.Alias(reference.located, listOf(), lazy { Type.Undefined })
         }
-        return ResolvedType.NamedType.Alias(reference, lazy { ResolvedType.Undefined })
+    }
+
+    fun resolveFunction(s: String): Function? {
+        return functions.find { it.name?.value?.equals(s) ?: false }
+    }
+
+    fun resolveVariable(located: Located<String>): Variable? {
+        return variables.find { it.name.value == located.value } ?: run {
+            error("No variable named '${located.value}'", located.location)
+            null
+        }
+    }
+
+    fun register(variable: Variable) {
+        val existing = variables.find { variable.name.value == it.name.value }
+        if (existing != null) {
+            error(
+                "Variable with name '${variable.name.value}' already exists",
+                variable.name.location,
+                listOf(CompilerMessage.Hint("Already defined here", existing.name.location))
+            )
+            return
+        }
+        variables.add(variable)
     }
 }

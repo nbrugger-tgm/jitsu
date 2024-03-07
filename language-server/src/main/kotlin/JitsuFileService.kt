@@ -2,6 +2,7 @@ import capabilities.documentSymbols
 import capabilities.syntaxDiagnostic
 import capabilities.syntaxHighlight
 import eu.nitok.jitsu.compiler.ast.SourceFileNode
+import eu.nitok.jitsu.compiler.graph.JitsuFile
 import eu.nitok.jitsu.compiler.graph.Scope
 import eu.nitok.jitsu.compiler.graph.buildGraph
 import eu.nitok.jitsu.compiler.parser.Location
@@ -16,7 +17,7 @@ import java.util.concurrent.CompletableFuture
 class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
     private val rawTexts: MutableMap<String, String> = mutableMapOf();
     private val asts = mutableMapOf<String, Lazy<SourceFileNode>>()
-    private val graphs = mutableMapOf<String, Lazy<Scope?>>()
+    private val graphs = mutableMapOf<String, Lazy<JitsuFile>>()
     override fun didOpen(params: DidOpenTextDocumentParams?) {
         params?.textDocument?.let {
             rawTexts[it.uri] = it.text
@@ -29,7 +30,7 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
         asts[uri] = lazy {
             customLogger.println("parsing $uri")
             val startMs = System.currentTimeMillis()
-            val ast = parseFile(text)
+            val ast = parseFile(text, URI(uri))
             val endMs = System.currentTimeMillis()
             val parsingTime = endMs - startMs
             customLogger.println("parsed in ${parsingTime}ms")
@@ -43,7 +44,7 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
             server.client?.refreshSemanticTokens()
             return@lazy ast
         }
-        graphs[uri] = lazy { asts[uri]?.value?.let { buildGraph(it) } }
+        graphs[uri] = lazy { buildGraph(asts[uri]!!.value) }
     }
 
     override fun didChange(params: DidChangeTextDocumentParams?) {
@@ -128,9 +129,15 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
 
     override fun diagnostic(params: DocumentDiagnosticParams?): CompletableFuture<DocumentDiagnosticReport> {
         val ast = params?.textDocument?.uri?.let { asts[it] }?.value
-        return CompletableFuture.completedFuture(DocumentDiagnosticReport(RelatedFullDocumentDiagnosticReport(
-            ast?.statements?.flatMap { syntaxDiagnostic(it) } ?: listOf()
-        )))
+        val graph = params?.textDocument?.uri?.let { graphs[it] }?.value
+        return CompletableFuture.completedFuture(
+            DocumentDiagnosticReport(
+                RelatedFullDocumentDiagnosticReport(
+                    (ast?.statements?.flatMap { syntaxDiagnostic(it) }
+                        ?: listOf()) + (graph?.scope?.let { syntaxDiagnostic(it) } ?: listOf())
+                )
+            )
+        )
     }
 
     override fun colorPresentation(params: ColorPresentationParams?): CompletableFuture<MutableList<ColorPresentation>> {

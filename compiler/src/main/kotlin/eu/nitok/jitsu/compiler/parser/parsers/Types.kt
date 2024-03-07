@@ -18,7 +18,7 @@ fun parseStructuralInterface(tokens: Tokens): TypeNode? {
         val name = parseIdentifier(tokens);
         tokens.skip(DefaultToken.WHITESPACE);
         if(name == null) {
-            interfaceMessages.error("Expected field", tokens.location)
+            interfaceMessages.error("Expected field", tokens.location.toRange())
         } else {
             val messages = CompilerMessages()
             val type = parseExplicitType(tokens, messages)
@@ -41,7 +41,7 @@ fun parseStructuralInterface(tokens: Tokens): TypeNode? {
             DefaultToken.EOF -> {
                 interfaceMessages.error(
                     "Scope was not closed, expected '}' to close the interface definition",
-                    tokens.location,
+                    tokens.location.toRange(),
                     CompilerMessage.Hint("Opened here", keyword)
                 )
                 break;
@@ -50,7 +50,7 @@ fun parseStructuralInterface(tokens: Tokens): TypeNode? {
             else -> {
                 interfaceMessages.error(
                     "Expected a new filed delemited by ',' or  end of the interface using '}' after the field definition",
-                    tokens.location
+                    tokens.location.toRange()
                 )
                 break;
             }
