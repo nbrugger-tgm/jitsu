@@ -24,6 +24,15 @@ class Function(
         it.sequence().filterIsInstance<Access<*>>()
     }.onEach { it.accessor = this }
 
+    init {
+        body.flatMap { it.sequence() }.forEach {
+            when (it) {
+                is ScopeAware -> it.scope = scope
+                is FunctionAware -> it.function = this
+            }
+        }
+    }
+
     @Serializable
     data class Parameter(
         val name: Located<String>,
