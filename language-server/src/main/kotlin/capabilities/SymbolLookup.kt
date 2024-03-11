@@ -41,6 +41,7 @@ private fun Type.resolveTypeKind(): SymbolKind? {
         is Type.TypeReference -> target?.symbolKind()
         Type.Undefined -> SymbolKind.Null
         is Type.Union -> SymbolKind.Enum
+        is Type.StructuralInterface -> SymbolKind.Interface
     }
 }
 

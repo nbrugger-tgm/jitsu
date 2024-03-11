@@ -85,7 +85,7 @@ fun buildGraph(statement: VariableDeclarationNode): VariableDeclaration {
         false,
         statement.name?.located ?: Located("unnamed", statement.keywordLocation),
         explicitType,
-        lazy{ initialValue.implicitType }
+        lazy { initialValue.implicitType }
     )
     return VariableDeclaration(
         variable,
@@ -354,7 +354,14 @@ fun resolveType(type: TypeNode?): Type {
         is TypeNode.FunctionTypeSignatureNode -> TODO()
         is TypeNode.IntTypeNode -> Type.Int(type.bitSize)
         is TypeNode.NameTypeNode -> Type.TypeReference(type.name.located, mapOf())
-        is TypeNode.StructuralInterfaceTypeNode -> TODO()
+        is TypeNode.StructuralInterfaceTypeNode -> Type.StructuralInterface(type.fields.map {
+            TypeDefinition.Struct.Field(
+                it.name.located,
+                false,
+                resolveType(it.type)
+            )
+        }.associateBy { it.name.value })
+
         is TypeNode.UnionTypeNode -> Type.Union(type.types.map { resolveType(it) })
         is TypeNode.ValueTypeNode -> TODO()
         is TypeNode.VoidTypeNode -> TODO()

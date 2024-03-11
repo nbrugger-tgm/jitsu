@@ -124,4 +124,12 @@ sealed class Type : Element {
             return options.joinToString(" | ")
         }
     }
+
+    @Serializable
+    data class StructuralInterface(val fields: Map<String, TypeDefinition.Struct.Field>) : Type() {
+        override val children: List<Element> get() = fields.values.toList()
+        override fun toString(): String {
+            return "{${fields.entries.joinToString(", ")}}"
+        }
+    }
 }
