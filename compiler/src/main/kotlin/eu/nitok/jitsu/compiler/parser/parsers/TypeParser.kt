@@ -52,10 +52,16 @@ private fun parseTypeAlias(tokens: Tokens): StatementNode.NamedTypeDeclarationNo
     )
     tokens.skipWhitespace()
     val type = parseType(tokens)
-    if(type == null){
+    if (type == null) {
         messages.error("Expected a type definition after the '='", tokens.location.toRange())
     }
-    return StatementNode.NamedTypeDeclarationNode.TypeAliasNode(name, type, alias.rangeTo(tokens.lastConsumedLocation), alias, listOf())
+    return StatementNode.NamedTypeDeclarationNode.TypeAliasNode(
+        name,
+        type,
+        alias.rangeTo(tokens.lastConsumedLocation),
+        alias,
+        listOf()
+    )
         .withMessages(messages)
 }
 
@@ -74,54 +80,29 @@ fun parseExplicitType(
 }
 
 private fun parseStructuralInterface(tokens: Tokens): TypeNode? {
-    val keyword = tokens.keyword(DefaultToken.ROUND_BRACKET_OPEN) ?: return null
-    val fields = mutableListOf<StructuralFieldNode>()
-    val interfaceMessages = CompilerMessages()
-    while (tokens.hasNext()) {
-        tokens.skip(DefaultToken.WHITESPACE)
-        val name = parseIdentifier(tokens)
-        tokens.skip(DefaultToken.WHITESPACE)
-        if (name == null) {
-            interfaceMessages.error("Expected field", tokens.location.toRange())
-        } else {
+    val messages = CompilerMessages()
+    val fields = tokens.range {
+        enclosedRepetition(
+            DefaultToken.ROUND_BRACKET_OPEN,
+            DefaultToken.COMMA,
+            DefaultToken.ROUND_BRACKET_CLOSED,
+            messages,
+            "interface",
+            "field"
+        ) {
+            val name = parseIdentifier(tokens) ?: return@enclosedRepetition null;
+            tokens.skip(DefaultToken.WHITESPACE)
             val messages = CompilerMessages()
             val type = parseExplicitType(tokens, messages)
             val element = StructuralFieldNode(name, type)
             messages.apply(element)
-            fields.add(element)
             tokens.skip(DefaultToken.WHITESPACE)
-        }
-        val endDelimiter = tokens.peek().type
-        when (endDelimiter) {
-            DefaultToken.ROUND_BRACKET_CLOSED -> {
-                tokens.next()
-                break
-            }
-
-            DefaultToken.COMMA -> {
-                tokens.next()
-            }
-
-            DefaultToken.EOF -> {
-                interfaceMessages.error(
-                    "Scope was not closed, expected '}' to close the interface definition",
-                    tokens.location.toRange(),
-                    CompilerMessage.Hint("Opened here", keyword)
-                )
-                break
-            }
-
-            else -> {
-                interfaceMessages.error(
-                    "Expected a new filed delemited by ',' or  end of the interface using '}' after the field definition",
-                    tokens.location.toRange()
-                )
-                break
-            }
+            return@enclosedRepetition element
         }
     }
-    return TypeNode.StructuralInterfaceTypeNode(fields, keyword.rangeTo(tokens.location))
-        .withMessages(interfaceMessages)
+    fields.value?: return null;
+    return TypeNode.StructuralInterfaceTypeNode(fields.value, fields.location)
+        .withMessages(messages)
 }
 
 private fun parseSingleType(tokens: Tokens): TypeNode? {
