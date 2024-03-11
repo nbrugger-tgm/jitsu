@@ -19,7 +19,7 @@ fun buildGraph(srcFile: SourceFileNode): JitsuFile {
 
 private fun GraphBuilder.buildGraph(srcFile: SourceFileNode): JitsuFile {
     val file = JitsuFile(processStatements(srcFile.statements) {
-        messages.error("Statement not allowed at root level", it.location)
+        if(it !is Declaration) messages.error("Statement not allowed at root level", it.location)
     }, messages)
     file.informChildren()
     file.sequence().forEach {
@@ -38,7 +38,10 @@ private fun GraphBuilder.processStatements(statements: List<StatementNode>, inst
             is NamedTypeDeclarationNode.EnumDeclarationNode -> types.add(buildGraph(statement))
             is NamedTypeDeclarationNode.TypeAliasNode -> types.add(buildGraph(statement))
             is NamedTypeDeclarationNode.InterfaceTypeNode -> types.add(buildGraph(statement))
-            is FunctionDeclarationNode -> functions.add(buildFunctionGraph(statement))
+            is FunctionDeclarationNode -> {
+                functions.add(buildFunctionGraph(statement))
+                instructionHandler(statement)
+            }
             is VariableDeclarationNode -> {
                 val declaration = buildGraph(statement)
                 instructionHandler(statement)
@@ -50,7 +53,7 @@ private fun GraphBuilder.processStatements(statements: List<StatementNode>, inst
     return Scope(constants, types, functions, variables, messages)
 }
 
-fun buildInstructionGraph(statement: InstructionNode): Instruction? {
+private fun GraphBuilder.buildInstructionGraph(statement: InstructionNode): Instruction? {
     return when (statement) {
         is IfNode,
         is MethodInvocationNode,
@@ -62,6 +65,7 @@ fun buildInstructionGraph(statement: InstructionNode): Instruction? {
         is ReturnNode -> Instruction.Return(buildExpressionGraph(statement.expression))
         is VariableDeclarationNode -> buildGraph(statement)
         is LineCommentNode -> null;
+        is FunctionDeclarationNode -> buildFunctionGraph(statement)
     }
 }
 
