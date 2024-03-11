@@ -209,7 +209,7 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
 
         is StringLiteralNode.StringPart.CharSequence -> listOf(token(STRING, location))
         is StringLiteralNode.StringPart.EscapeSequence -> listOf(token(symbolismType, location))
-
+        is TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode -> listOf(token(PROPERTY, name.location))
         else -> listOf()
     }
 }
