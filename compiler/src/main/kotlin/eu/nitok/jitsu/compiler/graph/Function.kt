@@ -13,7 +13,7 @@ class Function(
     val parameters: List<Parameter>,
     val body: CodeBlock,
     override val scope: Scope
-) : Element, Accessible<Function>, Accessor, ScopeAware, ScopeProvider {
+) : Instruction, Element, Accessible<Function>, Accessor, ScopeAware, ScopeProvider {
     constructor(
         name: Located<String>?,
         returnType: Type?,
@@ -61,7 +61,7 @@ class Function(
         override val children: List<Element> get() = listOfNotNull(type, defaultValue)
 
         override fun toString(): String {
-            return "$name: $type${if (defaultValue != null) " = $defaultValue" else ""}"
+            return "${name.value}: $type${if (defaultValue != null) " = $defaultValue" else ""}"
         }
     }
 }

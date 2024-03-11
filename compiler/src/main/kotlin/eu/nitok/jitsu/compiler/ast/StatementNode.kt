@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.compiler.ast
 
+import eu.nitok.jitsu.compiler.graph.Instruction
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -208,7 +209,7 @@ sealed interface StatementNode: AstNode{
             val body: InstructionNode.CodeBlockNode?,
             val keywordLocation: Range,
             override val attributes: List<AttributeNode>
-        ) : AstNodeImpl(), Declaration, ExpressionNode,
+        ) : AstNodeImpl(), Declaration, InstructionNode, ExpressionNode,
             CanHaveAttributes {
             override val children: List<AstNode>
                 get() = parameters + listOfNotNull(name, returnType, body) + attributes
