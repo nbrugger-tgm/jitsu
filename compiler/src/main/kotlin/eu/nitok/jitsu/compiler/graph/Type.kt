@@ -13,23 +13,42 @@ sealed class Type : Element {
     override val children: List<Element> = listOf()
 
     @Serializable
-    data class Int(val bits: BitSize) : Type()
+    data class Int(val bits: BitSize) : Type() {
+        override fun toString(): String {
+            return "i${bits.bits}"
+        }
+    }
 
     @Serializable
-    data class UInt(val bits: BitSize) : Type()
+    data class UInt(val bits: BitSize) : Type() {
+        override fun toString(): String {
+            return "u${bits.bits}"
+        }
+    }
 
     @Serializable
-    data class Float(val bits: BitSize = BitSize.BIT_32) : Type()
+    data class Float(val bits: BitSize = BitSize.BIT_32) : Type() {
+        override fun toString(): String {
+            return "f${bits.bits}"
+        }
+    }
 
     @Serializable
     data class Value(val value: Constant<@Contextual Any>) : Type() {
         val valueType: Type = value.type
         @Transient
         override val children: List<Element> = listOf(value)
+        override fun toString(): String {
+            return value.value.toString()
+        }
     }
 
     @Serializable
-    data object Null : Type()
+    data object Null : Type() {
+        override fun toString(): String {
+            return "null"
+        }
+    }
 
     /**
      * This type is not usable in the language. It is the type used at compile time when a type is not resolvable
@@ -45,10 +64,18 @@ sealed class Type : Element {
     ) : Type() {
         @Transient
         override val children: List<Element> = listOfNotNull(type, size)
+
+        override fun toString(): String {
+            return "$type[${size?.toString() ?: ""}]"
+        }
     }
 
     @Serializable
-    data object Boolean : Type()
+    data object Boolean : Type() {
+        override fun toString(): String {
+            return "boolean"
+        }
+    }
 
     @Serializable
     data class FunctionTypeSignature(val returnType: Type?, val params: List<Parameter>) : Type() {
@@ -56,10 +83,17 @@ sealed class Type : Element {
         data class Parameter(val name: Located<String>, val type: Type) : Element {
             @Transient
             override val children: List<Element> = listOf(type)
+            override fun toString(): String {
+                return "$name: $type"
+            }
         }
 
         @Transient
         override val children: List<Element> = params + listOfNotNull(returnType)
+
+        override fun toString(): String {
+            return "(${params.joinToString(", ") { "${it.type}" }}) -> ${returnType ?: "void"}"
+        }
     }
 
     @Serializable
@@ -77,6 +111,9 @@ sealed class Type : Element {
         }
         override fun setEnclosingScope(parent: Scope) {
             scope = parent
+        }
+        override fun toString(): String {
+            return reference.value
         }
     }
 }

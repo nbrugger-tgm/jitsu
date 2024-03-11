@@ -35,7 +35,7 @@ class RustBackend : Backend {
 private fun Function.transpile(writer: BufferedWriter) {
     if (name?.value == "main") writer.appendLine("use std::process::ExitCode;")
     writer.append("fn ${this.name?.value}(")
-    this.parameters.joinToString(", ") { it.transpile() }
+    writer.append(parameters.joinToString(", ") { it.transpile() })
     writer.append(") ")
     this.returnType?.let {
         if (name?.value == "main") writer.append("-> ExitCode ")
@@ -49,7 +49,9 @@ private fun Function.transpile(writer: BufferedWriter) {
 private fun Instruction.transpile(): String {
     return when (this) {
         is Instruction.Return -> {
-            if (this.function.isMain && this.value != null) return "ExitCode::from(${this.value!!.transpile()})"
+            if (this.function.isMain && this.value != null) {
+                return "ExitCode::from(${this.value!!.transpile()})"
+            }
             this.value?.transpile() ?: "return"
         }
 
@@ -98,6 +100,7 @@ private fun Type.transpile(): String {
         is Type.Value -> TODO()
     };
 }
+
 
 private fun Function.Parameter.transpile(): String {
     return "${this.name.value}: ${this.type}"
