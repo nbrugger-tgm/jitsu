@@ -3,6 +3,7 @@ package eu.nitok.jitsu.compiler.parser.parsers
 import com.niton.jainparse.token.DefaultToken
 import com.niton.jainparse.token.TokenStream
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
+import eu.nitok.jitsu.compiler.ast.StatementNode
 import eu.nitok.jitsu.compiler.ast.TypeNode
 import eu.nitok.jitsu.compiler.ast.TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode
 import eu.nitok.jitsu.compiler.ast.withMessages
@@ -30,6 +31,32 @@ fun parseOptionalExplicitType(tokens: Tokens, messages: (CompilerMessage) -> Uni
         )
     }
     return type
+}
+
+fun parseTypeDeclaration(tokens: Tokens): StatementNode.NamedTypeDeclarationNode? {
+    return parseTypeAlias(tokens)
+}
+
+private fun parseTypeAlias(tokens: Tokens): StatementNode.NamedTypeDeclarationNode.TypeAliasNode? {
+    val alias = tokens.keyword("type") ?: return null
+    tokens.skipWhitespace()
+    val messages = CompilerMessages()
+    val name = parseIdentifier(tokens)
+    if (name == null) {
+        messages.error("Expected a name for the type alias", tokens.location.toRange())
+    }
+    tokens.skipWhitespace()
+    tokens.expect(DefaultToken.EQUAL) ?: messages.error(
+        "Expected '=' after the type alias name",
+        tokens.location.toRange()
+    )
+    tokens.skipWhitespace()
+    val type = parseType(tokens)
+    if(type == null){
+        messages.error("Expected a type definition after the '='", tokens.location.toRange())
+    }
+    return StatementNode.NamedTypeDeclarationNode.TypeAliasNode(name, type, alias.rangeTo(tokens.lastConsumedLocation), alias, listOf())
+        .withMessages(messages)
 }
 
 fun parseExplicitType(

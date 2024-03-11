@@ -3,6 +3,11 @@ package eu.nitok.jitsu.compiler.graph
 import eu.nitok.jitsu.compiler.ast.Located
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.serializer
 
 @Serializable
 sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
@@ -45,7 +50,7 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
     data class Alias(
         override val name: Located<String>,
         val generics: List<Located<String>>,
-        var type: Lazy<Type>
+        var type: Type
     ) : TypeDefinition() {
         override val children: List<Element> get() = listOf()
     }

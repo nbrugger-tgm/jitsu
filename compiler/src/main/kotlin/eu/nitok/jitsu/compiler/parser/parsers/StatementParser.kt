@@ -8,7 +8,8 @@ import eu.nitok.jitsu.compiler.parser.*
 
 fun parseStatement(tokens: Tokens): StatementNode? {
     return parseFunction(tokens) ?: parseExecutableStatement(tokens) {
-        parseVariableDeclaration(it) ?: parseReturnStatement(it) ?: parseIdentifierBased(it) { tokens, id ->
+        parseVariableDeclaration(it) ?: parseReturnStatement(it) ?: parseTypeDeclaration(tokens)
+        ?: parseIdentifierBased(it) { tokens, id ->
             parseAssignment(tokens, id) ?: parseFunctionCall(tokens, id)
         }
     }

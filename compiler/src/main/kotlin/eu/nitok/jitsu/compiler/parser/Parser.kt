@@ -7,7 +7,6 @@ import com.niton.jainparse.token.TokenStream
 import com.niton.jainparse.token.Tokenizer
 import com.niton.jainparse.token.Tokenizer.AssignedToken
 import eu.nitok.jitsu.compiler.ast.*
-import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.*
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage.Hint
 import eu.nitok.jitsu.compiler.parser.parsers.parseIdentifier
@@ -170,9 +169,9 @@ inline fun <T> Tokens.range(action: Tokens.() -> T): Located<T> {
     return Located(res, start.rangeTo(end))
 }
 
-fun Tokens.expect(vararg token: DefaultToken): Located<AssignedToken<DefaultToken>>? {
+fun Tokens.expect(vararg tokens: DefaultToken): Located<AssignedToken<DefaultToken>>? {
     val next = peekOptional().getOrNull() ?: return null;
-    if (token.contains(next.type)) {
+    if (tokens.contains(next.type)) {
         return range { next() }
     }
     return null;

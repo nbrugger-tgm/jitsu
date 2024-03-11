@@ -39,7 +39,7 @@ private fun GraphBuilder.processStatements(
     for (statement in statements) {
         when (statement) {
             is NamedTypeDeclarationNode.EnumDeclarationNode -> types.add(buildGraph(statement))
-            is NamedTypeDeclarationNode.TypeAliasNode -> types.add(buildGraph(statement))
+            is NamedTypeDeclarationNode.TypeAliasNode -> buildGraph(statement)?.let { types.add(it) }
             is NamedTypeDeclarationNode.InterfaceTypeNode -> types.add(buildGraph(statement))
             is FunctionDeclarationNode -> {
                 functions.add(buildFunctionGraph(statement))
@@ -85,7 +85,7 @@ fun buildGraph(statement: VariableDeclarationNode): VariableDeclaration {
         false,
         statement.name?.located ?: Located("unnamed", statement.keywordLocation),
         explicitType,
-        lazy { initialValue.implicitType }
+        initialValue
     )
     return VariableDeclaration(
         variable,
@@ -93,8 +93,8 @@ fun buildGraph(statement: VariableDeclarationNode): VariableDeclaration {
     )
 }
 
-fun buildGraph(statement: NamedTypeDeclarationNode.TypeAliasNode): TypeDefinition.Alias {
-    return TypeDefinition.Alias(statement.name.located, listOf(), lazy { resolveType(statement.type) })
+fun buildGraph(statement: NamedTypeDeclarationNode.TypeAliasNode): TypeDefinition.Alias? {
+    return statement.name?.let { TypeDefinition.Alias(it.located, listOf(), resolveType(statement.type)) }
 }
 
 private fun buildGraph(

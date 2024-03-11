@@ -14,20 +14,31 @@ private fun TypeDefinition.documentSymbols(children: Iterable<DocumentSymbol>): 
         symbolKind(),
         range(name.location),
         range(name.location),
-        null,
+        additionalInfo(),
         children.toList()
     )
 )
 
-
+private fun TypeDefinition.additionalInfo(): String?{
+    if(this is TypeDefinition.Alias){
+        return this.type.additionalInfo()
+    }
+    return null;
+}
+private fun Type.additionalInfo(): String?{
+    return when(this) {
+        is Type.TypeReference -> target?.additionalInfo()
+        else -> toString()
+    }
+}
 private fun TypeDefinition.symbolKind() = when (this) {
     is TypeDefinition.Enum -> SymbolKind.Enum
     is TypeDefinition.Interface -> SymbolKind.Interface
-    is TypeDefinition.Alias -> type.value.resolveTypeKind()
+    is TypeDefinition.Alias -> type.resolveTypeKind()
     is TypeDefinition.Struct -> SymbolKind.Struct
 }
 
-private fun Type.resolveTypeKind(): SymbolKind? {
+private fun Type.resolveTypeKind(): SymbolKind {
     return when (this) {
         is Type.Float,
         is Type.Int,
@@ -38,7 +49,7 @@ private fun Type.resolveTypeKind(): SymbolKind? {
         Type.Boolean -> SymbolKind.Boolean
         is Type.FunctionTypeSignature -> SymbolKind.Function
         Type.Null -> SymbolKind.Null
-        is Type.TypeReference -> target?.symbolKind()
+        is Type.TypeReference -> target?.symbolKind()?: SymbolKind.Null
         Type.Undefined -> SymbolKind.Null
         is Type.Union -> SymbolKind.Enum
         is Type.StructuralInterface -> SymbolKind.Interface

@@ -250,12 +250,12 @@ sealed interface StatementNode: AstNode{
 
 
     sealed interface NamedTypeDeclarationNode : AstNode, Declaration {
-        val name: IdentifierNode;
+        val name: IdentifierNode?;
 
         @Serializable
         data class TypeAliasNode(
-            override val name: IdentifierNode,
-            @SerialName("definition") val type: TypeNode,
+            override val name: IdentifierNode?,
+            @SerialName("definition") val type: TypeNode?,
             override val location: Range,
             val keywordLocation: Range,
             override val attributes: List<AttributeNode>
@@ -263,7 +263,7 @@ sealed interface StatementNode: AstNode{
 
 
             override val children: List<AstNode>
-                get() = attributes + name + type
+                get() = attributes + listOfNotNull(name, type)
         }
 
         @Serializable
