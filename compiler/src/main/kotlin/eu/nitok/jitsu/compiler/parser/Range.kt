@@ -108,7 +108,7 @@ data class Range(val start: Location, val end: Location) : Locatable, Comparable
     }
 
     fun contains(location: Location): Boolean {
-        return !location.isBefore(start) && !location.isAfter(end)
+        return !location.isBefore(start) && !location.isAfter(end.copy(column = end.column + 1))
     }
 
     object Serializer : KSerializer<Range> {
