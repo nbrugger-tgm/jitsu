@@ -11,51 +11,36 @@ import org.eclipse.lsp4j.SymbolKind
 import range
 
 
-fun StatementNode.documentSymbols(): List<DocumentSymbol> {
-    return when (this) {
-        is AssignmentNode -> value?.documentSymbols()?: listOf()
-        is CodeBlockNode.SingleExpressionCodeBlock -> expression.documentSymbols()
-        is CodeBlockNode.StatementsCodeBlock -> statements.flatMap { it.documentSymbols() }
-        is FunctionCallNode -> listOf()
-        is FunctionDeclarationNode -> if(name != null) listOf(
-            DocumentSymbol(
-                name!!.value,
-                SymbolKind.Function,
-                range(location),
-                range(name!!.location),
-                "(${
-                    parameters.joinToString(", ") { it.toString() }
-                }) ${if (returnType != null) " -> $returnType" else ""}",
-                parameters.flatMap { it.documentSymbols() } +
-                        ((body as StatementNode?)?.documentSymbols() ?: listOf())
+fun JitsuFile.documentSymbols(): List<DocumentSymbol> {
+    return this.mapTree { node, children ->
+        if (node !is Accessible<*>) return@mapTree children;
+        when (node) {
+            is Function -> node.documentSymbols(children)?.let { listOf(it) } ?: children
+            is TypeDefinition -> node.documentSymbols(children)
+            is Variable -> listOf(
+                DocumentSymbol(
+                    node.name.value,
+                    SymbolKind.Variable,
+                    range(node.name.location),
+                    range(node.name.location),
+                    node.declaredType.toString(),
+                    children.toList()
+                )
             )
-        ) else listOf()
 
-        is IfNode -> {
-            val elseNodes = elseStatement?.let {
-                when (it) {
-                    is IfNode.ElseNode.ElseBlockNode -> (it.codeBlock as StatementNode).documentSymbols()
-                    is IfNode.ElseNode.ElseIfNode -> (it.ifNode as StatementNode).documentSymbols()
-                }
-            } ?: emptyList();
-            (condition?.documentSymbols()
-                ?: listOf()) + (thenCodeBlockNode as StatementNode).documentSymbols() + elseNodes
+            is TypeDefinition.Enum.Constant -> listOf(
+                DocumentSymbol(
+                    node.name.value,
+                    SymbolKind.EnumMember,
+                    range(node.name.location),
+                    range(node.name.location),
+                    "${node.enum.name.value}.${node}",
+                    children.toList()
+                )
+            )
         }
-
-        is MethodInvocationNode -> method.documentSymbols() + parameters.flatMap { it.documentSymbols() }
-        is ReturnNode -> expression?.documentSymbols() ?: emptyList()
-        is SwitchNode -> (item?.documentSymbols() ?: listOf()) + cases.flatMap { it.documentSymbols() }
-        is NamedTypeDeclarationNode -> documentSymbols()
-        is VariableDeclarationNode -> listOf(
-            DocumentSymbol(
-                name?.value ?: "",
-                SymbolKind.Variable,
-                range(location),
-                range(name?.location ?: location),
-                type.toString(),
-                value?.documentSymbols() ?: emptyList()
-            )
-        )
+    }.toList()
+}
 
         is LineCommentNode -> listOf()
         is YieldStatement -> expression?.documentSymbols()?: listOf()

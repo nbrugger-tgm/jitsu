@@ -20,3 +20,11 @@ fun <T:Walkable<T>> T.sequence(): Sequence<T> {
 fun <T:Walkable<T>,R> T.flatMap(mapper: (T) -> Iterable<R>): List<R> {
     return this.sequence().flatMap(mapper).toList()
 }
+
+/**
+ * Maps the tree into a new tree
+ */
+fun <T:Walkable<T>,R> T.mapTree(mapper: (T, Iterable<R>) -> Iterable<R>): Iterable<R> {
+    val children = this.children.flatMap { it.mapTree(mapper) }
+    return mapper(this, children)
+}
