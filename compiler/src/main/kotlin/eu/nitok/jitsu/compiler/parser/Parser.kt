@@ -7,6 +7,7 @@ import com.niton.jainparse.token.TokenStream
 import com.niton.jainparse.token.Tokenizer
 import com.niton.jainparse.token.Tokenizer.AssignedToken
 import eu.nitok.jitsu.compiler.ast.*
+import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.*
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage.Hint
 import eu.nitok.jitsu.compiler.model.BitSize
@@ -90,34 +91,39 @@ private fun tokenize(txt: String): Tokens {
 
 private fun parseStatement(tokens: Tokens): StatementNode? {
     return parseFunction(tokens) ?: parseExecutableStatement(tokens) {
-        parseVariableDeclaration(it) ?: parseReturnStatement(it) ?: parseIdentifierBasedStatement(it, tokens)
+        parseVariableDeclaration(it) ?: parseReturnStatement(it) ?: parseIdentifierBased(it) { tokens, id ->
+            parseAssignment(tokens, id) ?: parseFunctionCall(tokens, id)
+        }
     }
 }
 
-private fun parseIdentifierBasedStatement(it: Tokens, tokens: Tokens) : StatementNode? {
-    it.elevate()
-    val id = parseIdentifier(it) ?: return null
+private fun <T> parseIdentifierBased(tokens: Tokens, parser: (tokens: Tokens, id: IdentifierNode) -> T?): T? {
+    tokens.elevate()
+    val id = parseIdentifier(tokens) ?: run {
+        tokens.rollback()
+        return null
+    }
     tokens.skipWhitespace()
-    val res = parseAssignment(it, id) ?: parseFunctionCall(it, id)
-    if (res == null) it.rollback()
-    else it.commit()
+    val res = parser(tokens, id)
+    if (res == null) tokens.rollback()
+    else tokens.commit()
     return res
 }
 
-fun parseFunctionCall(tokens: Tokens, id: IdentifierNode): StatementNode.FunctionCallNode? {
+fun parseFunctionCall(tokens: Tokens, id: IdentifierNode): FunctionCallNode? {
     val messages = CompilerMessages()
     val params = tokens.range {
         enclosedRepetition(
-            ROUND_BRACKET_OPEN,
+            BRACKET_OPEN,
             COMMA,
-            ROUND_BRACKET_CLOSED,
+            BRACKET_CLOSED,
             messages,
             "parameter list",
             "parameter"
         ) { parseExpression(it) }
     }
-    if(params.value == null) return null
-    return StatementNode.FunctionCallNode(id, params.value, id.location.rangeTo(params.location))
+    if (params.value == null) return null
+    return FunctionCallNode(id, params.value, id.location.rangeTo(params.location)).withMessages(messages)
 }
 
 private fun <T> Tokens.enclosedRepetition(
@@ -136,18 +142,28 @@ private fun <T> Tokens.enclosedRepetition(
         skipWhitespace();
         when (val x = function(this)) {
             null -> {
-                skipWhitespace()
-                val lastToken = index()
-                val invalid = skipUntil(end, delimitter, NEW_LINE)
-                if (lastToken == index()) {
+                skip(WHITESPACE)//dont skip line breaks
+                index()
+                val invalid = skipUntil(end, delimitter, NEW_LINE, SEMICOLON)
+                messages.error(CompilerMessage("Expected a $elementName", invalid))
+                if (peek().type != delimitter) {
                     //nothing invalid was skipped - so end of block
                     break;
                 }
                 skip(delimitter)
-                messages.error(CompilerMessage("Expected a $elementName", invalid))
             }
 
-            else -> lst.add(x);
+            else -> {
+                lst.add(x)
+                val postElemPos = location;
+                skipWhitespace()
+                when (val delim = expect(delimitter, end)?.value?.type) {
+                    null -> messages.error("Expected $delimitter or $end", postElemPos.toRange())
+                    end -> return lst
+                    delimitter -> continue
+                    else -> throw IllegalStateException("$delim not a $end or $delimitter")
+                }
+            };
         }
     }
 
@@ -165,7 +181,7 @@ fun parseReturnStatement(tokens: Tokens): StatementNode? {
     val kw = tokens.keyword("return") ?: return null;
     tokens.skipWhitespace()
     val value = parseExpression(tokens);
-    return StatementNode.ReturnNode(value, kw.rangeTo(value?.location ?: kw), kw)
+    return ReturnNode(value, kw.rangeTo(value?.location ?: kw), kw)
 }
 
 
@@ -182,7 +198,7 @@ private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> Sta
     return res;
 }
 
-fun parseVariableDeclaration(tokens: Tokens): StatementNode.VariableDeclarationNode? {
+fun parseVariableDeclaration(tokens: Tokens): VariableDeclarationNode? {
     val kw = tokens.keyword("var") ?: return null;
     val messages = CompilerMessages()
     tokens.skipWhitespace();
@@ -200,7 +216,7 @@ fun parseVariableDeclaration(tokens: Tokens): StatementNode.VariableDeclarationN
 
     if (expression == null)
         messages.error("Expected value to assign to '${name?.value}'", tokens.location.toRange())
-    return StatementNode.VariableDeclarationNode(
+    return VariableDeclarationNode(
         name,
         type,
         expression,
@@ -359,7 +375,9 @@ private fun parseCompositExpression(
 ) = parseOperation(tokens, expressionNode)
 
 private fun parseSingleExpression(tokens: Tokens) =
-    parseIntLiteral(tokens) ?: parseVariableReference(tokens)
+    parseIntLiteral(tokens) ?: parseIdentifierBased(tokens) { tokens, identifier ->
+        parseFunctionCall(tokens, identifier) ?: ExpressionNode.VariableReferenceNode(identifier)
+    }
 
 fun parseOperation(tokens: Tokens, left: ExpressionNode): ExpressionNode? {
     tokens.elevate()
@@ -382,25 +400,17 @@ fun parseOperation(tokens: Tokens, left: ExpressionNode): ExpressionNode? {
     )
 }
 
-fun parseVariableReference(tokens: Tokens): ExpressionNode? {
-    return parseIdentifier(tokens)?.let { ExpressionNode.VariableReferenceNode(it) }
-}
-
 fun parseIntLiteral(tokens: Tokens): ExpressionNode? {
     val next = tokens.expect(NUMBER) ?: return null;
     return ExpressionNode.NumberLiteralNode.IntegerLiteralNode(next.value.value, next.location)
 }
 
-fun parseAssignment(tokens: Tokens, kw: IdentifierNode): StatementNode.AssignmentNode? {
+fun parseAssignment(tokens: Tokens, kw: IdentifierNode): AssignmentNode? {
     tokens.skipWhitespace();
-    val eq = tokens.keyword(EQUAL);
-    if (eq == null) {
-        tokens.rollback()
-        return null
-    }
+    tokens.keyword(EQUAL) ?: return null;
     tokens.skipWhitespace();
     val expression = parseExpression(tokens);
-    return StatementNode.AssignmentNode(ExpressionNode.VariableReferenceNode(kw), expression).run {
+    return AssignmentNode(ExpressionNode.VariableReferenceNode(kw), expression).run {
         if (expression == null)
             this.error(CompilerMessage("Expected value to assign to '${kw.value}'", tokens.location.toRange()))
         this

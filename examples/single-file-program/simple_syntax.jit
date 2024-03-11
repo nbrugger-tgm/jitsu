@@ -1,7 +1,7 @@
-fn main(): int {
+fn main(): i32 {
     var a = 12; 
     var b = 18;
-    return a + b;
+    add(add(a, b));
 }
 
 fn add(a: int, b: int): int {

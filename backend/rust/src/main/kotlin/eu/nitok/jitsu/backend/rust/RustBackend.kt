@@ -20,7 +20,7 @@ class RustBackend : Backend {
         file.deleteIfExists()
         file.createFile()
         file.bufferedWriter().use { writer ->
-            graph.scope.getFunctions().forEach {
+            graph.scope.functions.values.flatten().forEach {
                 it.transpile(writer)
             }
         }
@@ -38,25 +38,34 @@ private fun Function.transpile(writer: BufferedWriter) {
     this.parameters.joinToString(", ") { it.transpile() }
     writer.append(") ")
     this.returnType?.let {
-        if(name?.value == "main") writer.append("-> ExitCode ")
+        if (name?.value == "main") writer.append("-> ExitCode ")
         else writer.append("-> ${it.transpile()} ")
     }
     writer.append("{\n")
-    writer.append(this.body.joinToString("\n") { "  ${it.transpile()}" })
-    writer.append("\n}")
+    writer.append(this.body.instructions.joinToString("\n") { "  ${it.transpile()}" })
+    writer.append("\n}\n\n")
 }
 
 private fun Instruction.transpile(): String {
     return when (this) {
         is Instruction.Return -> {
-            if(this.function.isMain && this.value != null) return "ExitCode::from(${this.value!!.transpile()})"
+            if (this.function.isMain && this.value != null) return "ExitCode::from(${this.value!!.transpile()})"
             this.value?.transpile() ?: "return"
         }
+
         is Instruction.VariableDeclaration -> "let ${this.variable.name.value}${
-            this.variable.declaredType?.transpile()?.let { ": $it" }?: ""
+            this.variable.declaredType?.transpile()?.let { ": $it" } ?: ""
         } = ${this.value.transpile()};"
+
+        is Instruction.FunctionCall -> "${this.transpile()};"
     }
 }
+
+private fun Instruction.FunctionCall.transpile(): String = "${this.target?.name?.value ?: "undefined"}(${
+    this.target?.parameters?.map {
+        parameters[it.name.value]?.transpile()
+    }?.joinToString(", ")
+})"
 
 private fun Expression.transpile(): String {
     return when (this) {
@@ -70,7 +79,8 @@ private fun Expression.transpile(): String {
         is Constant.UIntConstant -> this.value.toString()
         is Expression.Operation -> "${this.left.transpile()} ${this.operator.rune} ${this.right.transpile()}"
         Expression.Undefined -> throw IllegalStateException("Undefined expression")
-        is Expression.VariableReference -> this.variable.name.value
+        is Expression.VariableReference -> this.target?.name?.value?: throw IllegalStateException("Undefined variable")
+        is Instruction.FunctionCall -> this.transpile()
     }
 }
 

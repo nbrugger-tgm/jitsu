@@ -1,15 +1,9 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.compiler.model.sequence
+import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 
 @Serializable
-class JitsuFile(
-    override val scope: Scope,
-) : Accessor {
-    @Transient
-    override val accessFromSelf: List<Access<*>> = scope.getFunctions().flatMap {
-        it.sequence().filterIsInstance<Access<*>>().onEach { it.accessor = this }
-    }
+class JitsuFile(override val scope: Scope, val messages: CompilerMessages): ScopeProvider {
+    override val children: List<Element> get() = scope.elements.toList()
 }

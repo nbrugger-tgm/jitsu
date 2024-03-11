@@ -1,6 +1,8 @@
 package capabilities
 
 import eu.nitok.jitsu.compiler.ast.*
+import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.*
+import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.NamedTypeDeclarationNode
 import eu.nitok.jitsu.compiler.parser.Range
 import getArtificalId
@@ -11,11 +13,11 @@ import range
 
 fun StatementNode.documentSymbols(): List<DocumentSymbol> {
     return when (this) {
-        is StatementNode.AssignmentNode -> value?.documentSymbols()?: listOf()
-        is StatementNode.CodeBlockNode.SingleExpressionCodeBlock -> expression.documentSymbols()
-        is StatementNode.CodeBlockNode.StatementsCodeBlock -> statements.flatMap { it.documentSymbols() }
-        is StatementNode.FunctionCallNode -> listOf()
-        is StatementNode.FunctionDeclarationNode -> if(name != null) listOf(
+        is AssignmentNode -> value?.documentSymbols()?: listOf()
+        is CodeBlockNode.SingleExpressionCodeBlock -> expression.documentSymbols()
+        is CodeBlockNode.StatementsCodeBlock -> statements.flatMap { it.documentSymbols() }
+        is FunctionCallNode -> listOf()
+        is FunctionDeclarationNode -> if(name != null) listOf(
             DocumentSymbol(
                 name!!.value,
                 SymbolKind.Function,
@@ -29,22 +31,22 @@ fun StatementNode.documentSymbols(): List<DocumentSymbol> {
             )
         ) else listOf()
 
-        is StatementNode.IfNode -> {
+        is IfNode -> {
             val elseNodes = elseStatement?.let {
                 when (it) {
-                    is StatementNode.IfNode.ElseNode.ElseBlockNode -> (it.codeBlock as StatementNode).documentSymbols()
-                    is StatementNode.IfNode.ElseNode.ElseIfNode -> (it.ifNode as StatementNode).documentSymbols()
+                    is IfNode.ElseNode.ElseBlockNode -> (it.codeBlock as StatementNode).documentSymbols()
+                    is IfNode.ElseNode.ElseIfNode -> (it.ifNode as StatementNode).documentSymbols()
                 }
             } ?: emptyList();
             (condition?.documentSymbols()
                 ?: listOf()) + (thenCodeBlockNode as StatementNode).documentSymbols() + elseNodes
         }
 
-        is StatementNode.MethodInvocationNode -> method.documentSymbols() + parameters.flatMap { it.documentSymbols() }
-        is StatementNode.ReturnNode -> expression?.documentSymbols() ?: emptyList()
-        is StatementNode.SwitchNode -> (item?.documentSymbols() ?: listOf()) + cases.flatMap { it.documentSymbols() }
+        is MethodInvocationNode -> method.documentSymbols() + parameters.flatMap { it.documentSymbols() }
+        is ReturnNode -> expression?.documentSymbols() ?: emptyList()
+        is SwitchNode -> (item?.documentSymbols() ?: listOf()) + cases.flatMap { it.documentSymbols() }
         is NamedTypeDeclarationNode -> documentSymbols()
-        is StatementNode.VariableDeclarationNode -> listOf(
+        is VariableDeclarationNode -> listOf(
             DocumentSymbol(
                 name?.value ?: "",
                 SymbolKind.Variable,
@@ -55,8 +57,8 @@ fun StatementNode.documentSymbols(): List<DocumentSymbol> {
             )
         )
 
-        is StatementNode.LineCommentNode -> listOf()
-        is StatementNode.YieldStatement -> expression?.documentSymbols()?: listOf()
+        is LineCommentNode -> listOf()
+        is YieldStatement -> expression?.documentSymbols()?: listOf()
     }
 }
 
@@ -187,16 +189,16 @@ private fun NamedTypeDeclarationNode.InterfaceTypeNode.FunctionSignatureNode.doc
     )
 }
 
-private fun StatementNode.SwitchNode.CaseNode.documentSymbols(): List<DocumentSymbol> {
+private fun SwitchNode.CaseNode.documentSymbols(): List<DocumentSymbol> {
     //https://discuss.kotlinlang.org/t/what-is-the-reason-behind-smart-cast-being-impossible-to-perform-when-referenced-class-is-in-another-module/2201/36
     return when (val body = body) {
-        is StatementNode.CodeBlockNode -> (body as StatementNode).documentSymbols()
+        is CodeBlockNode -> (body as StatementNode).documentSymbols()
         is ExpressionNode -> body.documentSymbols()
         null -> listOf()
     }
 }
 
-private fun StatementNode.FunctionDeclarationNode.ParameterNode.documentSymbols(): List<DocumentSymbol> {
+private fun FunctionDeclarationNode.ParameterNode.documentSymbols(): List<DocumentSymbol> {
     return listOf(
         DocumentSymbol(
             name.value,

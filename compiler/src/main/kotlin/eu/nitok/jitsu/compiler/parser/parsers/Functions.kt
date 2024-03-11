@@ -5,8 +5,8 @@ import com.niton.jainparse.token.DefaultToken.*
 import com.niton.jainparse.token.Tokenizer
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.Located
-import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode
-import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode.ParameterNode
+import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.*
+import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.FunctionDeclarationNode.*
 import eu.nitok.jitsu.compiler.ast.withMessages
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage.Hint

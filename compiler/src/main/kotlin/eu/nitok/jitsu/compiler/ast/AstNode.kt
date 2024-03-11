@@ -32,6 +32,7 @@ sealed class AstNodeImpl : AstNode {
     override val errors: MutableList<CompilerMessage> = mutableListOf()
 }
 
+@Serializable
 data class CompilerMessages(
     val warnings: MutableList<CompilerMessage> = mutableListOf(),
     val errors: MutableList<CompilerMessage> = mutableListOf()

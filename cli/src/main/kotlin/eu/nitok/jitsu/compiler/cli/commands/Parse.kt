@@ -64,14 +64,13 @@ class Parse : Callable<List<Pair<SourceFileNode, Path>>> {
     fun printErrors(errors: List<CompilerMessage>, file: Path) {
         errors.forEach {
             val fileContent = lazy { file.readText() }
-            errors.forEach {
+            spec.commandLine().err.println(errors.joinToString("\n------------------------\n\n") {
                 val errorMark = it.location.mark(fileContent.value, it.message)
-                spec.commandLine().err.println(errorMark)
-                it.hints.forEach {
+                errorMark + it.hints.joinToString("\t----\n") {
                     val hintMark = it.location.mark(fileContent.value, it.message).replace(Regex("^", RegexOption.MULTILINE), "\t| ")
-                    spec.commandLine().err.println(hintMark)
+                    hintMark
                 }
-            }
+            })
             if (errors.isNotEmpty()) throw IllegalStateException()
         }
     }

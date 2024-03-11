@@ -5,9 +5,10 @@ import customLogger
 import eu.nitok.jitsu.compiler.ast.*
 import eu.nitok.jitsu.compiler.ast.ExpressionNode.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.*
-import eu.nitok.jitsu.compiler.ast.StatementNode.FunctionDeclarationNode.ParameterNode
+import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.*
+import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.*
+import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.SwitchNode.CaseNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.NamedTypeDeclarationNode.EnumDeclarationNode
-import eu.nitok.jitsu.compiler.ast.StatementNode.SwitchNode.CaseNode.CaseMatchNode
 import eu.nitok.jitsu.compiler.model.flatMap
 import eu.nitok.jitsu.compiler.parser.Range
 
@@ -185,12 +186,12 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
         )
 
         is NamedTypeDeclarationNode.InterfaceTypeNode.FunctionSignatureNode -> listOf(token(FUNCTION, name.location))
-        is CaseMatchNode.DefaultCaseNode -> listOf(token(KEYWORD, location))
-        is CaseMatchNode.ConstantCaseNode -> listOf(token(KEYWORD, keywordLocation))
-        is CaseMatchNode.TypeCaseNode -> listOf(token(KEYWORD, keywordLocation))
-        is SwitchNode.CaseNode -> listOf(token(KEYWORD, keywordLocation))
+        is CaseNode.CaseMatchNode.DefaultCaseNode -> listOf(token(KEYWORD, location))
+        is CaseNode.CaseMatchNode.ConstantCaseNode -> listOf(token(KEYWORD, keywordLocation))
+        is CaseNode.CaseMatchNode.TypeCaseNode -> listOf(token(KEYWORD, keywordLocation))
+        is CaseNode -> listOf(token(KEYWORD, keywordLocation))
         is IfNode.ElseNode -> listOf(token(KEYWORD, keywordLocation))
-        is ParameterNode -> listOf(token(PARAMETER, name.location))
+        is FunctionDeclarationNode.ParameterNode -> listOf(token(PARAMETER, name.location))
         is FieldAccessNode -> this.field?.let { listOf(token(PROPERTY, it.location)) } ?: listOf()
         is NumberLiteralNode -> listOf(token(NUMBER, location))
         is OperationNode -> listOf(token(OPERATOR, operator.location))
