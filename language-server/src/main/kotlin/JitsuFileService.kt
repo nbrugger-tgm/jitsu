@@ -98,10 +98,10 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
 
 
     override fun documentSymbol(params: DocumentSymbolParams?): CompletableFuture<MutableList<Either<SymbolInformation, DocumentSymbol>>> {
-        val ast = asts[params?.textDocument?.uri]?.value ?: return CompletableFuture.completedFuture(mutableListOf());
+        val graph = graphs[params?.textDocument?.uri]?.value ?: return CompletableFuture.completedFuture(mutableListOf());
 
 
-        val either = ast.statements.flatMap { it.documentSymbols() }
+        val either = graph.documentSymbols()
             .map<DocumentSymbol, Either<SymbolInformation, DocumentSymbol>> {
                 Either.forRight(it)
             }

@@ -2,6 +2,7 @@ package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.compiler.ast.Located
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
@@ -26,9 +27,18 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
     @Serializable
     data class Enum(
         override val name: Located<String>,
-        val constants: List<Located<String>>
+        val constants: List<Constant>
     ) : TypeDefinition(){
-        override val children: List<Element> get() = listOf()
+        override val children: List<Element> get() = constants
+        init {
+            constants.forEach { it.enum = this }
+        }
+        @Serializable
+        data class Constant(override val name: Located<String>): Element, Accessible<Constant> {
+            override val children: List<Element> get() = listOf()
+            @Transient override val accessToSelf: MutableList<in Access<Constant>> = mutableListOf()
+            @Transient lateinit var enum: Enum
+        }
     }
 
     @Serializable
@@ -36,7 +46,7 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
         override val name: Located<String>,
         val generics: List<Located<String>>,
         var type: Lazy<Type>
-    ) : TypeDefinition(){
+    ) : TypeDefinition() {
         override val children: List<Element> get() = listOf()
     }
 
@@ -44,8 +54,9 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
     data class Interface(
         override val name: Located<String>,
         val generics: List<Located<String>>,
-        val methods: Map<String, Located<Type.FunctionTypeSignature>>
+        val methods: Map<String, List<NamedFunctionSignature>>
     ) : TypeDefinition() {
-        override val children: List<Element> get() = listOf()
+        constructor(name: Located<String>, generics: List<Located<String>>, methods: List<NamedFunctionSignature>) : this(name, generics, methods.groupBy { it.name.value })
+        override val children: List<Element> get() = methods.values.flatten()
     }
 }
