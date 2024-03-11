@@ -57,7 +57,7 @@ class Function(
         val type: Type,
         val defaultValue: Expression?
     ) : Element {
-        fun asVariable(): Variable = Variable(false, name, type)
+        fun asVariable(): Variable = Variable(false, name, type, lazy { defaultValue?.implicitType })
         override val children: List<Element> get() = listOfNotNull(type, defaultValue)
 
         override fun toString(): String {

@@ -84,7 +84,8 @@ fun buildGraph(statement: VariableDeclarationNode): VariableDeclaration {
     val variable = Variable(
         false,
         statement.name?.located ?: Located("unnamed", statement.keywordLocation),
-        explicitType
+        explicitType,
+        lazy{ initialValue.implicitType }
     )
     return VariableDeclaration(
         variable,

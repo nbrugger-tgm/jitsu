@@ -25,21 +25,24 @@ sealed class Constant<out T> : Expression, Element {
     @Serializable
     data class IntConstant(override val value: Long, val explicitType: Type.Int? = null, override val originLocation: Range) : Constant<Long>() {
         override val type: Type.Int
-            get() = explicitType ?: when (value) {
-                in Byte.MIN_VALUE..Byte.MAX_VALUE -> Type.Int(BitSize.BIT_8)
-                in Short.MIN_VALUE..Short.MAX_VALUE -> Type.Int(BitSize.BIT_16)
-                in Int.MIN_VALUE..Int.MAX_VALUE -> Type.Int(BitSize.BIT_32)
-                in Long.MIN_VALUE..Long.MAX_VALUE -> Type.Int(BitSize.BIT_64)
-                else -> throw IllegalStateException("Int value $value is too large")
-            };
+            get() = explicitType ?: implicitType;
         override val literal: String get() = value.toString()
+        override val implicitType: Type.Int get() =  when (value) {
+            in Byte.MIN_VALUE..Byte.MAX_VALUE -> Type.Int(BitSize.BIT_8)
+            in Short.MIN_VALUE..Short.MAX_VALUE -> Type.Int(BitSize.BIT_16)
+            in Int.MIN_VALUE..Int.MAX_VALUE -> Type.Int(BitSize.BIT_32)
+            in Long.MIN_VALUE..Long.MAX_VALUE -> Type.Int(BitSize.BIT_64)
+            else -> throw IllegalStateException("Int value $value is too large")
+        }
         @Transient override val children: List<Element> = listOfNotNull(explicitType)
     }
 
     @Serializable
     data class UIntConstant(override val value: ULong, val explicitType: Type.UInt? = null, override val originLocation: Range) : Constant<ULong>() {
-        override val type: Type.UInt = explicitType ?: run {
-            when {
+        override val type: Type.UInt = explicitType ?: implicitType;
+        override val literal: String get() = value.toString()
+        override val implicitType: Type.UInt
+            get() =   when {
                 value < 0u -> throw IllegalArgumentException("UInt value $value is negative")
                 value <= UByte.MAX_VALUE -> Type.UInt(BitSize.BIT_8)
                 value <= UShort.MAX_VALUE -> Type.UInt(BitSize.BIT_16)
@@ -47,8 +50,6 @@ sealed class Constant<out T> : Expression, Element {
                 value <= ULong.MAX_VALUE -> Type.UInt(BitSize.BIT_64)
                 else -> throw IllegalArgumentException("UInt value $value is too large")
             }
-        };
-        override val literal: String get() = value.toString()
         @Transient override val children: List<Element> = listOfNotNull(explicitType)
     }
 
@@ -56,12 +57,15 @@ sealed class Constant<out T> : Expression, Element {
     data class StringConstant(override val value: String, override val originLocation: Range) : Constant<String>() {
         override val type: Type = Type.TypeReference(Located(value, originLocation), mapOf())
         override val literal: String get() = "\"${value}\""
+        override val implicitType: Type?
+            get() = TODO("String no exist yet")
         @Transient override val children: List<Element> = listOfNotNull()
     }
 
     class BooleanConstant(override val value: Boolean, override val originLocation: Range) : Constant<Boolean>() {
         override val type: Type get() = Type.Boolean
         override val literal: String get() = value.toString()
+        override val implicitType: Type get() = Type.Boolean
         @Transient override val children: List<Element> = listOfNotNull()
     }
 }

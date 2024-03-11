@@ -84,7 +84,7 @@ fun JitsuFile.documentSymbols(): List<DocumentSymbol> {
                     SymbolKind.Variable,
                     range(node.name.location),
                     range(node.name.location),
-                    node.declaredType.toString(),
+                    node.type.toString(),
                     children.toList()
                 )
             )
