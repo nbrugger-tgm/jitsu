@@ -4,134 +4,127 @@ import eu.nitok.jitsu.compiler.ast.*
 
 
 import eu.nitok.jitsu.compiler.ast.StatementNode.*
+import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.FunctionDeclarationNode
+import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.*
+import eu.nitok.jitsu.compiler.graph.Instruction.VariableDeclaration
+import eu.nitok.jitsu.compiler.model.sequence
 
-fun buildGraph(srcFile: SourceFileNode): JitsuFile {
-    val rootScope = Scope()//top level scopes have no parent
-    val file = JitsuFile(rootScope);
-    for (statement in srcFile.statements) {
-        when (statement) {
-            is IfNode,
-            is ReturnNode,
-            is MethodInvocationNode,
-            is FunctionCallNode,
-            is AssignmentNode,
-            is SwitchNode -> rootScope.error("Statement not allowed at root level", statement.location)
-
-            is CodeBlockNode -> rootScope.error("Code block not allowed at root level", statement.location)
-            is NamedTypeDeclarationNode.EnumDeclarationNode -> rootScope.register(buildGraph(rootScope, statement))
-            is NamedTypeDeclarationNode.TypeAliasNode -> rootScope.register(buildGraph(rootScope, statement))
-            is NamedTypeDeclarationNode.InterfaceTypeNode -> rootScope.register(buildGraph(rootScope, statement))
-            is VariableDeclarationNode -> TODO()
-            is LineCommentNode -> TODO()
-            is YieldStatement -> TODO()
-            is FunctionDeclarationNode -> rootScope.register(buildFunctionGraph(statement, rootScope))
-        }
-    }
-    return file
+private class GraphBuilder {
+    val messages: CompilerMessages = CompilerMessages()
 }
 
-fun buildGraph(scope: Scope, statement: StatementNode): Instruction? {
+fun buildGraph(srcFile: SourceFileNode): JitsuFile {
+    return  GraphBuilder().buildGraph(srcFile);
+}
+
+private fun GraphBuilder.buildGraph(srcFile: SourceFileNode): JitsuFile {
+    val file = JitsuFile(processStatements(srcFile.statements) {
+        messages.error("Statement not allowed at root level", it.location)
+    }, messages)
+    file.informChildren()
+    file.sequence().forEach {
+        if(it is Access<*>) it.resolve(messages)
+    }
+    return file;
+}
+
+private fun GraphBuilder.processStatements(statements: List<StatementNode>, instructionHandler: (InstructionNode)->Unit): Scope {
+    val functions: MutableList<Function> = mutableListOf()
+    val variables: MutableList<Variable> = mutableListOf()
+    val constants: MutableList<Constant<Any>> = mutableListOf()
+    val types: MutableList<TypeDefinition> = mutableListOf()
+    for (statement in statements) {
+        when (statement) {
+            is NamedTypeDeclarationNode.EnumDeclarationNode -> types.add(buildGraph(statement))
+            is NamedTypeDeclarationNode.TypeAliasNode -> types.add(buildGraph(statement))
+            is NamedTypeDeclarationNode.InterfaceTypeNode -> types.add(buildGraph(statement))
+            is FunctionDeclarationNode -> functions.add(buildFunctionGraph(statement))
+            is VariableDeclarationNode -> {
+                val declaration = buildGraph(statement)
+                instructionHandler(statement)
+                variables.add(declaration.variable)
+            }
+            is InstructionNode -> instructionHandler(statement)
+        }
+    }
+    return Scope(constants, types, functions, variables, messages)
+}
+
+fun buildInstructionGraph(statement: InstructionNode): Instruction? {
     return when (statement) {
         is IfNode,
         is MethodInvocationNode,
-        is FunctionCallNode,
         is AssignmentNode,
         is CodeBlockNode,
         is YieldStatement,
         is SwitchNode -> TODO()
-
-        is ReturnNode -> Instruction.Return(buildExpressionGraph(statement.expression, scope))
-
-        is VariableDeclarationNode -> buildGraph(scope, statement)
-
-        is NamedTypeDeclarationNode.EnumDeclarationNode -> {
-            scope.register(buildGraph(scope, statement))
-            null
-        }
-
-        is NamedTypeDeclarationNode.TypeAliasNode -> {
-            scope.register(buildGraph(scope, statement))
-            null
-        }
-
-        is NamedTypeDeclarationNode.InterfaceTypeNode -> {
-            scope.register(buildGraph(scope, statement))
-            null
-        }
-
-        is FunctionDeclarationNode -> {
-            scope.register(buildFunctionGraph(statement, scope))
-            null
-        }
-
+        is FunctionCallNode -> Instruction.FunctionCall(statement.function.located, statement.parameters.map { buildExpressionGraph(it) })
+        is ReturnNode -> Instruction.Return(buildExpressionGraph(statement.expression))
+        is VariableDeclarationNode -> buildGraph(statement)
         is LineCommentNode -> null;
     }
 }
 
-fun buildGraph(scope: Scope, statement: VariableDeclarationNode): Instruction {
-    val explicitType = statement.type?.let { resolveType(scope, it) }
-    val initialValue = buildExpressionGraph(statement.value, scope)
+fun buildGraph(statement: VariableDeclarationNode): VariableDeclaration {
+    val explicitType = statement.type?.let { resolveType(it) }
+    val initialValue = buildExpressionGraph(statement.value)
     val variable = Variable(
         false,
         statement.name?.located ?: Located("unnamed", statement.keywordLocation),
         explicitType
     )
-    scope.register(variable)
-    return Instruction.VariableDeclaration(
+    return VariableDeclaration(
         variable,
         initialValue
     )
 }
 
-fun buildGraph(scope: Scope, statement: NamedTypeDeclarationNode.TypeAliasNode): TypeDefinition.Alias {
-    return TypeDefinition.Alias(statement.name.located, listOf(), lazy { resolveType(scope, statement.type) })
+fun buildGraph(statement: NamedTypeDeclarationNode.TypeAliasNode): TypeDefinition.Alias {
+    return TypeDefinition.Alias(statement.name.located, listOf(), lazy { resolveType(statement.type) })
 }
 
 private fun buildGraph(
-    scope: Scope,
     it: NamedTypeDeclarationNode.InterfaceTypeNode
 ) = TypeDefinition.Interface(
     it.name.located,
     listOf(),
     it.functions.associateBy(
         { func -> func.name.value },
-        { func -> Located(buildGraph(func.typeSignature, scope), func.typeSignature.location) }
+        { func -> Located(buildGraph(func.typeSignature), func.typeSignature.location) }
     )
 )
 
 private fun buildGraph(
-    it: TypeNode.FunctionTypeSignatureNode,
-    scope: Scope
+    it: TypeNode.FunctionTypeSignatureNode
 ) = Type.FunctionTypeSignature(
-    it.returnType?.let { resolveType(scope, it) },
+    it.returnType?.let { resolveType(it) },
     it.parameters.map {
-        val type = resolveType(scope, it.type);
+        val type = resolveType(it.type);
         Type.FunctionTypeSignature.Parameter(it.name.located, type)
     }
 )
 
-private fun buildGraph(scope: Scope, enum: NamedTypeDeclarationNode.EnumDeclarationNode): TypeDefinition.Enum {
+private fun buildGraph(enum: NamedTypeDeclarationNode.EnumDeclarationNode): TypeDefinition.Enum {
     return TypeDefinition.Enum(enum.name.located, enum.constants.map { it.located })
 }
 
 private fun buildGraph(
-    scope: Scope,
     array: TypeNode.ArrayTypeNode
 ) = Type.Array(
-    resolveType(scope, array.type),
-    array.fixedSize?.run { buildExpressionGraph(this, scope) }
+    resolveType(array.type),
+    array.fixedSize?.run { buildExpressionGraph(this) }
 )
 
-fun buildExpressionGraph(expression: ExpressionNode?, scope: Scope): Expression {
+fun buildExpressionGraph(expression: ExpressionNode?): Expression {
     return when (expression) {
         null -> Expression.Undefined
         is ExpressionNode.BooleanLiteralNode -> Constant.BooleanConstant(expression.value, expression.location)
         is ExpressionNode.NumberLiteralNode.FloatLiteralNode -> TODO()
         is ExpressionNode.NumberLiteralNode.IntegerLiteralNode -> resolveIntConstant(expression)
         is ExpressionNode.OperationNode -> Expression.Operation(
-            buildExpressionGraph(expression.left, scope),
+            buildExpressionGraph(expression.left),
             expression.operator.value,
-            buildExpressionGraph(expression.right, scope)
+            buildExpressionGraph(expression.right)
         );
         is ExpressionNode.StringLiteralNode -> TODO()
         is ExpressionNode.VariableReferenceNode -> resolveVariableReference(expression)
@@ -139,12 +132,19 @@ fun buildExpressionGraph(expression: ExpressionNode?, scope: Scope): Expression 
         is ExpressionNode.IndexAccessNode -> TODO()
         is CodeBlockNode.SingleExpressionCodeBlock -> TODO()
         is CodeBlockNode.StatementsCodeBlock -> TODO()
-        is FunctionCallNode -> TODO()
+        is FunctionCallNode -> resolveFunctionCall(expression)
         is FunctionDeclarationNode -> TODO()
         is IfNode -> TODO()
         is MethodInvocationNode -> TODO()
         is SwitchNode -> TODO()
     }
+}
+
+fun resolveFunctionCall(expression: FunctionCallNode): Instruction.FunctionCall {
+    return Instruction.FunctionCall(
+        expression.function.located,
+        expression.parameters.map { buildExpressionGraph(it) }
+    )
 }
 
 fun resolveVariableReference(
@@ -153,28 +153,36 @@ fun resolveVariableReference(
     return Expression.VariableReference(expression.variable.located)
 }
 
-fun buildFunctionGraph(functionNode: FunctionDeclarationNode, parentScope: Scope): Function {
+private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNode): Function {
     val name = functionNode.name
-    val innerScope = Scope(parentScope);
     val parameters = functionNode.parameters.map {
-        val type = resolveType(parentScope, it.type)
+        val type = resolveType(it.type)
         Function.Parameter(
             it.name.located, type,
-            buildExpressionGraph(it.defaultValue, parentScope)
+            buildExpressionGraph(it.defaultValue)
         )
     }
     val functionBody = when (val body = functionNode.body) {
         is CodeBlockNode.SingleExpressionCodeBlock -> TODO()//buildExpressionGraph(body.expression, function.bodyScope)
-        is CodeBlockNode.StatementsCodeBlock -> body.statements.mapNotNull { buildGraph(innerScope, it) }
-        null -> listOf();
+        is CodeBlockNode.StatementsCodeBlock -> buildCodeBlockGraph(body.statements)
+        null -> CodeBlock(listOf(), Scope(mutableListOf(),mutableListOf(),mutableListOf(),mutableListOf(), messages));
     }
     return Function(
-        innerScope,
         name?.located,
-        resolveType(parentScope, functionNode.returnType),
+        resolveType(functionNode.returnType),
         parameters,
-        functionBody
+        functionBody,
+        messages
     );
+}
+
+private fun GraphBuilder.buildCodeBlockGraph(statements: List<StatementNode>): CodeBlock {
+    val instructions = mutableListOf<Instruction>()
+    val scope = processStatements(statements) {
+        val instruction = buildInstructionGraph(it)
+        if (instruction != null) instructions.add(instruction)
+    }
+    return CodeBlock(instructions, scope)
 }
 
 fun resolveConstantOperation(scope: Scope, expression: ExpressionNode.OperationNode): Constant<Any>? {
@@ -324,7 +332,7 @@ private fun resolveIntConstant(
 
 val IdentifierNode.located: Located<String> get() = Located(value, location)
 
-fun resolveType(scope: Scope, type: TypeNode?): Type {
+fun resolveType(type: TypeNode?): Type {
     if (type == null) return Type.Undefined
     return when (type) {
         is TypeNode.ArrayTypeNode -> TODO()

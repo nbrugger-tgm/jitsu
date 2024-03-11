@@ -1,6 +1,7 @@
 package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.compiler.ast.BiOperator
+import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.Located
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -30,22 +31,19 @@ sealed interface Expression : Element {
     }
 
     @Serializable
-    class VariableReference(val name: Located<String>) : Expression, Access.VariableAccess {
-        @Transient
-        override val isConstant: ReasonedBoolean = ReasonedBoolean.False("Cuz not implemented yet")
+    class VariableReference(override val reference: Located<String>) : Expression, Access.VariableAccess, ScopeAware {
+        @Transient private lateinit var scope: Scope
+        override val isConstant: ReasonedBoolean get() = ReasonedBoolean.False("Cuz not implemented yet")
         override val children: List<Element> get() = listOf()
-        lateinit var variable: Variable;
-        override val target: Variable get() = variable;
+        override var target: Variable? = null;
         @Transient
-        private lateinit var _accessor: Accessor
-        override var accessor: Accessor
-            get() = _accessor
-            set(value) {
-                _accessor = value
-                variable = (accessor.scope.resolveVariable(name) ?: Variable(false, name, Type.Undefined))
-                    .apply { accessToSelf.add(this@VariableReference) }
-            }
-        override val reference: Located<String>
-            get() = name
+        override lateinit var accessor: Accessor
+
+        override fun setEnclosingScope(parent: Scope) {
+            this.scope = parent
+        }
+        override fun resolve(messages: CompilerMessages) {
+            target = scope.resolveVariable(reference, messages)
+        }
     }
 }

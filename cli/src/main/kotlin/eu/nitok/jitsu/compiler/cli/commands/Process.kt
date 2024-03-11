@@ -34,7 +34,7 @@ class Process : Callable<List<Pair<JitsuFile, Path>>> {
             )
             spec.commandLine().out.println("Write graph to $cacheFile")
 
-            val errors = it.first.scope.flatMap { it.errors }
+            val errors = it.first.messages.errors
             cli.printErrors(errors, it.second)
             if(errors.isNotEmpty()) {
                 throw IllegalStateException("Errors found in ${it.second}")

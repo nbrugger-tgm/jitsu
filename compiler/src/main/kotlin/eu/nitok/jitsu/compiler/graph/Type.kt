@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.model.BitSize
 import kotlinx.serialization.Contextual
@@ -65,15 +66,17 @@ sealed class Type : Element {
     data class TypeReference(
         override val reference: Located<String>,
         val genericParameters: Map<String, Type>
-    ) : Type(), Access.TypeAccess {
-        @Transient
-        override val children: List<Element> = genericParameters.values.toList()
-        override val target: TypeDefinition
-            get() = accessor.scope.resolveType(reference)
-        @Transient
-        private lateinit var _accessor: Accessor
-        override var accessor: Accessor
-            get() = _accessor
-            set(value) { _accessor = value }
+    ) : Type(), Access.TypeAccess, ScopeAware {
+        @Transient override val children: List<Element> = genericParameters.values.toList()
+        @Transient override var target: TypeDefinition? = null;
+        @Transient override lateinit var accessor: Accessor;
+        @Transient private lateinit var scope: Scope
+
+        override fun resolve(messages: CompilerMessages) {
+            target = scope.resolveType(reference, messages)
+        }
+        override fun setEnclosingScope(parent: Scope) {
+            scope = parent
+        }
     }
 }

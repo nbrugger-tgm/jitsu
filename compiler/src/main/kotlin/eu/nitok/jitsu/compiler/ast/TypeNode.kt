@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.compiler.ast
 
+import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.FunctionDeclarationNode
 import eu.nitok.jitsu.compiler.model.BitSize
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.SerialName
@@ -41,7 +42,7 @@ sealed interface TypeNode : AstNode {
     @Serializable
     class FunctionTypeSignatureNode(
         val returnType: TypeNode?,
-        var parameters: List<StatementNode.FunctionDeclarationNode.ParameterNode>,
+        var parameters: List<FunctionDeclarationNode.ParameterNode>,
         override val location: Range
     ) : TypeNode, AstNodeImpl() {
         override val children: List<AstNode>

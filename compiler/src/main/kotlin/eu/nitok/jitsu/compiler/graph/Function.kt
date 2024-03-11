@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.model.sequence
 import kotlinx.serialization.Serializable;
@@ -7,31 +8,48 @@ import kotlinx.serialization.Transient
 
 @Serializable
 class Function(
-    override val scope: Scope,
     override val name: Located<String>?,
     val returnType: Type?,
     val parameters: List<Parameter>,
-    val body: List<Instruction>,
-) : Element, Accessor, Accessible<Function> {
+    val body: CodeBlock,
+    override val scope: Scope
+) : Element, Accessible<Function>, Accessor, ScopeAware, ScopeProvider {
+    constructor(
+        name: Located<String>?,
+        returnType: Type?,
+        parameters: List<Parameter>,
+        body: CodeBlock,
+        messages: CompilerMessages
+    ) : this(
+        name, returnType, parameters, body, Scope(
+            listOf(), listOf(), listOf(),
+            parameters.map { it.asVariable() },
+            messages
+        )
+    )
 
-    override val children: List<Element> get() = listOfNotNull(returnType) + parameters
+    init {
+        fun informChildren(children: List<Element>) {
+            children.forEach {
+                if (it is FunctionAware) it.setEnclosingFunction(this)
+                if (it is Function) it.informChildren()
+                else informChildren(it.children)
+            }
+        }
+        informChildren(body.children)
+    }
+
+    override fun setEnclosingScope(parent: Scope) {
+        scope.parent = parent
+    }
+
+    override val children: List<Element> get() = listOfNotNull(returnType) + parameters + body
 
     @Transient
     override val accessToSelf: MutableList<Access<Function>> = mutableListOf()
 
     @Transient
-    override val accessFromSelf: List<Access<*>> = body.flatMap {
-        it.sequence().filterIsInstance<Access<*>>()
-    }.onEach { it.accessor = this }
-
-    init {
-        body.flatMap { it.sequence() }.forEach {
-            when (it) {
-                is ScopeAware -> it.scope = scope
-                is FunctionAware -> it.function = this
-            }
-        }
-    }
+    override val accessFromSelf: List<Access<*>> = findAccessesFromSelf(body.instructions)
 
     @Serializable
     data class Parameter(
@@ -39,7 +57,7 @@ class Function(
         val type: Type,
         val defaultValue: Expression?
     ) : Element {
-        fun asVariable(fn: Function): Variable = Variable(false, name, type)
+        fun asVariable(): Variable = Variable(false, name, type)
         override val children: List<Element> get() = listOfNotNull(type, defaultValue)
     }
 }

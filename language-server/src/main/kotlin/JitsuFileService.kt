@@ -130,7 +130,7 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
         return CompletableFuture.supplyAsync {
             val referencePos = location(params.position)
             val graph = graphs[params.textDocument.uri]?.value?.let {
-                it.scope.sequence().flatMap { it.accessFromSelf }
+                it.sequence().filterIsInstance<Access<*>>()
                     .find { it.reference.location.contains(referencePos) }
             }?.target?.name?.location?.let { range(it, params.textDocument.uri) }
             Either.forLeft(listOfNotNull(graph).toMutableList())
@@ -144,7 +144,7 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
             DocumentDiagnosticReport(
                 RelatedFullDocumentDiagnosticReport(
                     (ast?.statements?.flatMap { syntaxDiagnostic(it) }
-                        ?: listOf()) + (graph?.scope?.let { syntaxDiagnostic(it) } ?: listOf())
+                        ?: listOf()) + (graph?.let { syntaxDiagnostic(it) } ?: listOf())
                 )
             )
         )

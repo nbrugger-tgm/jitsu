@@ -11,7 +11,7 @@ import kotlinx.serialization.Transient
 import java.lang.IllegalArgumentException
 
 @Serializable
-sealed class Constant<out T> : Expression {
+sealed class Constant<out T> : Expression, Element {
     @SerialName("resolved_type")
     abstract val type: Type
     abstract val literal: String
