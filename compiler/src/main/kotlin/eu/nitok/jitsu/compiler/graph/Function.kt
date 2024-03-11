@@ -59,5 +59,9 @@ class Function(
     ) : Element {
         fun asVariable(): Variable = Variable(false, name, type)
         override val children: List<Element> get() = listOfNotNull(type, defaultValue)
+
+        override fun toString(): String {
+            return "$name: $type${if (defaultValue != null) " = $defaultValue" else ""}"
+        }
     }
 }
