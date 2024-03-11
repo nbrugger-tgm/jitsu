@@ -176,6 +176,7 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
 
         is TypeNode.FloatTypeNode,
         is TypeNode.IntTypeNode,
+        is TypeNode.UIntTypeNode,
         is BooleanLiteralNode,
         is TypeNode.VoidTypeNode -> listOf(token(KEYWORD, location))
 
