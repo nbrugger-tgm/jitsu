@@ -1,9 +1,9 @@
-fn main(): i32 {
-    var a = 12; 
-    var b = 18;
-    add(add(a, b));
+fn main(): u8 {
+    var a:u8 = 12; 
+    var b:u8 = 18;
+    return add(a, b);
 }
 
-fn add(a: int, b: int): int {
+fn add(a: u8, b: u8): u8 {
     return a + b;
 }
