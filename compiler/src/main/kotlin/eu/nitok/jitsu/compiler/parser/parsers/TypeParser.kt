@@ -150,6 +150,7 @@ private fun parseBitsizedNumberType(tokens: TokenStream<DefaultToken>): TypeNode
 private fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode.UnionTypeNode? {
     if (!tokens.hasNext()) return null
     tokens.elevate()
+    tokens.skipWhitespace()
     val (pipe, pipeLocation) = tokens.range { next() }
     if (pipe.type != DefaultToken.PIPE) {
         tokens.rollback()

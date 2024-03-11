@@ -40,6 +40,7 @@ private fun Type.resolveTypeKind(): SymbolKind? {
         Type.Null -> SymbolKind.Null
         is Type.TypeReference -> target?.symbolKind()
         Type.Undefined -> SymbolKind.Null
+        is Type.Union -> SymbolKind.Enum
     }
 }
 

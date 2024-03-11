@@ -355,7 +355,7 @@ fun resolveType(type: TypeNode?): Type {
         is TypeNode.IntTypeNode -> Type.Int(type.bitSize)
         is TypeNode.NameTypeNode -> Type.TypeReference(type.name.located, mapOf())
         is TypeNode.StructuralInterfaceTypeNode -> TODO()
-        is TypeNode.UnionTypeNode -> TODO()
+        is TypeNode.UnionTypeNode -> Type.Union(type.types.map { resolveType(it) })
         is TypeNode.ValueTypeNode -> TODO()
         is TypeNode.VoidTypeNode -> TODO()
         is TypeNode.UIntTypeNode -> Type.UInt(type.bitSize)

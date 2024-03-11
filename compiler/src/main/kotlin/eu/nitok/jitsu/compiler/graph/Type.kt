@@ -116,4 +116,12 @@ sealed class Type : Element {
             return reference.value
         }
     }
+
+    @Serializable
+    class Union(var options: List<Type>) : Type() {
+        override val children: List<Element> get() = options
+        override fun toString(): String {
+            return options.joinToString(" | ")
+        }
+    }
 }
