@@ -116,4 +116,20 @@ sealed class Type : Element {
             return reference.value
         }
     }
+
+    @Serializable
+    class Union(var options: List<Type>) : Type() {
+        override val children: List<Element> get() = options
+        override fun toString(): String {
+            return options.joinToString(" | ")
+        }
+    }
+
+    @Serializable
+    data class StructuralInterface(val fields: Map<String, TypeDefinition.Struct.Field>) : Type() {
+        override val children: List<Element> get() = fields.values.toList()
+        override fun toString(): String {
+            return "{${fields.entries.joinToString(", ")}}"
+        }
+    }
 }

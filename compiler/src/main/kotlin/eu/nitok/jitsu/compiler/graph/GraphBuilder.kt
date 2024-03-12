@@ -14,21 +14,24 @@ private class GraphBuilder {
 }
 
 fun buildGraph(srcFile: SourceFileNode): JitsuFile {
-    return  GraphBuilder().buildGraph(srcFile);
+    return GraphBuilder().buildGraph(srcFile);
 }
 
 private fun GraphBuilder.buildGraph(srcFile: SourceFileNode): JitsuFile {
     val file = JitsuFile(processStatements(srcFile.statements) {
-        if(it !is Declaration) messages.error("Statement not allowed at root level", it.location)
+        if (it !is Declaration) messages.error("Statement not allowed at root level", it.location)
     }, messages)
     file.informChildren()
     file.sequence().forEach {
-        if(it is Access<*>) it.resolve(messages)
+        if (it is Access<*>) it.resolve(messages)
     }
     return file;
 }
 
-private fun GraphBuilder.processStatements(statements: List<StatementNode>, instructionHandler: (InstructionNode)->Unit): Scope {
+private fun GraphBuilder.processStatements(
+    statements: List<StatementNode>,
+    instructionHandler: (InstructionNode) -> Unit
+): Scope {
     val functions: MutableList<Function> = mutableListOf()
     val variables: MutableList<Variable> = mutableListOf()
     val constants: MutableList<Constant<Any>> = mutableListOf()
@@ -36,17 +39,19 @@ private fun GraphBuilder.processStatements(statements: List<StatementNode>, inst
     for (statement in statements) {
         when (statement) {
             is NamedTypeDeclarationNode.EnumDeclarationNode -> types.add(buildGraph(statement))
-            is NamedTypeDeclarationNode.TypeAliasNode -> types.add(buildGraph(statement))
+            is NamedTypeDeclarationNode.TypeAliasNode -> buildGraph(statement)?.let { types.add(it) }
             is NamedTypeDeclarationNode.InterfaceTypeNode -> types.add(buildGraph(statement))
             is FunctionDeclarationNode -> {
                 functions.add(buildFunctionGraph(statement))
                 instructionHandler(statement)
             }
+
             is VariableDeclarationNode -> {
                 val declaration = buildGraph(statement)
                 instructionHandler(statement)
                 variables.add(declaration.variable)
             }
+
             is InstructionNode -> instructionHandler(statement)
         }
     }
@@ -61,7 +66,11 @@ private fun GraphBuilder.buildInstructionGraph(statement: InstructionNode): Inst
         is CodeBlockNode,
         is YieldStatement,
         is SwitchNode -> TODO()
-        is FunctionCallNode -> Instruction.FunctionCall(statement.function.located, statement.parameters.map { buildExpressionGraph(it) })
+
+        is FunctionCallNode -> Instruction.FunctionCall(
+            statement.function.located,
+            statement.parameters.map { buildExpressionGraph(it) })
+
         is ReturnNode -> Instruction.Return(buildExpressionGraph(statement.expression))
         is VariableDeclarationNode -> buildGraph(statement)
         is LineCommentNode -> null;
@@ -75,7 +84,8 @@ fun buildGraph(statement: VariableDeclarationNode): VariableDeclaration {
     val variable = Variable(
         false,
         statement.name?.located ?: Located("unnamed", statement.keywordLocation),
-        explicitType
+        explicitType,
+        initialValue
     )
     return VariableDeclaration(
         variable,
@@ -83,8 +93,8 @@ fun buildGraph(statement: VariableDeclarationNode): VariableDeclaration {
     )
 }
 
-fun buildGraph(statement: NamedTypeDeclarationNode.TypeAliasNode): TypeDefinition.Alias {
-    return TypeDefinition.Alias(statement.name.located, listOf(), lazy { resolveType(statement.type) })
+fun buildGraph(statement: NamedTypeDeclarationNode.TypeAliasNode): TypeDefinition.Alias? {
+    return statement.name?.let { TypeDefinition.Alias(it.located, listOf(), resolveType(statement.type)) }
 }
 
 private fun buildGraph(
@@ -92,10 +102,7 @@ private fun buildGraph(
 ) = TypeDefinition.Interface(
     it.name.located,
     listOf(),
-    it.functions.associateBy(
-        { func -> func.name.value },
-        { func -> Located(buildGraph(func.typeSignature), func.typeSignature.location) }
-    )
+    it.functions.map { func -> NamedFunctionSignature(func.name.located, buildGraph(func.typeSignature)) }
 )
 
 private fun buildGraph(
@@ -109,7 +116,7 @@ private fun buildGraph(
 )
 
 private fun buildGraph(enum: NamedTypeDeclarationNode.EnumDeclarationNode): TypeDefinition.Enum {
-    return TypeDefinition.Enum(enum.name.located, enum.constants.map { it.located })
+    return TypeDefinition.Enum(enum.name.located, enum.constants.map { TypeDefinition.Enum.Constant(it.located) })
 }
 
 private fun buildGraph(
@@ -169,7 +176,10 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
     val functionBody = when (val body = functionNode.body) {
         is CodeBlockNode.SingleExpressionCodeBlock -> TODO()//buildExpressionGraph(body.expression, function.bodyScope)
         is CodeBlockNode.StatementsCodeBlock -> buildCodeBlockGraph(body.statements)
-        null -> CodeBlock(listOf(), Scope(mutableListOf(),mutableListOf(),mutableListOf(),mutableListOf(), messages));
+        null -> CodeBlock(
+            listOf(),
+            Scope(mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf(), messages)
+        );
     }
     return Function(
         name?.located,
@@ -344,8 +354,15 @@ fun resolveType(type: TypeNode?): Type {
         is TypeNode.FunctionTypeSignatureNode -> TODO()
         is TypeNode.IntTypeNode -> Type.Int(type.bitSize)
         is TypeNode.NameTypeNode -> Type.TypeReference(type.name.located, mapOf())
-        is TypeNode.StructuralInterfaceTypeNode -> TODO()
-        is TypeNode.UnionTypeNode -> TODO()
+        is TypeNode.StructuralInterfaceTypeNode -> Type.StructuralInterface(type.fields.map {
+            TypeDefinition.Struct.Field(
+                it.name.located,
+                false,
+                resolveType(it.type)
+            )
+        }.associateBy { it.name.value })
+
+        is TypeNode.UnionTypeNode -> Type.Union(type.types.map { resolveType(it) })
         is TypeNode.ValueTypeNode -> TODO()
         is TypeNode.VoidTypeNode -> TODO()
         is TypeNode.UIntTypeNode -> Type.UInt(type.bitSize)

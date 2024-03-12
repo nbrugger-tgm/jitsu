@@ -36,11 +36,19 @@ sealed interface Instruction : Element {
                 .associateBy({ it.second!! }, { it.first })
         override val isConstant: ReasonedBoolean
             get() = ReasonedBoolean.False("Function call constant analysis not implemented yet")
+        override val implicitType: Type?
+            get() = Type.FunctionTypeSignature(
+                target?.returnType,
+                target?.parameters?.map { Type.FunctionTypeSignature.Parameter(it.name, it.type) } ?: listOf()
+            )
         override val children: List<Element> get() = callParameters.toList()
+
         @Transient
         override lateinit var accessor: Accessor
+
         @Transient
         override var target: Function? = null
+
         @Transient
         lateinit var scope: Scope
 

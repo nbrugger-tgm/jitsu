@@ -1,40 +1,105 @@
 package capabilities
 
-import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.*
-import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.*
-import eu.nitok.jitsu.compiler.ast.StatementNode.NamedTypeDeclarationNode
+
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.compiler.model.mapTree
-import eu.nitok.jitsu.compiler.model.sequence
-import eu.nitok.jitsu.compiler.parser.Range
-import getArtificalId
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
 import range
 
 
+
+private fun TypeDefinition.documentSymbols(children: Iterable<DocumentSymbol>): List<DocumentSymbol> = listOf(
+    DocumentSymbol(
+        name.value,
+        symbolKind(),
+        range(name.location),
+        range(name.location),
+        additionalInfo(),
+        children.toList()
+    )
+)
+
+private fun TypeDefinition.additionalInfo(): String?{
+    if(this is TypeDefinition.Alias){
+        return this.type.additionalInfo()
+    }
+    return null;
+}
+private fun Type.additionalInfo(): String?{
+    return when(this) {
+        is Type.TypeReference -> target?.additionalInfo()
+        else -> toString()
+    }
+}
+private fun TypeDefinition.symbolKind() = when (this) {
+    is TypeDefinition.Enum -> SymbolKind.Enum
+    is TypeDefinition.Interface -> SymbolKind.Interface
+    is TypeDefinition.Alias -> type.resolveTypeKind()
+    is TypeDefinition.Struct -> SymbolKind.Struct
+}
+
+private fun Type.resolveTypeKind(): SymbolKind {
+    return when (this) {
+        is Type.Float,
+        is Type.Int,
+        is Type.UInt -> SymbolKind.Number
+
+        is Type.Value -> SymbolKind.Constant
+        is Type.Array -> SymbolKind.Array
+        Type.Boolean -> SymbolKind.Boolean
+        is Type.FunctionTypeSignature -> SymbolKind.Function
+        Type.Null -> SymbolKind.Null
+        is Type.TypeReference -> target?.symbolKind()?: SymbolKind.Null
+        Type.Undefined -> SymbolKind.Null
+        is Type.Union -> SymbolKind.Enum
+        is Type.StructuralInterface -> SymbolKind.Interface
+    }
+}
+
 fun JitsuFile.documentSymbols(): List<DocumentSymbol> {
     return this.mapTree { node, children ->
         if (node !is Accessible<*>) return@mapTree children;
-        when (node) {
-            is Function -> node.documentSymbols(children)?.let { listOf(it) } ?: children
-            is TypeDefinition.Alias -> TODO()
-            is TypeDefinition.Enum -> TODO()
-            is TypeDefinition.Interface -> TODO()
-            is TypeDefinition.Struct -> TODO()
-            is Variable -> listOf(
-                DocumentSymbol(
-                    node.name.value,
-                    SymbolKind.Variable,
-                    range(node.name.location),
-                    range(node.name.location),
-                    node.declaredType.toString(),
-                    children.toList()
-                )
-            )
-        }
+        node.documentSymbols(children)
     }.toList()
+}
+
+private fun <T: Accessible<T>> Accessible<T>.documentSymbols(children: Iterable<DocumentSymbol>): Iterable<DocumentSymbol> {
+    return when (this) {
+        is Function -> documentSymbols(children)?.let { listOf(it) } ?: children
+        is TypeDefinition -> documentSymbols(children)
+        is Variable -> listOf(
+            DocumentSymbol(
+                name.value,
+                SymbolKind.Variable,
+                range(name.location),
+                range(name.location),
+                type.toString(),
+                children.toList()
+            )
+        )
+
+        is TypeDefinition.Enum.Constant -> listOf(
+            DocumentSymbol(
+                name.value,
+                SymbolKind.EnumMember,
+                range(name.location),
+                range(name.location),
+                null,
+                children.toList()
+            )
+        )
+
+        is TypeDefinition.Struct.Field -> listOf(DocumentSymbol(
+            name.value,
+            SymbolKind.Field,
+            range(name.location),
+            range(name.location),
+            type.toString(),
+            children.toList()
+        ))
+    }
 }
 
 fun Function.documentSymbols(children: Iterable<DocumentSymbol>): DocumentSymbol? {
@@ -50,207 +115,5 @@ fun Function.documentSymbols(children: Iterable<DocumentSymbol>): DocumentSymbol
     ) else null
 }
 
-//fun Statement.documentSymbols(): List<DocumentSymbol> {
-//    return when (this) {
-//        is AssignmentNode -> value?.documentSymbols() ?: listOf()
-//        is CodeBlockNode.SingleExpressionCodeBlock -> expression.documentSymbols()
-//        is CodeBlockNode.StatementsCodeBlock -> statements.flatMap { it.documentSymbols() }
-//        is FunctionCallNode -> listOf()
-//        is FunctionDeclarationNode ->
-//
-//        is IfNode -> {
-//            val elseNodes = elseStatement?.let {
-//                when (it) {
-//                    is IfNode.ElseNode.ElseBlockNode -> (it.codeBlock as StatementNode).documentSymbols()
-//                    is IfNode.ElseNode.ElseIfNode -> (it.ifNode as StatementNode).documentSymbols()
-//                }
-//            } ?: emptyList();
-//            (condition?.documentSymbols()
-//                ?: listOf()) + (thenCodeBlockNode as StatementNode).documentSymbols() + elseNodes
-//        }
-//
-//        is MethodInvocationNode -> method.documentSymbols() + parameters.flatMap { it.documentSymbols() }
-//        is ReturnNode -> expression?.documentSymbols() ?: emptyList()
-//        is SwitchNode -> (item?.documentSymbols() ?: listOf()) + cases.flatMap { it.documentSymbols() }
-//        is NamedTypeDeclarationNode -> documentSymbols()
-//        is VariableDeclarationNode -> listOf(
-//            DocumentSymbol(
-//                name?.value ?: "",
-//                SymbolKind.Variable,
-//                range(location),
-//                range(name?.location ?: location),
-//                type.toString(),
-//                value?.documentSymbols() ?: emptyList()
-//            )
-//        )
-//
-//        is LineCommentNode -> listOf()
-//        is YieldStatement -> expression?.documentSymbols() ?: listOf()
-//    }
-//}
-//
-//private fun NamedTypeDeclarationNode.documentSymbols(): List<DocumentSymbol> {
-//    return when (this) {
-//        is NamedTypeDeclarationNode.EnumDeclarationNode -> {
-//            val constantSymbols = constants.map {
-//                DocumentSymbol(
-//                    it.value,
-//                    SymbolKind.EnumMember,
-//                    range(it.location),
-//                    range(it.location),
-//                    "${name}.${it}",
-//                )
-//            }
-//            listOf(
-//                DocumentSymbol(
-//                    name.value,
-//                    SymbolKind.Enum,
-//                    range(location),
-//                    range(name.location),
-//                    "enum $name (${constants.size} options)",
-//                    constantSymbols
-//                )
-//            )
-//        }
-//
-//        is NamedTypeDeclarationNode.InterfaceTypeNode -> listOf(
-//            DocumentSymbol(
-//                name.value,
-//                SymbolKind.Interface,
-//                range(location),
-//                range(name.location),
-//                null,
-//                this.functions.flatMap { it.documentSymbols() }
-//            )
-//        )
-//
-//        is NamedTypeDeclarationNode.TypeAliasNode -> this.type.documentSymbols(
-//            this.location,
-//            this.name.value,
-//            this.name.location
-//        )
-//    }
-//}
-//
-//private fun TypeNode.documentSymbols(location: Range, name: String, nameLocation: Range): List<DocumentSymbol> {
-//    return when (this) {
-//        is TypeNode.FloatTypeNode,
-//        is TypeNode.IntTypeNode,
-//        is TypeNode.NameTypeNode,
-//        is TypeNode.ValueTypeNode,
-//        is TypeNode.UIntTypeNode -> listOf(
-//            DocumentSymbol(
-//                name,
-//                SymbolKind.Variable,
-//                range(location),
-//                range(nameLocation),
-//                this::class.simpleName
-//            )
-//        )
-//
-//        is TypeNode.ArrayTypeNode -> listOf(
-//            DocumentSymbol(
-//                name,
-//                SymbolKind.Array,
-//                range(location),
-//                range(nameLocation),
-//                this::class.simpleName
-//            )
-//        )
-//
-//        is TypeNode.UnionTypeNode -> listOf(
-//            DocumentSymbol(
-//                name,
-//                SymbolKind.Enum,
-//                range(location),
-//                range(nameLocation),
-//                this::class.simpleName
-//            )
-//        )
-//
-//        is TypeNode.FunctionTypeSignatureNode -> listOf(
-//            DocumentSymbol(
-//                name,
-//                SymbolKind.Function,
-//                range(location),
-//                range(nameLocation),
-//                toString()
-//            )
-//        )
-//
-//        is TypeNode.VoidTypeNode -> listOf()
-//        is TypeNode.StructuralInterfaceTypeNode -> this.fields.map {
-//            DocumentSymbol(
-//                it.name.value,
-//                SymbolKind.Field,
-//                range(it.location),
-//                range(it.name.location),
-//                it.toString(),
-//                it.type?.let { documentSymbols(it.location, "anonymous\$si\$${getArtificalId()}", it.location) }
-//                    ?: listOf()
-//            )
-//        }
-//    }
-//}
-//
-//private fun NamedTypeDeclarationNode.InterfaceTypeNode.documentSymbol(): List<DocumentSymbol> {
-//    return listOf(DocumentSymbol(
-//        name.value,
-//        SymbolKind.Interface,
-//        range(location),
-//        range(name.location),
-//        "interface",
-//        functions.flatMap { it.documentSymbols() }
-//    ))
-//}
-//
-//private fun NamedTypeDeclarationNode.InterfaceTypeNode.FunctionSignatureNode.documentSymbols(): List<DocumentSymbol> {
-//    return listOf(
-//        DocumentSymbol(
-//            name.value,
-//            SymbolKind.Method,
-//            range(location),
-//            range(name.location),
-//            typeSignature.toString(),
-//            listOf()
-//        )
-//    )
-//}
-//
-//private fun SwitchNode.CaseNode.documentSymbols(): List<DocumentSymbol> {
-//    //https://discuss.kotlinlang.org/t/what-is-the-reason-behind-smart-cast-being-impossible-to-perform-when-referenced-class-is-in-another-module/2201/36
-//    return when (val body = body) {
-//        is CodeBlockNode -> (body as StatementNode).documentSymbols()
-//        is ExpressionNode -> body.documentSymbols()
-//        null -> listOf()
-//    }
-//}
-//
-//private fun FunctionDeclarationNode.ParameterNode.documentSymbols(): List<DocumentSymbol> {
-//    return listOf(
-//        DocumentSymbol(
-//            name.value,
-//            SymbolKind.Variable,
-//            range(location),
-//            range(name.location),
-//            type.toString(),
-//            emptyList()
-//        )
-//    )
-//}
-//
-//private fun ExpressionNode.documentSymbols(): List<DocumentSymbol> {
-//    return when (this) {
-//        is ExpressionNode.BooleanLiteralNode -> emptyList()
-//        is ExpressionNode.NumberLiteralNode.FloatLiteralNode -> listOf()
-//        is ExpressionNode.NumberLiteralNode.IntegerLiteralNode -> listOf()
-//        is ExpressionNode.OperationNode -> left.documentSymbols() + (right?.documentSymbols() ?: listOf())
-//        is ExpressionNode.StringLiteralNode -> emptyList()
-//        is ExpressionNode.VariableReferenceNode -> listOf()
-//        is ExpressionNode.FieldAccessNode -> emptyList()
-//        is ExpressionNode.IndexAccessNode -> emptyList()
-//        is StatementNode -> (this as StatementNode).documentSymbols()
-//    }
-//}
 
 

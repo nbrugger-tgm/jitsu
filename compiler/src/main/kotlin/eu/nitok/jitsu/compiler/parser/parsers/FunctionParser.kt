@@ -18,7 +18,7 @@ private val fnKeywords = listOf(fnKeyword, "fun", "func", "function")
 
 fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     tokens.elevate()
-    val kw = tokens.range { nextOptional().getOrNull() ?: return null; };
+    val kw = tokens.range { nextOptional().getOrNull() ?: return null; }
     if (kw.value.type != LETTERS || !fnKeywords.contains(kw.value.value)) {
         tokens.rollback()
         return null
@@ -26,7 +26,7 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     tokens.commit()
     val messages = CompilerMessages()
     if (kw.value.value != fnKeyword) {
-        messages.error("Functions are declared with the 'fn' keyword", kw.location);
+        messages.error("Functions are declared with the 'fn' keyword", kw.location)
     }
     tokens.skipWhitespace()
     val functionName = parseIdentifier(tokens)
@@ -42,7 +42,7 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     tokens.skipWhitespace()
     val parameters = parseParameters(tokens, messages, kw)
     tokens.skipWhitespace()
-    val returnType = parseOptionalExplicitType(tokens, messages::error);
+    val returnType = parseOptionalExplicitType(tokens, messages::error)
     tokens.skipWhitespace()
     val body = parseCodeBlock(tokens)
     if(body == null) {
@@ -67,19 +67,19 @@ private fun parseParameters(
         )
     } else tokens.skip()
     val parameters = mutableListOf<ParameterNode>()
-    var nonParameterTokens = 0;
+    var nonParameterTokens = 0
     paramsLoop@ while (tokens.hasNext()) {
         tokens.skipWhitespace()
         val closedBracket = tokens.peek()
         if (closedBracket.type == BRACKET_CLOSED) {
             tokens.next()
-            break;
+            break
         }
         tokens.skipWhitespace()
         val argName = parseIdentifier(tokens)
         if (argName == null) {
-            val invalid = tokens.range { nextOptional().getOrNull() };
-            messages.error("Expected parameter name", invalid.location);
+            val invalid = tokens.range { nextOptional().getOrNull() }
+            messages.error("Expected parameter name", invalid.location)
             nonParameterTokens++
             if (nonParameterTokens > 2 || invalid.value == null) break
             else continue

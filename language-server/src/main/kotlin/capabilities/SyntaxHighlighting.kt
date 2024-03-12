@@ -143,24 +143,26 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
         is ReturnNode -> listOf(token(KEYWORD, keywordLocation))
         is SwitchNode -> listOf(token(KEYWORD, keywordLocation))
         is NamedTypeDeclarationNode.TypeAliasNode ->
-            listOf(
+            listOfNotNull(
                 token(KEYWORD, keywordLocation),
-                token(
-                    when (type) {
-                        is TypeNode.ArrayTypeNode,
-                        is TypeNode.FloatTypeNode,
-                        is TypeNode.IntTypeNode,
-                        is TypeNode.NameTypeNode,
-                        is TypeNode.VoidTypeNode,
-                        is TypeNode.UIntTypeNode,
-                        is TypeNode.ValueTypeNode -> TYPE
+                name?.let {
+                    token(
+                        when (type) {
+                            is TypeNode.ArrayTypeNode,
+                            is TypeNode.FloatTypeNode,
+                            is TypeNode.IntTypeNode,
+                            is TypeNode.NameTypeNode,
+                            is TypeNode.VoidTypeNode,
+                            is TypeNode.UIntTypeNode,
+                            is TypeNode.ValueTypeNode -> TYPE
 
-                        is TypeNode.UnionTypeNode -> ENUM
-                        is TypeNode.FunctionTypeSignatureNode -> FUNCTION
-                        is TypeNode.StructuralInterfaceTypeNode -> INTERFACE
-
-                    }, name.location
-                )
+                            is TypeNode.UnionTypeNode -> ENUM
+                            is TypeNode.FunctionTypeSignatureNode -> FUNCTION
+                            is TypeNode.StructuralInterfaceTypeNode -> INTERFACE
+                            null -> TYPE
+                        }, it.location
+                    )
+                }
             )
 
         is VariableDeclarationNode -> listOfNotNull(
@@ -207,7 +209,7 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
 
         is StringLiteralNode.StringPart.CharSequence -> listOf(token(STRING, location))
         is StringLiteralNode.StringPart.EscapeSequence -> listOf(token(symbolismType, location))
-
+        is TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode -> listOf(token(PROPERTY, name.location))
         else -> listOf()
     }
 }

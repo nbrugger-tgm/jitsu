@@ -11,7 +11,7 @@ import eu.nitok.jitsu.compiler.parser.*
 import kotlin.jvm.optionals.getOrNull
 
 fun parseCodeBlock(tokens: Tokens): StatementsCodeBlock? {
-    val openKw = tokens.expect(DefaultToken.ROUND_BRACKET_OPEN)?.location ?: return null;
+    val openKw = tokens.expect(DefaultToken.ROUND_BRACKET_OPEN)?.location ?: return null
     val lst = mutableListOf<StatementNode>()
     val messages = CompilerMessages()
     parseStatements(tokens, lst, messages::error)

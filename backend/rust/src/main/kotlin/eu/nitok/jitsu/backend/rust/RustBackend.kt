@@ -60,6 +60,7 @@ private fun Instruction.transpile(): String {
         } = ${this.value.transpile()};"
 
         is Instruction.FunctionCall -> "${this.transpile()};"
+        is Function -> ""
     }
 }
 
@@ -98,6 +99,8 @@ private fun Type.transpile(): String {
         is Type.UInt -> "u${this.bits.bits}"
         Type.Undefined -> TODO()
         is Type.Value -> TODO()
+        is Type.StructuralInterface -> TODO()
+        is Type.Union -> TODO()
     };
 }
 

@@ -55,7 +55,7 @@ open class Scope constructor(
     fun resolveType(reference: Located<String>, messages: CompilerMessages): TypeDefinition {
         return types[reference.value] ?: parent?.resolveType(reference, messages) ?: run {
             messages.error("Type with name '${reference.value}' does not exist", reference.location)
-            TypeDefinition.Alias(reference, listOf(), lazy { Type.Undefined })
+            TypeDefinition.Alias(reference, listOf(), Type.Undefined)
         }
     }
 
