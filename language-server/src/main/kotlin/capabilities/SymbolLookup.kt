@@ -59,32 +59,45 @@ private fun Type.resolveTypeKind(): SymbolKind {
 fun JitsuFile.documentSymbols(): List<DocumentSymbol> {
     return this.mapTree { node, children ->
         if (node !is Accessible<*>) return@mapTree children;
-        when (node) {
-            is Function -> node.documentSymbols(children)?.let { listOf(it) } ?: children
-            is TypeDefinition -> node.documentSymbols(children)
-            is Variable -> listOf(
-                DocumentSymbol(
-                    node.name.value,
-                    SymbolKind.Variable,
-                    range(node.name.location),
-                    range(node.name.location),
-                    node.type.toString(),
-                    children.toList()
-                )
-            )
-
-            is TypeDefinition.Enum.Constant -> listOf(
-                DocumentSymbol(
-                    node.name.value,
-                    SymbolKind.EnumMember,
-                    range(node.name.location),
-                    range(node.name.location),
-                    null,
-                    children.toList()
-                )
-            )
-        }
+        node.documentSymbols(children)
     }.toList()
+}
+
+private fun <T: Accessible<T>> Accessible<T>.documentSymbols(children: Iterable<DocumentSymbol>): Iterable<DocumentSymbol> {
+    return when (this) {
+        is Function -> documentSymbols(children)?.let { listOf(it) } ?: children
+        is TypeDefinition -> documentSymbols(children)
+        is Variable -> listOf(
+            DocumentSymbol(
+                name.value,
+                SymbolKind.Variable,
+                range(name.location),
+                range(name.location),
+                type.toString(),
+                children.toList()
+            )
+        )
+
+        is TypeDefinition.Enum.Constant -> listOf(
+            DocumentSymbol(
+                name.value,
+                SymbolKind.EnumMember,
+                range(name.location),
+                range(name.location),
+                null,
+                children.toList()
+            )
+        )
+
+        is TypeDefinition.Struct.Field -> listOf(DocumentSymbol(
+            name.value,
+            SymbolKind.Field,
+            range(name.location),
+            range(name.location),
+            type.toString(),
+            children.toList()
+        ))
+    }
 }
 
 fun Function.documentSymbols(children: Iterable<DocumentSymbol>): DocumentSymbol? {

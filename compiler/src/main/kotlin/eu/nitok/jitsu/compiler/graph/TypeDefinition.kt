@@ -21,8 +21,9 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
         private val embedded: MutableSet<Lazy<Struct>> = mutableSetOf()
     ) : TypeDefinition() {
         @Serializable
-        data class Field(val name: Located<String>, var mutable: kotlin.Boolean, val type: Type): Element {
+        data class Field(override val name: Located<String>, var mutable: kotlin.Boolean, val type: Type): Element, Accessible<Field> {
             override val children: List<Element> get() = listOf(type)
+            @Transient override val accessToSelf: MutableList<in Access<Field>> = mutableListOf()
         }
 
         val allFields: Set<Field> get() = embedded.flatMap { it.value.allFields }.toSet() + fields
@@ -52,7 +53,7 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
         val generics: List<Located<String>>,
         var type: Type
     ) : TypeDefinition() {
-        override val children: List<Element> get() = listOf()
+        override val children: List<Element> get() = listOf(type)
     }
 
     @Serializable
