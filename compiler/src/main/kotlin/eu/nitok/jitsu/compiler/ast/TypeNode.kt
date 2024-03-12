@@ -2,6 +2,8 @@ package eu.nitok.jitsu.compiler.ast
 
 import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.FunctionDeclarationNode
 import eu.nitok.jitsu.compiler.model.BitSize
+import eu.nitok.jitsu.compiler.model.Visibility
+import eu.nitok.jitsu.compiler.parser.Location
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable;
@@ -124,11 +126,13 @@ sealed interface TypeNode : AstNode {
         @Serializable
         class StructuralFieldNode(
             val name: IdentifierNode,
-            val type: TypeNode?
+            val type: TypeNode?,
+            val mutableKw: Range?,
+            val visibility: Located<String>?
         ) : AstNodeImpl() {
             override val location: Range = name.location.rangeTo(type?.location ?: name.location)
             override fun toString(): String {
-                return "${name.value}: $type"
+                return "${if(mutableKw != null)"mut " else ""}${name.value}: $type"
             }
 
             override val children: List<AstNode>

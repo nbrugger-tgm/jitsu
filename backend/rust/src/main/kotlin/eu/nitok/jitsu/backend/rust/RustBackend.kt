@@ -95,7 +95,7 @@ private fun Type.transpile(): String {
         is Type.FunctionTypeSignature -> TODO()
         is Type.Int -> "i${this.bits.bits}"
         Type.Null -> TODO()
-        is Type.TypeReference -> TODO()
+        is Type.TypeReference -> this.reference.value
         is Type.UInt -> "u${this.bits.bits}"
         Type.Undefined -> TODO()
         is Type.Value -> TODO()

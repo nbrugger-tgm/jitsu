@@ -1,18 +1,15 @@
 package eu.nitok.jitsu.compiler.ast
 
 import eu.nitok.jitsu.compiler.ast.TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode
-import eu.nitok.jitsu.compiler.graph.Accessible
-import eu.nitok.jitsu.compiler.graph.Element
-import eu.nitok.jitsu.compiler.parser.Location
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed interface StatementNode: AstNode{
+sealed interface StatementNode : AstNode {
 
     @Serializable
-    sealed interface InstructionNode: StatementNode {
+    sealed interface InstructionNode : StatementNode {
         @Serializable
         class FunctionCallNode(
             val function: IdentifierNode,
@@ -62,8 +59,6 @@ sealed interface StatementNode: AstNode{
         }
 
 
-
-
         @Serializable
         data class YieldStatement(
             val expression: ExpressionNode?,
@@ -74,6 +69,7 @@ sealed interface StatementNode: AstNode{
             override val location: Range
                 get() = if (expression == null) keywordLocation else keywordLocation.rangeTo(expression.location)
         }
+
         @Serializable
         class SwitchNode(
             val item: ExpressionNode?,
@@ -188,6 +184,7 @@ sealed interface StatementNode: AstNode{
             override val children: List<AstNode>
                 get() = listOfNotNull(expression)
         }
+
         @Serializable
         class VariableDeclarationNode(
             val name: IdentifierNode?,
@@ -196,14 +193,17 @@ sealed interface StatementNode: AstNode{
             val value: ExpressionNode?,
             val keywordLocation: Range
         ) : AstNodeImpl(), InstructionNode, Declaration {
-            override val location: Range get() = keywordLocation.rangeTo(value?.location?: type?.location?:keywordLocation)
+            override val location: Range
+                get() = keywordLocation.rangeTo(
+                    value?.location ?: type?.location ?: keywordLocation
+                )
             override val children: List<AstNode>
                 get() = listOfNotNull(name, type, value)
         }
     }
 
     @Serializable
-    sealed interface Declaration: StatementNode {
+    sealed interface Declaration : StatementNode {
         @Serializable
         class FunctionDeclarationNode(
             val name: IdentifierNode?,
@@ -238,7 +238,6 @@ sealed interface StatementNode: AstNode{
     }
 
 
-
     //    @Serializabledata
     //    class While(val condition: ExpressionNode, val body: CodeBlockNode) : StatementNode()
 //    @Serializabledata
@@ -249,7 +248,6 @@ sealed interface StatementNode: AstNode{
 //    class Continue(val label: String?) : StatementNode()
 //    @Serializabledata
 //    class Label(val label: String) : StatementNode()
-
 
 
     sealed interface NamedTypeDeclarationNode : AstNode, Declaration {
@@ -271,7 +269,8 @@ sealed interface StatementNode: AstNode{
 
         @Serializable
         data class ClassDeclarationNode(
-            override val name: IdentifierNode,
+            override val name: IdentifierNode?,
+            val typeParameters: List<IdentifierNode>,
             val fields: List<StructuralFieldNode>,
             val methods: List<MethodNode>,
             override val location: Range,
@@ -279,10 +278,11 @@ sealed interface StatementNode: AstNode{
             override val attributes: List<AttributeNode>
         ) : NamedTypeDeclarationNode, AstNodeImpl(), CanHaveAttributes {
             override val children: List<AstNode>
-                get() = fields + methods + attributes + name
+                get() = attributes + methods + fields + listOfNotNull(name) + typeParameters
 
             @Serializable
-            data class MethodNode(val function: Declaration.FunctionDeclarationNode, val mutableKw: Range?): AstNodeImpl() {
+            data class MethodNode(val function: Declaration.FunctionDeclarationNode, val mutableKw: Range?) :
+                AstNodeImpl() {
                 override val location: Range get() = mutableKw?.rangeTo(function.location) ?: function.location
                 override val children: List<AstNode> get() = listOf(function)
             }

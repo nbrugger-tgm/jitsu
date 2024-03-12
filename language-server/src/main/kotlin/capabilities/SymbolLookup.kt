@@ -38,6 +38,7 @@ private fun TypeDefinition.symbolKind() = when (this) {
     is TypeDefinition.Interface -> SymbolKind.Interface
     is TypeDefinition.Alias -> type.resolveTypeKind()
     is TypeDefinition.Struct -> SymbolKind.Struct
+    is TypeDefinition.Class -> SymbolKind.Class
 }
 
 private fun Type.resolveTypeKind(): SymbolKind {

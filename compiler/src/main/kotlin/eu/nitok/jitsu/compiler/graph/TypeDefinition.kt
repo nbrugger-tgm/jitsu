@@ -65,4 +65,16 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
         constructor(name: Located<String>, generics: List<Located<String>>, methods: List<NamedFunctionSignature>) : this(name, generics, methods.groupBy { it.name.value })
         override val children: List<Element> get() = methods.values.flatten()
     }
+
+    @Serializable
+    data class Class(
+        override val name: Located<String>,
+        val generics: List<Located<String>>,
+        val fields: List<Struct.Field>,
+        val methods: List<Function>
+    ): TypeDefinition() {
+        override val children: List<Element>
+            get() = fields + methods // + generics
+
+    }
 }

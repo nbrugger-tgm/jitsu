@@ -9,8 +9,11 @@ import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.SwitchNode.CaseNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.NamedTypeDeclarationNode.EnumDeclarationNode
+import eu.nitok.jitsu.compiler.graph.TypeDefinition
 import eu.nitok.jitsu.compiler.model.flatMap
 import eu.nitok.jitsu.compiler.parser.Range
+import java.lang.instrument.ClassDefinition
+import java.security.Key
 
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -138,6 +141,7 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
             token(KEYWORD, keywordLocation),
             name?.let { token(FUNCTION, it.location) }
         )
+
         is IfNode -> listOf(token(KEYWORD, keywordLocation))
         is MethodInvocationNode -> listOf(token(METHOD, method.location))
         is ReturnNode -> listOf(token(KEYWORD, keywordLocation))
@@ -182,6 +186,11 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
         is BooleanLiteralNode,
         is TypeNode.VoidTypeNode -> listOf(token(KEYWORD, location))
 
+        is NamedTypeDeclarationNode.ClassDeclarationNode -> listOfNotNull(
+            name?.location?.let { token(CLASS, it) },
+            token(KEYWORD, this.keywordLocation)
+        )
+
         is TypeNode.NameTypeNode -> listOf(token(TYPE, name.location))
         is NamedTypeDeclarationNode.InterfaceTypeNode -> listOf(
             token(INTERFACE, name.location),
@@ -209,7 +218,12 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
 
         is StringLiteralNode.StringPart.CharSequence -> listOf(token(STRING, location))
         is StringLiteralNode.StringPart.EscapeSequence -> listOf(token(symbolismType, location))
-        is TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode -> listOf(token(PROPERTY, name.location))
+        is TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode -> listOfNotNull(
+            this.visibility?.let { token(KEYWORD, it.location) },
+            this.mutableKw?.let { token(KEYWORD, it) },
+            token(PROPERTY, name.location)
+        )
+
         else -> listOf()
     }
 }

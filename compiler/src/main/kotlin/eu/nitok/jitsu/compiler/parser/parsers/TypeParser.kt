@@ -9,6 +9,7 @@ import eu.nitok.jitsu.compiler.ast.TypeNode.StructuralInterfaceTypeNode.Structur
 import eu.nitok.jitsu.compiler.ast.withMessages
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.model.BitSize
+import eu.nitok.jitsu.compiler.model.Visibility
 import eu.nitok.jitsu.compiler.parser.*
 import kotlin.jvm.optionals.getOrNull
 
@@ -90,11 +91,18 @@ private fun parseStructuralInterface(tokens: Tokens): TypeNode? {
             "interface",
             "field"
         ) {
-            val name = parseIdentifier(tokens) ?: return@enclosedRepetition null;
+            tokens.elevate()
+            val mut = tokens.keyword("mut")
+            tokens.skipWhitespace()
+            val name = parseIdentifier(tokens);
+            if(name == null) {
+                tokens.rollback()
+                return@enclosedRepetition null
+            } else tokens.commit()
             tokens.skip(DefaultToken.WHITESPACE)
             val messages = CompilerMessages()
             val type = parseExplicitType(tokens, messages)
-            val element = StructuralFieldNode(name, type)
+            val element = StructuralFieldNode(name, type, mut, null)
             messages.apply(element)
             tokens.skip(DefaultToken.WHITESPACE)
             return@enclosedRepetition element

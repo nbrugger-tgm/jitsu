@@ -53,9 +53,26 @@ private fun GraphBuilder.processStatements(
             }
 
             is InstructionNode -> instructionHandler(statement)
+            is NamedTypeDeclarationNode.ClassDeclarationNode -> buildClassGraph(statement)?.let { types.add(it) }
         }
     }
     return Scope(constants, types, functions, variables, messages)
+}
+
+private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.ClassDeclarationNode): TypeDefinition.Class? {
+    return classNode.name?.let { name ->
+        val fields = classNode.fields.map { field ->
+            TypeDefinition.Struct.Field(
+                field.name.located,
+                field.mutableKw != null,
+                resolveType(field.type)
+            )
+        }
+        return TypeDefinition.Class(name.located, classNode.typeParameters.map { it.located }, fields, classNode.methods.map {
+            var base = buildFunctionGraph(it.function);
+            Function(base.name,base.returnType, listOf(Function.Parameter(Located("this", name.location), Type.TypeReference(name.located, mapOf()), null)) + base.parameters, base.body, base.scope)
+        })
+    }
 }
 
 private fun GraphBuilder.buildInstructionGraph(statement: InstructionNode): Instruction? {
