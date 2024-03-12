@@ -1,11 +1,13 @@
 package capabilities
 
+
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.compiler.model.mapTree
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
 import range
+
 
 
 private fun TypeDefinition.documentSymbols(children: Iterable<DocumentSymbol>): List<DocumentSymbol> = listOf(
@@ -112,5 +114,6 @@ fun Function.documentSymbols(children: Iterable<DocumentSymbol>): DocumentSymbol
         children.toList()
     ) else null
 }
+
 
 
