@@ -23,7 +23,10 @@ private fun GraphBuilder.buildGraph(srcFile: SourceFileNode): JitsuFile {
     }, messages)
     file.informChildren()
     file.sequence().forEach {
-        if (it is Access<*>) it.resolve(messages)
+        if (it is Access<*>) it.finalize(messages)
+    }
+    file.sequence().forEach {
+        if (it is Finalizable) it.finalizeGraph(messages)
     }
     return file;
 }
@@ -128,7 +131,7 @@ private fun buildGraph(
     it.returnType?.let { resolveType(it) },
     it.parameters.map {
         val type = resolveType(it.type);
-        Type.FunctionTypeSignature.Parameter(it.name.located, type)
+        Type.FunctionTypeSignature.Parameter(it.name.located, type, false)
     }
 )
 
@@ -187,7 +190,7 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
         val type = resolveType(it.type)
         Function.Parameter(
             it.name.located, type,
-            buildExpressionGraph(it.defaultValue)
+            it.defaultValue?.let { buildExpressionGraph(it) }
         )
     }
     val functionBody = when (val body = functionNode.body) {

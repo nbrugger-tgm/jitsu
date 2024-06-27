@@ -87,13 +87,13 @@ fun <T> Tokens.enclosedRepetition(
 ): List<T>? {
     val openKw = expect(start)?.location ?: return null;
     val lst = mutableListOf<T>()
-
+    skipWhitespace()
+    if(expect(end) != null)
+        return lst
     while (hasNext()) {
-        skipWhitespace();
         when (val x = function(this)) {
             null -> {
                 skip(WHITESPACE)//dont skip line breaks
-                index()
                 val invalid = skipUntil(end, delimitter, NEW_LINE, SEMICOLON)
                 messages.error(CompilerMessage("Expected a $elementName", invalid))
                 if (peek().type != delimitter) {
@@ -113,8 +113,9 @@ fun <T> Tokens.enclosedRepetition(
                     delimitter -> continue
                     else -> throw IllegalStateException("$delim not a $end or $delimitter")
                 }
-            };
+            }
         }
+        skipWhitespace()
     }
 
     skipWhitespace()

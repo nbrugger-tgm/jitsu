@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
     implementation(project(":compiler"))
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     project.project(":backend").subprojects {
         implementation(this)
     }

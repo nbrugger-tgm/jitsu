@@ -78,9 +78,9 @@ sealed class Type : Element {
     }
 
     @Serializable
-    data class FunctionTypeSignature(val returnType: Type?, val params: List<Parameter>) : Type() {
+    data class FunctionTypeSignature(val returnType: Type?, val parameters: List<Parameter>) : Type() {
         @Serializable
-        data class Parameter(val name: Located<String>, val type: Type) : Element {
+        data class Parameter(val name: Located<String>, val type: Type, var optional: kotlin.Boolean) : Element {
             @Transient
             override val children: List<Element> = listOf(type)
             override fun toString(): String {
@@ -89,10 +89,10 @@ sealed class Type : Element {
         }
 
         @Transient
-        override val children: List<Element> = params + listOfNotNull(returnType)
+        override val children: List<Element> = parameters + listOfNotNull(returnType)
 
         override fun toString(): String {
-            return "(${params.joinToString(", ") { "${it.type}" }}) -> ${returnType ?: "void"}"
+            return "(${parameters.joinToString(", ") { "${it.type}" }}) -> ${returnType ?: "void"}"
         }
     }
 
@@ -106,8 +106,8 @@ sealed class Type : Element {
         @Transient override lateinit var accessor: Accessor;
         @Transient private lateinit var scope: Scope
 
-        override fun resolve(messages: CompilerMessages) {
-            target = scope.resolveType(reference, messages)
+        override fun resolve(messages: CompilerMessages): TypeDefinition {
+            return scope.resolveType(reference, messages)
         }
         override fun setEnclosingScope(parent: Scope) {
             scope = parent

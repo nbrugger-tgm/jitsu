@@ -37,7 +37,11 @@ sealed interface Access<T : Accessible<T>> {
     @Transient
     val reference: Located<String>
 
-    fun resolve(messages: CompilerMessages)
+    fun resolve(messages: CompilerMessages): T?
+    fun finalize(messages: CompilerMessages) {
+        target = resolve(messages)
+        target?.accessToSelf?.add(this)
+    }
 
     sealed interface FunctionAccess : Access<Function>
     sealed interface VariableAccess : Access<Variable>

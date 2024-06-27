@@ -60,7 +60,7 @@ data class Range(val start: Location, val end: Location) : Locatable, Comparable
             lines.subList(start.line, end.line - 1)
                 .replaceAll { line -> line + " ".repeat(vcol - 1 - line.length) + "|" }
         }
-        return lines.joinToString("\n" );
+        return lines.subList(start.line-3, end.line+3).joinToString("\n" );
     }
 
     private fun singleLineMark(note: String?): String {

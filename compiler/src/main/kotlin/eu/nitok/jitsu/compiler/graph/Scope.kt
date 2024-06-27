@@ -1,9 +1,10 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.compiler.analysis.FunctionSignatureMatch
+import eu.nitok.jitsu.compiler.analysis.matchFunctionSignatures
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
-import eu.nitok.jitsu.compiler.model.sequence
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
@@ -59,25 +60,56 @@ open class Scope constructor(
         }
     }
 
-    fun resolveFunction(name: Located<String>, messages: CompilerMessages): Function? {
+    fun resolveFunction(name: Located<String>, parameterTypes: Array<Type>, messages: CompilerMessages): Function? {
         val matchingFunctions = allFunctions[name.value] ?: run {
             messages.error("No function named '${name.value}'", name.location)
             return null
         }
-        if (matchingFunctions.size > 1) {
-            messages.error(
-                "Multiple functions named '${name.value}'! Function overloading is not yet supported!", name.location,
-                *matchingFunctions.map { CompilerMessage.Hint("Defined here", it.name!!.location) }.toTypedArray()
-            );
-            return null
+        return when (val match = matchFunctionSignatures(matchingFunctions, parameterTypes)) {
+            is FunctionSignatureMatch.NoMatch -> {
+                messages.error(
+                    "No function named '${name.value}' with matching signature",
+                    name.location,
+                    *matchingFunctions.map {
+                        CompilerMessage.Hint("Signature: ${it.signature}", it.name!!.location)
+                    }.toTypedArray()
+                )
+                null
+            }
+
+            is FunctionSignatureMatch.Suggestion -> {
+                match.missing.forEach {
+                    messages.error(
+                        "Missing parameter '${it.name.value}'",
+                        name.location,
+                        CompilerMessage.Hint("Parameter '${it.name.value}' defined here", it.name.location)
+                    )
+                }
+                match.typeError.forEach {
+                    messages.error(
+                        "Type mismatch for parameter '${it.param.value}': expected '${it.expected}', got '${it.actual}'",
+                        name.location,
+                        CompilerMessage.Hint("Parameter '${it.param.value}' defined here", it.param.location)
+                    )
+                }
+                if (match.overflow > 0) {
+                    messages.error(
+                        "Too many parameters (expected: ${match.function.parameters.filter { it.defaultValue == null }.size}, got: ${parameterTypes.size})",
+                        name.location,
+                        CompilerMessage.Hint("Function defined here", match.function.name!!.location)
+                    )
+                }
+                match.function
+            }
+
+            is FunctionSignatureMatch.Match -> match.function
         }
-        return matchingFunctions.first()
     }
 
     fun resolveVariable(located: Located<String>, messages: CompilerMessages): Variable? {
         val self = variables[located.value]
-        if(self != null) return self
-        if(parent == null) {
+        if (self != null) return self
+        if (parent == null) {
             messages.error("No variable named '${located.value}'", located.location)
             return null
         }

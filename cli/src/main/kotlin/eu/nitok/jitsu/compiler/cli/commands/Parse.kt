@@ -5,9 +5,12 @@ import eu.nitok.jitsu.compiler.cli.Jitsu
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.model.flatMap
 import eu.nitok.jitsu.compiler.parser.parseFile
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
+import kotlinx.serialization.json.JsonNamingStrategy
 import kotlinx.serialization.modules.EmptySerializersModule
 import picocli.CommandLine
 import picocli.CommandLine.*
@@ -37,10 +40,12 @@ class Parse : Callable<List<Pair<SourceFileNode, Path>>> {
     var outpurDir = Paths.get("build")
     val cacheDirectory get() = outpurDir.resolve("cache")
 
+    @OptIn(ExperimentalSerializationApi::class)
     val json: Json = Json(
         builderAction = {
             prettyPrint = true;
             classDiscriminator = "class"
+            namingStrategy = JsonNamingStrategy { _, _, serialName -> serialName.split(".").last() }
         }
     );
 

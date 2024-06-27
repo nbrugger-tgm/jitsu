@@ -46,13 +46,10 @@ sealed interface Expression : Element {
         @Transient
         private lateinit var scope: Scope
         override val isConstant: ReasonedBoolean get() = ReasonedBoolean.False("Cuz not implemented yet")
-        override val implicitType: Type?
-            get() {
-                if (target == null) return null
-                return target?.implicitType
-            }
+        override val implicitType: Type? get() = target?.implicitType
+
         override val children: List<Element> get() = listOf()
-        override var target: Variable? = null;
+        @Transient override var target: Variable? = null;
 
         @Transient
         override lateinit var accessor: Accessor
@@ -61,8 +58,8 @@ sealed interface Expression : Element {
             this.scope = parent
         }
 
-        override fun resolve(messages: CompilerMessages) {
-            target = scope.resolveVariable(reference, messages)
+        override fun resolve(messages: CompilerMessages): Variable? {
+            return scope.resolveVariable(reference, messages)
         }
     }
 }
