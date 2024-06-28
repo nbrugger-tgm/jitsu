@@ -4,7 +4,6 @@ import com.niton.jainparse.ast.AstNode;
 import com.niton.jainparse.api.ParsingResult;
 import com.niton.jainparse.exceptions.ParsingException;
 import com.niton.jainparse.grammar.types.*;
-import com.niton.jainparse.token.TokenReference;
 import com.niton.jainparse.token.TokenStream;
 import com.niton.jainparse.token.Tokenable;
 import lombok.Data;
@@ -23,102 +22,104 @@ import java.util.LinkedHashMap;
  * @author Nils
  * @version 2019-05-28
  */
-public abstract class Grammar<R extends AstNode> {
+@Getter
+public abstract class Grammar<R extends AstNode<T>, T extends Enum<T> & Tokenable> {
     private String name;
     @Getter
     private @Nullable String displayName;
-    public static Builder build(GrammarName string) {
+
+    public static<T extends Enum<T> & Tokenable> Builder<T> build(GrammarName string) {
         return build(string.getName());
     }
 
-    public static Builder build(String string) {
-        return new Builder(string);
+    public static<T extends Enum<T> & Tokenable> Builder<T> build(String string) {
+        return new Builder<>(string);
     }
 
-    public static Grammar<?> anyExcept(Grammar<?> except) {
-        return new AnyExceptGrammar(except);
+    public static <T extends Enum<T> & Tokenable> Grammar<?, T> anyExcept(Grammar<?, T> except) {
+        return new AnyExceptGrammar<>(except);
     }
 
-    public static Grammar<?> reference(String name) {
-        return new GrammarReferenceGrammar(name);
+    public static <T extends Enum<T> & Tokenable> Grammar<?, T> reference(String name) {
+        return new GrammarReferenceGrammar<T>(name);
     }
 
-    public static Grammar<?> reference(GrammarName name) {
-        return new GrammarReferenceGrammar(name.getName());
+    public static <T extends Enum<T> & Tokenable> Grammar<?, ?> reference(GrammarName name) {
+        return new GrammarReferenceGrammar<T>(name.getName());
     }
 
-    public static Grammar<?> reference(Grammar name) {
-        return new GrammarReferenceGrammar(name.getName());
+    public static <T extends Enum<T> & Tokenable> Grammar<?,T> reference(Grammar<?,T> name) {
+        return new GrammarReferenceGrammar<>(name.getName());
     }
 
-    public static Grammar<?> ignore(Grammar<?> g) {
-        return new IgnoreGrammar(g);
+    public static <T extends Enum<T> & Tokenable> Grammar<?,T> ignore(Grammar<?,T> g) {
+        return new IgnoreGrammar<>(g);
     }
 
-    public static Grammar<?> anyOf(Grammar<?>... grammars) {
-        return new MultiGrammar(grammars);
+    public static <T extends Enum<T> & Tokenable> Grammar<?,T> anyOf(Grammar<?,T>... grammars) {
+        return new MultiGrammar<>(grammars);
     }
 
-    public static Grammar<?> optional(Grammar<?> g) {
-        return new OptionalGrammar(g);
-    }
-    public static Grammar<?> not(Grammar<?> g) {
-        return new NotGrammar(g);
+    public static <T extends Enum<T> & Tokenable> Grammar<?,T> optional(Grammar<?,T> g) {
+        return new OptionalGrammar<>(g);
     }
 
-    public static Grammar<?> repeat(Grammar<?> g) {
-        return new RepeatGrammar(g, 0);
+    public static <T extends Enum<T> & Tokenable> Grammar<?,T> not(Grammar<?,T> g) {
+        return new NotGrammar<>(g);
     }
 
-    public static Grammar<?> token(TokenReference token) {
-        return token(token.getName());
+    public static <T extends Enum<T> & Tokenable> Grammar<?,T> repeat(Grammar<?,T> g) {
+        return new RepeatGrammar<>(g, 0);
     }
 
-    public static Grammar<?> token(String token) {
-        return new TokenGrammar(token);
+    public static<T extends Enum<T> & Tokenable> Grammar<?,T> keyword(String keyword) {
+        return new KeywordGrammar<T>(keyword);
     }
 
-    public static Grammar<?> keyword(String keyword) {
-        return new KeywordGrammar(keyword);
+    public static <T extends Enum<T> & Tokenable> Grammar<?,T> token(T token) {
+        return new TokenGrammar<>(token);
     }
 
-    public static Grammar<?> token(Tokenable token) {
-        return token(token.name());
-    }
-
-    public static Grammar<?> object(LinkedHashMap<String, ? extends Grammar<?>> properties) {
-        var chain = new ChainGrammar();
+    public static<T extends Enum<T> & Tokenable> Grammar<?,T> object(LinkedHashMap<String, ? extends Grammar<?,T>> properties) {
+        var chain = new ChainGrammar<T>();
         properties.forEach((name, grammar) -> chain.addGrammar(grammar, name));
         return chain;
     }
 
-    public Grammar<?> ignore() {
-        return new IgnoreGrammar(this);
+    public static<T extends Enum<T> & Tokenable> Grammar<?,T> first(String name, Grammar<?,T> grammar) {
+        var chainGrammar = new ChainGrammar<T>();
+        chainGrammar.addGrammar(grammar, name);
+        return chainGrammar;
     }
 
-    public Grammar<?> optional() {
-        return new OptionalGrammar(this);
+    public Grammar<?,T> ignore() {
+        return new IgnoreGrammar<>(this);
     }
 
-    public Grammar<?> repeat() {
+    public Grammar<?,T> optional() {
+        return new OptionalGrammar<>(this);
+    }
+
+    public Grammar<?,T> repeat() {
         return repeat(0);
     }
-    public Grammar<?> repeat(int minimum) {
-        return new RepeatGrammar(this,minimum);
+
+    public Grammar<?,T> repeat(int minimum) {
+        return new RepeatGrammar<>(this, minimum);
     }
 
-    public void map(GrammarReferenceMap ref) {
+    public void map(GrammarReferenceMap<T> ref) {
         ref.map(this);
     }
 
-    public boolean parsable(@NonNull TokenStream tokens, @NonNull GrammarReference ref) {
+    public boolean parsable(@NonNull TokenStream<T> tokens, @NonNull GrammarReference<T> ref) {
         try {
             tokens.elevate();
         } catch (Exception e) {
             throw new RuntimeException("Evaluating " + name + " failed", e);
         }
         try {
-            GrammarMatcher<R> matcher = createExecutor();
+            GrammarMatcher<R, T> matcher = createExecutor();
             matcher.setOriginGrammarName(getName());
             matcher.setIdentifier(getIdentifier());
             return matcher.parse(tokens, ref).wasParsed();
@@ -127,64 +128,46 @@ public abstract class Grammar<R extends AstNode> {
         }
     }
 
-    public static Grammar<?> first(String name, Grammar<?> grammar) {
-        var chainGrammar = new ChainGrammar();
-        chainGrammar.addGrammar(grammar, name);
-        return chainGrammar;
-    }
-
     @NotNull
-    public Grammar<?> namedCopy(@NotNull GrammarName variable) {
+    public Grammar<?,T> namedCopy(@NotNull GrammarName variable) {
         var copy = copy();
         copy.setName(variable.getName());
         return copy;
     }
+
     @NotNull
-    public Grammar<?> namedCopy(@NotNull String variable) {
+    public Grammar<?,T> namedCopy(@NotNull String variable) {
         var copy = copy();
         copy.setName(variable);
         return copy;
     }
-    protected abstract Grammar<?> copy();
 
-    @Data
-    public static class ParsingProbe{
-        private final boolean parsable;
-        private final ParsingException exception;
-    }
+    protected abstract Grammar<?,T> copy();
 
     /**
      * To see what a executor is look at {@link GrammarMatcher}
      */
-    protected abstract GrammarMatcher<R> createExecutor();
-
-    /**
-     * @return the name
-     */
-    public String getName() {
-        return name;
-    }
+    protected abstract GrammarMatcher<R, T> createExecutor();
 
     /**
      * @param name the name to set
-     * @return
      */
-    public Grammar<R> setName(String name) {
+    public Grammar<R,T> setName(String name) {
         this.name = name;
         return this;
     }
 
     @NotNull
-    public ParsingResult<R> parse(@NonNull TokenStream tokens, @NotNull GrammarReference ref){
-        GrammarMatcher<R> matcher = createExecutor();
+    public ParsingResult<R> parse(@NonNull TokenStream<T> tokens, @NotNull GrammarReference<T> ref) {
+        GrammarMatcher<R, T> matcher = createExecutor();
         matcher.setOriginGrammarName(getName());
         matcher.setIdentifier(getIdentifier());
         return matcher.parse(tokens, ref);
     }
 
-    public abstract boolean isLeftRecursive(GrammarReference ref);
+    public abstract boolean isLeftRecursive(GrammarReference<T> ref);
 
-    public Grammar<?> merged(){
+    public Grammar<?,T> merged() {
         return new MergedGrammar(this);
     }
 
@@ -193,11 +176,11 @@ public abstract class Grammar<R extends AstNode> {
         return this.getClass().getSimpleName() + "(" + getName() + ")";
     }
 
-    public Grammar<?> or(Grammar<?>... alternatives) {
+    public Grammar<?,T> or(Grammar<?,T>... alternatives) {
         var combined = new Grammar<?>[alternatives.length + 1];
         combined[0] = this;
         System.arraycopy(alternatives, 0, combined, 1, alternatives.length);
-        return new MultiGrammar(combined);
+        return new MultiGrammar<>(combined);
     }
 
     public ChainGrammar then(Grammar<?> tokenDefiner) {
@@ -206,9 +189,11 @@ public abstract class Grammar<R extends AstNode> {
         chain.addGrammar(tokenDefiner);
         return chain;
     }
+
     public ChainGrammar then(Tokenable tokenDefiner) {
         return then(token(tokenDefiner));
     }
+
     public ChainGrammar then(String name, Grammar<?> tokenDefiner) {
         var chain = new ChainGrammar();
         chain.addGrammar(this);
@@ -216,24 +201,24 @@ public abstract class Grammar<R extends AstNode> {
         return chain;
     }
 
-    public Grammar<R> named(String name) {
+    public Grammar<R,T> named(String name) {
         this.name = name;
         return this;
     }
 
-    public Grammar<R> named(GrammarName name) {
+    public Grammar<R,T> named(GrammarName name) {
         this.name = name.getName();
         return this;
     }
 
-    public Grammar<R> display(String name) {
+    public Grammar<R,T> display(String name) {
         this.displayName = name;
         return this;
     }
 
     @NotNull
     public String getIdentifier() {
-        if(getDisplayName() != null){
+        if (getDisplayName() != null) {
             return getDisplayName();
         }
         if (getName() != null)
@@ -241,8 +226,14 @@ public abstract class Grammar<R extends AstNode> {
         return this.getClass().getSimpleName();
     }
 
-    public static class Builder {
-        private final ChainGrammar chain = new ChainGrammar();
+    @Data
+    public static class ParsingProbe {
+        private final boolean parsable;
+        private final ParsingException exception;
+    }
+
+    public static class Builder<T extends Enum<T> & Tokenable> {
+        private final ChainGrammar<T> chain = new ChainGrammar<>();
         @Getter
         @Setter
         private boolean directRecursion = true;
@@ -262,7 +253,7 @@ public abstract class Grammar<R extends AstNode> {
             return new RuleApplier(g, new Builder.ReferenceGrammarConverter());
         }
 
-        public RuleApplier grammar(Grammar<?> g) {
+        public RuleApplier grammar(Grammar<?,T> g) {
             return new RuleApplier(g);
         }
 
@@ -270,15 +261,11 @@ public abstract class Grammar<R extends AstNode> {
             return new RuleApplier(g, new Builder.TokenGrammarConverter());
         }
 
-        public RuleApplier token(TokenReference g) {
-            return token(g.getName());
-        }
-
         public RuleApplier token(String g) {
             return new RuleApplier(g, new Builder.TokenNameGrammarConverter());
         }
 
-        public RuleApplier grammars(Grammar<?>... g) {
+        public RuleApplier grammars(Grammar<?,T>... g) {
             return new MultiRuleApplier(g);
         }
 
@@ -313,39 +300,33 @@ public abstract class Grammar<R extends AstNode> {
             return new RuleApplier(Grammar.keyword(keyword));
         }
 
-        public ChainGrammar get() {
+        public ChainGrammar<T> get() {
             return chain;
         }
 
-        private interface GrammarConverter<T> {
-            Grammar<?> toGrammar(T s);
+        private interface GrammarConverter<T,K extends Enum<K> & Tokenable> {
+            Grammar<?,K> toGrammar(T s);
         }
 
         //This classes convert The specific types into grammars
-        private static class ReferenceGrammarConverter implements GrammarConverter<String> {
+        private static class ReferenceGrammarConverter<T extends Enum<T> & Tokenable> implements GrammarConverter<String, T> {
             @Override
-            public Grammar<?> toGrammar(String s) {
-                return new GrammarReferenceGrammar(s);
+            public Grammar<?,T> toGrammar(String s) {
+                return new GrammarReferenceGrammar<>(s);
             }
         }
 
         //This classes convert The specific types into grammars
-        private static class NamedGrammarConverter implements GrammarConverter<GrammarName> {
+        private static class NamedGrammarConverter<T extends Enum<T> & Tokenable> implements GrammarConverter<GrammarName,T> {
             @Override
-            public Grammar<?> toGrammar(GrammarName s) {
+            public Grammar<?,T> toGrammar(GrammarName s) {
                 return new GrammarReferenceGrammar(s.getName());
             }
         }
 
-        private static class TokenGrammarConverter implements GrammarConverter<Tokenable> {
-            public Grammar<?> toGrammar(Tokenable s) {
-                return new TokenGrammar(s.name());
-            }
-        }
-
-        private static class TokenNameGrammarConverter implements GrammarConverter<String> {
-            public Grammar<?> toGrammar(String s) {
-                return new TokenGrammar(s);
+        private static class TokenGrammarConverter<T extends Enum<T> & Tokenable> implements GrammarConverter<Tokenable> {
+            public Grammar<?,T> toGrammar(T s) {
+                return new TokenGrammar<>(s);
             }
         }
 
@@ -432,4 +413,3 @@ public abstract class Grammar<R extends AstNode> {
         }
     }
 }
-

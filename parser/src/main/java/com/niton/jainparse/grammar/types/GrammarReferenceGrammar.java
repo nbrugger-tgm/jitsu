@@ -2,9 +2,11 @@ package com.niton.jainparse.grammar.types;
 
 import com.niton.jainparse.ast.AstNode;
 import com.niton.jainparse.grammar.api.Grammar;
+import com.niton.jainparse.grammar.api.GrammarMatcher;
 import com.niton.jainparse.grammar.api.GrammarName;
 import com.niton.jainparse.grammar.api.GrammarReference;
 import com.niton.jainparse.grammar.matchers.ReferenceGrammarMatcher;
+import com.niton.jainparse.token.Tokenable;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.Nullable;
@@ -19,12 +21,8 @@ import java.util.Objects;
  */
 @Getter
 @Setter
-public class GrammarReferenceGrammar extends Grammar<AstNode> {
-    /**
-     * -- GETTER --
-     *
-     * @return the grammar
-     */
+public class GrammarReferenceGrammar<T extends Enum<T> & Tokenable> extends Grammar<AstNode<T>,T> {
+    @Setter
     @Getter
     private String grammar;
     private @Nullable String explicitName = null;
@@ -32,27 +30,16 @@ public class GrammarReferenceGrammar extends Grammar<AstNode> {
         this.grammar = g;
     }
 
-    /**
-     * @param grammar the grammar to set
-     */
-    public void setGrammar(String grammar) {
-        this.grammar = grammar;
-    }
-
-    public Grammar<?> grammer(GrammarReference ref) {
-        return ref.get(grammar);
+    @Override
+    protected Grammar<AstNode<T>,T> copy() {
+        return new GrammarReferenceGrammar<>(grammar);
     }
 
     @Override
-    protected Grammar<?> copy() {
-        return new GrammarReferenceGrammar(grammar);
-    }
-
-    @Override
-    public ReferenceGrammarMatcher createExecutor() {
+    public GrammarMatcher<AstNode<T>,T> createExecutor() {
         if(grammar == null)
             throw new NullPointerException();
-        return new ReferenceGrammarMatcher(grammar);
+        return new ReferenceGrammarMatcher<>(grammar);
     }
 
     @Override
@@ -61,23 +48,23 @@ public class GrammarReferenceGrammar extends Grammar<AstNode> {
     }
 
 	@Override
-	public Grammar<AstNode> named(GrammarName name) {
+	public Grammar<AstNode<T>,T> named(GrammarName name) {
 		return setName(name.getName());
 	}
 
     @Override
-	public Grammar<AstNode> named(String name) {
+	public Grammar<AstNode<T>,T> named(String name) {
 		return setName(name);
 	}
 
 	@Override
-    public Grammar<AstNode> setName(@Nullable String name) {
+    public Grammar<AstNode<T>,T> setName(@Nullable String name) {
         this.explicitName = name;
         return this;
     }
 
     @Override
-    public boolean isLeftRecursive(GrammarReference ref) {
+    public boolean isLeftRecursive(GrammarReference<T> ref) {
         return Objects.requireNonNull(ref.get(grammar)).isLeftRecursive(ref);
     }
 }

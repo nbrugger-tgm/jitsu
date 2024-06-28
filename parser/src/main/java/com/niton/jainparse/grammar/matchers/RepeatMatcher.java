@@ -9,6 +9,7 @@ import com.niton.jainparse.grammar.api.GrammarMatcher;
 import com.niton.jainparse.grammar.api.GrammarReference;
 import com.niton.jainparse.api.Location;
 import com.niton.jainparse.token.TokenStream;
+import com.niton.jainparse.token.Tokenable;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
@@ -29,21 +30,21 @@ import static java.util.stream.Collectors.toMap;
  */
 @Getter
 @Setter
-public class RepeatMatcher extends GrammarMatcher<SequenceNode> {
+public class RepeatMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<SequenceNode<T>,T> {
 
     private final int minimum;
-    private Grammar<?> check;
+    private Grammar<?,T> check;
 
-    public RepeatMatcher(Grammar<?> expression, int minimum) {
+    public RepeatMatcher(Grammar<?,T> expression, int minimum) {
         this.check = expression;
         this.minimum = minimum;
     }
 
 
     @Override
-    public @NotNull ParsingResult<SequenceNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
+    public @NotNull ParsingResult<SequenceNode<T>> process(@NotNull TokenStream<T> tokens, @NotNull GrammarReference<T> ref) {
         List<ParsingException> exitStates = new LinkedList<>();
-        List<AstNode> subNodes = new ArrayList<>(4);
+        List<AstNode<T>> subNodes = new ArrayList<>(4);
         int resultIndex = 0;
         while (true) {
             var oldPos = tokens.index();
@@ -52,7 +53,7 @@ public class RepeatMatcher extends GrammarMatcher<SequenceNode> {
                 exitStates.add(new ParsingException(getIdentifier(), format("The %s element failed and stopped parsing the repetition", englishify(resultIndex)), res.exception()));
                 break;
             }
-            AstNode subNode = res.unwrap();
+            AstNode<T> subNode = res.unwrap();
             subNodes.add(subNode);
             if (oldPos == tokens.index()) {
                 //Since the position did not change, the grammar did an empty match and the stream did not continue!
@@ -72,11 +73,11 @@ public class RepeatMatcher extends GrammarMatcher<SequenceNode> {
                     exitStates.toArray(ParsingException[]::new)
             ));
         }
-        SequenceNode astNode;
+        SequenceNode<T> astNode;
         if (subNodes.isEmpty()) {
-            astNode = new SequenceNode(Location.oneChar(tokens.getLine(), tokens.getColumn()-1));
+            astNode = new SequenceNode<>(Location.oneChar(tokens.getLine(), tokens.getColumn()-1));
         } else {
-            astNode = new SequenceNode(subNodes, IntStream.range(0, subNodes.size()).boxed().collect(toMap(Object::toString, i -> i)));
+            astNode = new SequenceNode<>(subNodes, IntStream.range(0, subNodes.size()).boxed().collect(toMap(Object::toString, i -> i)));
         }
         astNode.setParsingException(new ParsingException(
                 getIdentifier(),

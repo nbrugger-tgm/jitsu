@@ -2,6 +2,7 @@ package com.niton.jainparse.ast;
 
 import com.niton.jainparse.api.Location;
 import com.niton.jainparse.exceptions.ParsingException;
+import com.niton.jainparse.token.Tokenable;
 import com.niton.jainparse.token.Tokenizer;
 import lombok.Getter;
 import lombok.NonNull;
@@ -27,7 +28,7 @@ import java.util.stream.Stream;
  */
 @Getter
 @Setter
-public abstract class AstNode {
+public abstract class AstNode<T extends Enum<T> & Tokenable> {
     public static final String ERRORNOUS_CONTENT = "$errornous_content";
     private String originGrammarName;
     /**
@@ -65,7 +66,7 @@ public abstract class AstNode {
      *
      * @return the ordered stream of all recursive tokens
      */
-    public abstract Stream<Tokenizer.AssignedToken> join();
+    public abstract Stream<Tokenizer.AssignedToken<T>> join();
 
     /**
      * Reduces the tree to the bare minimum, usefully for interpreting the AST.

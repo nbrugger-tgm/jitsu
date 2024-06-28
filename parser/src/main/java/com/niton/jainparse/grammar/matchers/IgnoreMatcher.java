@@ -8,6 +8,7 @@ import com.niton.jainparse.grammar.api.Grammar;
 import com.niton.jainparse.grammar.api.GrammarMatcher;
 import com.niton.jainparse.grammar.api.GrammarReference;
 import com.niton.jainparse.token.TokenStream;
+import com.niton.jainparse.token.Tokenable;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
@@ -20,10 +21,10 @@ import org.jetbrains.annotations.NotNull;
  */
 @Getter
 @Setter
-public class IgnoreMatcher extends GrammarMatcher<OptionalNode> {
-    private Grammar<?> grammar;
+public class IgnoreMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<IgnoredNode<T>,T> {
+    private Grammar<?,T> grammar;
 
-    public IgnoreMatcher(Grammar<?> name2) {
+    public IgnoreMatcher(Grammar<?,T> name2) {
         this.grammar = name2;
     }
 
@@ -34,11 +35,11 @@ public class IgnoreMatcher extends GrammarMatcher<OptionalNode> {
      * @see GrammarMatcher#process(TokenStream, GrammarReference)
      */
     @Override
-    public @NotNull ParsingResult<OptionalNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
-        OptionalNode thisRes = grammar.parse(tokens, ref).map(
-                (sub) -> new IgnoredNode(tokens.currentLocation(), sub.getParsingException())
+    public @NotNull ParsingResult<IgnoredNode<T>> process(@NotNull TokenStream<T> tokens, @NotNull GrammarReference<T> ref) {
+        IgnoredNode<T> thisRes = grammar.parse(tokens, ref).map(
+                (sub) -> new IgnoredNode<T>(tokens.currentLocation(), sub.getParsingException())
         ).orElse(
-                err -> new IgnoredNode(tokens.currentLocation(), new ParsingException(getIdentifier(), "Nothing to ignore", err))
+                err -> new IgnoredNode<>(tokens.currentLocation(), new ParsingException(getIdentifier(), "Nothing to ignore", err))
         );
         return ParsingResult.ok(thisRes);
     }

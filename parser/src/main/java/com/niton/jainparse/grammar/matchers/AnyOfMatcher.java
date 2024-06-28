@@ -11,6 +11,7 @@ import com.niton.jainparse.grammar.types.MultiGrammar;
 import com.niton.jainparse.internal.Lazy;
 import com.niton.jainparse.api.Location;
 import com.niton.jainparse.token.TokenStream;
+import com.niton.jainparse.token.Tokenable;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -26,10 +27,10 @@ import static java.util.stream.Collectors.joining;
  * @author Nils
  * @version 2019-05-29
  */
-public class AnyOfMatcher extends GrammarMatcher<SwitchNode> {
-    private final MultiGrammar grammars;
+public class AnyOfMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<SwitchNode<T>,T> {
+    private final MultiGrammar<T> grammars;
 
-    public AnyOfMatcher(MultiGrammar grammers) {
+    public AnyOfMatcher(MultiGrammar<T> grammers) {
         this.grammars = grammers;
     }
 
@@ -39,8 +40,8 @@ public class AnyOfMatcher extends GrammarMatcher<SwitchNode> {
      * @see GrammarMatcher#process(TokenStream, GrammarReference)
      */
     @Override
-    public @NotNull ParsingResult<SwitchNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
-        Map<String, ParsingResult<? extends AstNode>> results = new HashMap<>();
+    public @NotNull ParsingResult<SwitchNode<T>> process(@NotNull TokenStream<T> tokens, @NotNull GrammarReference<T> ref) {
+        Map<String, ParsingResult<? extends AstNode<T>>> results = new HashMap<>();
 //        boolean matchAll = Arrays.stream(this.grammars.getGrammars()).filter(e -> e.isLeftRecursive(ref));
         for (var grammar : this.grammars.getGrammars()) {
             var result = grammar.parse(tokens, ref);
@@ -49,7 +50,7 @@ public class AnyOfMatcher extends GrammarMatcher<SwitchNode> {
                 continue;
             }
             var node = result.unwrap();
-            SwitchNode wrapper = new SwitchNode(node);
+            SwitchNode<T> wrapper = new SwitchNode<>(node);
             var mappedExceptions = formatFails(results);
             if (mappedExceptions.length > 0) {
                 wrapper.setParsingException(new ParsingException(getIdentifier(), String.format(
@@ -82,7 +83,7 @@ public class AnyOfMatcher extends GrammarMatcher<SwitchNode> {
         ));
     }
 
-    private ParsingException[] formatFails(Map<String, ParsingResult<? extends AstNode>> fails) {
+    private ParsingException[] formatFails(Map<String, ParsingResult<? extends AstNode<T>>> fails) {
         return fails.entrySet().stream().map(e -> {
             var parsed = e.getValue().wasParsed();
             ParsingException ex;
@@ -99,7 +100,7 @@ public class AnyOfMatcher extends GrammarMatcher<SwitchNode> {
     /**
      * @return the tokens
      */
-    public Grammar<?>[] getGrammars() {
+    public Grammar<?,T>[] getGrammars() {
         return grammars.getGrammars();
     }
 }

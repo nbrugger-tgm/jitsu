@@ -1,6 +1,7 @@
 package com.niton.jainparse.ast;
 
 import com.niton.jainparse.api.Location;
+import com.niton.jainparse.token.Tokenable;
 import com.niton.jainparse.token.Tokenizer.AssignedToken;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -19,18 +20,18 @@ import java.util.stream.Stream;
  * When a node is named, it indicates the importance of interpretation and identification when processing the AST.
  */
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class SequenceNode extends AstNode {
+public class SequenceNode<T extends Enum<T> & Tokenable> extends AstNode<T> {
     private final Location explicitLocation;
     /**
      * The sub nodes of this node.
      */
-    public List<AstNode> subNodes;
+    public List<AstNode<T>> subNodes;
     /**
      * The names of the sub nodes. Where the value is the index of the sub node in the list.
      */
     public Map<String, Integer> naming;
 
-    public SequenceNode(List<AstNode> subNodes, Map<String, Integer> naming) {
+    public SequenceNode(List<AstNode<T>> subNodes, Map<String, Integer> naming) {
         this(getLocation(subNodes), Collections.unmodifiableList(subNodes), Collections.unmodifiableMap(naming));
     }
 
@@ -39,7 +40,7 @@ public class SequenceNode extends AstNode {
     }
 
     @NotNull
-    private static Location getLocation(List<AstNode> subNodes) {
+    private static <T extends Enum<T> & Tokenable> Location getLocation(List<AstNode<T>> subNodes) {
         if (subNodes.isEmpty()) {
             throw new IllegalArgumentException("A sequence node must have at least one sub node or use the one arg constructor");
         }
@@ -52,7 +53,7 @@ public class SequenceNode extends AstNode {
      * @param name the name to be associated with the node
      * @param node the node to be added
      */
-    public void name(String name, AstNode node) {
+    public void name(String name, AstNode<T> node) {
         add(node);
         naming.put(name, subNodes.size() - 1);
     }
@@ -63,7 +64,7 @@ public class SequenceNode extends AstNode {
      * @param node the node to be added
      * @return true if the node was added
      */
-    public boolean add(AstNode node) {
+    public boolean add(AstNode<T> node) {
         return subNodes.add(node);
     }
 
@@ -72,7 +73,7 @@ public class SequenceNode extends AstNode {
         return explicitLocation;
     }
 
-    public Stream<AssignedToken> join() {
+    public Stream<AssignedToken<T>> join() {
         return subNodes.stream()
                 .flatMap(AstNode::join);
     }
@@ -119,7 +120,7 @@ public class SequenceNode extends AstNode {
      *
      * @param name the name of the sub object to find
      */
-    public AstNode getNode(String name) {
+    public AstNode<T> getNode(String name) {
         return subNodes.get(naming.get(name));
     }
 
@@ -131,7 +132,7 @@ public class SequenceNode extends AstNode {
         StringBuilder builder = new StringBuilder();
         builder.append("[");
         builder.append(getOriginGrammarName());
-        for (AstNode grammarObject : subNodes) {
+        for (AstNode<T> grammarObject : subNodes) {
             builder.append("\n   ");
             builder.append(grammarObject.toString().replace("\n", "\n   "));
         }
@@ -149,10 +150,10 @@ public class SequenceNode extends AstNode {
         StringBuilder builder = new StringBuilder();
         builder.append("[");
         builder.append(getOriginGrammarName());
-        for (AstNode grammarObject : subNodes) {
+        for (AstNode<T> grammarObject : subNodes) {
             builder.append("\n   ");
             if (grammarObject instanceof SequenceNode) {
-                builder.append(((SequenceNode) grammarObject).toString(depth - 1)
+                builder.append(((SequenceNode<T>) grammarObject).toString(depth - 1)
                         .replaceAll("\n", "\n   "));
             } else {
                 builder.append(grammarObject.toString().replaceAll("\n", "\n    "));

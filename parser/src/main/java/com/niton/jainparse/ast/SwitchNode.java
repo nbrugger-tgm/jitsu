@@ -1,6 +1,7 @@
 package com.niton.jainparse.ast;
 
 import com.niton.jainparse.api.Location;
+import com.niton.jainparse.token.Tokenable;
 import com.niton.jainparse.token.Tokenizer;
 import lombok.NonNull;
 
@@ -12,10 +13,10 @@ import java.util.stream.Stream;
  * This is the node that is produced if a grammar can match different grammars. This node expresses which of the grammars matched.
  * For example, the grammar: {@code {TEXT or NUMBER}} would produce a switch node showing {@code TEXT} or {@code NUMBER} was matched and also the matched value itself.
  */
-public class SwitchNode extends AstNode {
-    private final AstNode result;
+public class SwitchNode<T extends Enum<T> & Tokenable> extends AstNode<T> {
+    private final AstNode<T> result;
 
-    public SwitchNode(AstNode res) {
+    public SwitchNode(AstNode<T> res) {
         this.result = res;
     }
 
@@ -32,7 +33,7 @@ public class SwitchNode extends AstNode {
     }
 
     @Override
-    public Stream<Tokenizer.AssignedToken> join() {
+    public Stream<Tokenizer.AssignedToken<T>> join() {
         return result.join();
     }
 
@@ -52,7 +53,7 @@ public class SwitchNode extends AstNode {
     /**
      * @return the result of the match
      */
-    public AstNode getResult() {
+    public AstNode<T> getResult() {
         return result;
     }
 

@@ -10,6 +10,7 @@ import com.niton.jainparse.grammar.api.GrammarReference;
 import com.niton.jainparse.grammar.types.ChainGrammar;
 import com.niton.jainparse.api.Location;
 import com.niton.jainparse.token.TokenStream;
+import com.niton.jainparse.token.Tokenable;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,25 +30,25 @@ import static java.lang.String.format;
  */
 @Getter
 @Setter
-public class ChainMatcher extends GrammarMatcher<SequenceNode> {
+public class ChainMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<SequenceNode<T>,T> {
 
     private static final Set<RecursionMarker> recursionMarkers = new HashSet<>();
-    private final ChainGrammar chain;
+    private final ChainGrammar<T> chain;
 
-    public ChainMatcher(ChainGrammar chain) {
+    public ChainMatcher(ChainGrammar<T> chain) {
         this.chain = chain;
         setOriginGrammarName(chain.getName());
         setIdentifier(chain.getIdentifier());
     }
 
     @Override
-    public @NotNull ParsingResult<SequenceNode> process(
-            @NotNull TokenStream tokens,
-            @NotNull GrammarReference reference
+    public @NotNull ParsingResult<SequenceNode<T>> process(
+            @NotNull TokenStream<T> tokens,
+            @NotNull GrammarReference<T> reference
     ) {
         List<ParsingException> exitStates = new ArrayList<>(chain.getChain().size());
         Map<String, Integer> naming = new HashMap<>();
-        List<AstNode> subNodes = new ArrayList<>();
+        List<AstNode<T>> subNodes = new ArrayList<>();
         int i = 0;
         var index = tokens.index();
         var optRecursionMarker = recursionMarkers.stream().filter(m -> m.index == index).findFirst();
@@ -72,7 +73,7 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
         }
         var recursionMarker = optRecursionMarker.orElse(null);
         for (var grammar : chain.getChain()) {
-            ParsingResult<? extends AstNode> res;
+            ParsingResult<? extends AstNode<T>> res;
             if (i == 0 && (chain.isLeftRecursive() && recursionMarker.firstNodeSubstitute != null)) {
                 res = ParsingResult.ok(recursionMarker.firstNodeSubstitute);
             } else {
@@ -136,12 +137,12 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
         }
     }
 
-    private ParsingResult<SequenceNode> substituteLeftRecursion(
-            TokenStream tokens,
-            GrammarReference reference,
+    private ParsingResult<SequenceNode<T>> substituteLeftRecursion(
+            TokenStream<T> tokens,
+            GrammarReference<T> reference,
             RecursionMarker recursionMarker
     ) {
-        Grammar<?> leftmostGrammar = chain.getChain().get(0);
+        Grammar<?,T> leftmostGrammar = chain.getChain().get(0);
         var leftElement = leftmostGrammar.parse(tokens, reference);
         if (!leftElement.wasParsed()) {
             return ParsingResult.error(new ParsingException(getIdentifier(), "Couldn't parse first element of" + chain.getIdentifier(), leftElement.exception()));
@@ -181,10 +182,10 @@ public class ChainMatcher extends GrammarMatcher<SequenceNode> {
 
     @Data
     private static class RecursionMarker {
-        private final ChainGrammar root;
-        private @Nullable AstNode firstNodeSubstitute;
+        private final ChainGrammar<?> root;
+        private @Nullable AstNode<?> firstNodeSubstitute;
         private int index;
-        private @Nullable SequenceNode lastSameTypeNode;
+        private @Nullable SequenceNode<?> lastSameTypeNode;
     }
 
 

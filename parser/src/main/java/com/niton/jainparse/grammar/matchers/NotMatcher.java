@@ -9,28 +9,29 @@ import com.niton.jainparse.grammar.api.GrammarMatcher;
 import com.niton.jainparse.grammar.api.GrammarReference;
 import com.niton.jainparse.api.Location;
 import com.niton.jainparse.token.TokenStream;
+import com.niton.jainparse.token.Tokenable;
 import lombok.AllArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
 @AllArgsConstructor
-public class NotMatcher extends GrammarMatcher<OptionalNode> {
-    private final Grammar<?> grammarNotToMatch;
+public class NotMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<OptionalNode<T>,T> {
+    private final Grammar<?,T> grammarNotToMatch;
 
     @NotNull
     @Override
-    protected ParsingResult<OptionalNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference reference)  {
+    protected ParsingResult<OptionalNode<T>> process(@NotNull TokenStream<T> tokens, @NotNull GrammarReference<T> reference)  {
         tokens.elevate();
         var start = tokens.currentLocation();
         var result = grammarNotToMatch.parse(tokens, reference);
         if(!result.wasParsed()){
             tokens.commit();
-            var node = new OptionalNode(
+            var node = new OptionalNode<T>(
                     tokens.currentLocation(),
                     new ParsingException(getIdentifier(), "Successfully  mis-matched " + grammarNotToMatch.getIdentifier(), result.exception())
             );
             return ParsingResult.ok(node);
         }
-        AstNode node = result.unwrap();
+        AstNode<T> node = result.unwrap();
         var exception = node.getParsingException();
         tokens.rollback();
         if (exception != null)

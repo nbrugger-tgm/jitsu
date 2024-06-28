@@ -2,9 +2,11 @@ package com.niton.jainparse.grammar.types;
 
 import com.niton.jainparse.ast.SwitchNode;
 import com.niton.jainparse.grammar.api.Grammar;
+import com.niton.jainparse.grammar.api.GrammarMatcher;
 import com.niton.jainparse.grammar.api.GrammarReference;
 import com.niton.jainparse.grammar.api.WrapperGrammar;
 import com.niton.jainparse.grammar.matchers.AnyOfMatcher;
+import com.niton.jainparse.token.Tokenable;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,45 +21,43 @@ import java.util.stream.Stream;
  */
 @Getter
 @Setter
-public class MultiGrammar extends WrapperGrammar<SwitchNode> {
-    private final AnyOfMatcher matcher = new AnyOfMatcher(this);
-    private Grammar<?>[] grammars;
+public class MultiGrammar<T extends Enum<T> & Tokenable> extends WrapperGrammar<SwitchNode<T>,T> {
+    private final AnyOfMatcher<T> matcher = new AnyOfMatcher<>(this);
+    private Grammar<?,T>[] grammars;
 
-    public MultiGrammar(Grammar<?>[] grammars) {
+    public MultiGrammar(Grammar<?,T>[] grammars) {
         this.grammars = grammars;
     }
 
     @Override
-    protected Grammar<?> copy() {
-        return new MultiGrammar(grammars);
+    protected Grammar<?,T> copy() {
+        return new MultiGrammar<>(grammars);
     }
 
     /**
      * @see Grammar#createExecutor()
      */
     @Override
-    public AnyOfMatcher createExecutor() {
+    public GrammarMatcher<SwitchNode<T>, T> createExecutor() {
         return matcher;
     }
 
     @Override
-    public boolean isLeftRecursive(GrammarReference ref) {
+    public boolean isLeftRecursive(GrammarReference<T> ref) {
         return Arrays.stream(grammars).anyMatch(g -> g.isLeftRecursive(ref));
     }
 
     @Override
-    public MultiGrammar or(Grammar<?>... alternatives) {
-        var combined = new Grammar<?>[alternatives.length + grammars.length];
+    public MultiGrammar<T> or(Grammar<?,T>... alternatives) {
+        var combined = new Grammar<?,?>[alternatives.length + grammars.length];
 
         System.arraycopy(grammars, 0, combined, 0, grammars.length);
         System.arraycopy(alternatives, 0, combined, grammars.length, alternatives.length);
-        var cloned = new MultiGrammar(combined);
-        return cloned;
+        return new MultiGrammar<T>((Grammar<?, T>[]) combined);
     }
 
-
     @Override
-    protected Stream<Grammar<?>> getWrapped() {
+    protected Stream<Grammar<?,T>> getWrapped() {
         return Arrays.stream(grammars);
     }
 }

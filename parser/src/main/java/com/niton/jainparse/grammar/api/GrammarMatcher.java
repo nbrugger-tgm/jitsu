@@ -1,12 +1,13 @@
 package com.niton.jainparse.grammar.api;
 
-import com.niton.jainparse.ast.AstNode;
 import com.niton.jainparse.api.ParsingResult;
+import com.niton.jainparse.ast.AstNode;
 import com.niton.jainparse.exceptions.ParsingException;
-import com.niton.jainparse.token.ListTokenStream;
 import com.niton.jainparse.token.TokenStream;
+import com.niton.jainparse.token.Tokenable;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Stack;
@@ -18,7 +19,8 @@ import java.util.Stack;
  * @author Nils Brugger
  * @version 2019-06-07
  */
-public abstract class GrammarMatcher<T extends AstNode> {
+public abstract class GrammarMatcher<T extends AstNode<N>, N extends Enum<N> & Tokenable> {
+    @Setter
     @Getter
     private String originGrammarName;
     private String originIdentifier;
@@ -36,7 +38,7 @@ public abstract class GrammarMatcher<T extends AstNode> {
      * @version 2019-05-29
      */
     @NotNull
-    public ParsingResult<T> parse(@NonNull TokenStream tokens, @NonNull GrammarReference reference) {
+    public ParsingResult<T> parse(@NonNull TokenStream<N> tokens, @NonNull GrammarReference<N> reference) {
         boolean root = tokens.level() == 0;
         try {
             tokens.elevate();
@@ -79,34 +81,28 @@ public abstract class GrammarMatcher<T extends AstNode> {
         return result;
     }
 
-    public GrammarMatcher<T> setOriginGrammarName(String originGrammarName) {
-        this.originGrammarName = originGrammarName;
-        return this;
-    }
-
     /**
-     * The parsing process itself use {@link ListTokenStream#next()} to iterate over the tokens.
+     * The parsing process itself use {@link TokenStream#next()} to iterate over the tokens.
      * Behaviour contract:
      * <ul>
      *     <li>When parsing is successfull return the result</li>
      *     <li>When parsing is not successfull throw a {@link ParsingException}</li>
      * </ul>
-     * <b>Do not use {@link ListTokenStream#commit()} or {@link ListTokenStream#rollback()} unless you opened a new frame yourself</b>
+     * <b>Do not use {@link TokenStream#commit()} or {@link TokenStream#rollback()} unless you opened a new frame yourself</b>
      *
      * @param tokens    the tokens representing the tokenized string to parse
      * @param reference the collection to get Grammars from
      * @return the result of the parsing process. Error or AstNode @NotNull
      */
     @NotNull
-    protected abstract ParsingResult<T> process(@NotNull TokenStream tokens, @NotNull GrammarReference reference);
+    protected abstract ParsingResult<T> process(@NotNull TokenStream<N> tokens, @NotNull GrammarReference<N> reference);
 
     public String getIdentifier() {
         return originIdentifier;
     }
 
-    public GrammarMatcher<T> setIdentifier(String identifier) {
+    public void setIdentifier(String identifier) {
         this.originIdentifier = identifier;
-        return this;
     }
 }
 

@@ -1,6 +1,7 @@
 package com.niton.jainparse.ast;
 
 import com.niton.jainparse.api.Location;
+import com.niton.jainparse.token.Tokenable;
 import com.niton.jainparse.token.Tokenizer.AssignedToken;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -17,8 +18,8 @@ import java.util.stream.Stream;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @RequiredArgsConstructor
-public class TokenNode extends AstNode {
-	private final List<AssignedToken> tokens;
+public class TokenNode<T extends Enum<T> & Tokenable> extends AstNode<T> {
+	private final List<AssignedToken<T>> tokens;
 	private final Location loc;
 
 	@Override
@@ -33,7 +34,7 @@ public class TokenNode extends AstNode {
 	 */
 	public String joinTokens() {
 		StringBuilder builder = new StringBuilder();
-		for (AssignedToken grammarObject : tokens) {
+		for (AssignedToken<T> grammarObject : tokens) {
 			builder.append(grammarObject.getValue());
 		}
 		return builder.toString();
@@ -43,7 +44,7 @@ public class TokenNode extends AstNode {
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("[");
-		for (AssignedToken t : tokens) {
+		for (AssignedToken<T> t : tokens) {
 			builder.append("\n\t");
 			builder.append(t.toString());
 		}
@@ -52,7 +53,7 @@ public class TokenNode extends AstNode {
 	}
 
 	@Override
-	public Stream<AssignedToken> join() {
+	public Stream<AssignedToken<T>> join() {
 		return tokens.stream();
 	}
 

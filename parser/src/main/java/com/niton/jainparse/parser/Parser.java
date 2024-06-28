@@ -1,15 +1,12 @@
 package com.niton.jainparse.parser;
 
-import com.niton.jainparse.ast.AstNode;
 import com.niton.jainparse.api.ParsingResult;
+import com.niton.jainparse.ast.AstNode;
 import com.niton.jainparse.grammar.api.Grammar;
 import com.niton.jainparse.grammar.api.GrammarName;
 import com.niton.jainparse.grammar.api.GrammarReference;
 import com.niton.jainparse.grammar.api.GrammarReferenceMap;
-import com.niton.jainparse.token.ListTokenStream;
-import com.niton.jainparse.token.TokenSource;
-import com.niton.jainparse.token.TokenStream;
-import com.niton.jainparse.token.Tokenizer;
+import com.niton.jainparse.token.*;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -29,12 +26,12 @@ import java.util.List;
  */
 @Getter
 @Setter
-public abstract class Parser<R> {
-    private Tokenizer tokenizer = new Tokenizer();
+public abstract class Parser<R, T extends Enum<T> & Tokenable> {
+    private Tokenizer<T> tokenizer = new Tokenizer<>();
     /**
      * This reference is used to resolve the root grammar
      */
-    private GrammarReference reference;
+    private GrammarReference<T> reference;
     private String root;
 
     /**
@@ -42,7 +39,7 @@ public abstract class Parser<R> {
      * @param root       the grammar to be used as root
      */
 
-    protected Parser(@NonNull GrammarReference references, @NonNull Grammar<?> root) {
+    protected Parser(@NonNull GrammarReference<T> references, @NonNull Grammar<?,T> root) {
         this(references, root.getName());
     }
 
@@ -50,7 +47,7 @@ public abstract class Parser<R> {
      * @param root the name of the grammar to use
      * @see #Parser(GrammarReference, Grammar)
      */
-    protected Parser(@NonNull GrammarReference csv, @NonNull String root) {
+    protected Parser(@NonNull GrammarReference<T> csv, @NonNull String root) {
         setReference(csv);
         this.root = root;
     }
@@ -59,12 +56,12 @@ public abstract class Parser<R> {
      * @param references a collection of all used Grammars
      * @param root       the grammar to be used as root
      */
-    protected Parser(@NonNull GrammarReference references, @NonNull GrammarName root) {
+    protected Parser(@NonNull GrammarReference<T> references, @NonNull GrammarName root) {
         this(references, root.getName());
     }
 
-    protected Parser(@NonNull Grammar<?> rootGrammar) {
-        setReference(new GrammarReferenceMap().map(rootGrammar));
+    protected Parser(@NonNull Grammar<?,T> rootGrammar) {
+        setReference(new GrammarReferenceMap<T>().map(rootGrammar));
         this.root = rootGrammar.getName();
     }
 
@@ -80,11 +77,11 @@ public abstract class Parser<R> {
      * @return an instance of the targeted Type
      */
     @NotNull
-    public abstract R convert(@NonNull AstNode o);
+    public abstract R convert(@NonNull AstNode<T> o);
 
     @NotNull
-    public ParsingResult<? extends AstNode> parsePlain(@NonNull String content) {
-        var tokens = tokenizer.tokenize(content).map(ListTokenStream::new);
+    public ParsingResult<? extends AstNode<T>> parsePlain(@NonNull String content) {
+        var tokens = tokenizer.tokenize(content).map(TokenStream::of);
         if(!tokens.wasParsed())
             return ParsingResult.error(tokens.exception());
         else
@@ -92,12 +89,12 @@ public abstract class Parser<R> {
     }
 
     @NotNull
-    public ParsingResult<? extends AstNode> parsePlain(@NonNull TokenStream content) {
+    public ParsingResult<? extends AstNode<T>> parsePlain(@NonNull TokenStream<T> content) {
         return reference.get(root).parse(content, reference);
     }
 
     @NotNull
-    public ParsingResult<R> parse(@NonNull TokenStream content) {
+    public ParsingResult<R> parse(@NonNull TokenStream<T> content) {
         return parsePlain(content).map(this::convert);
     }
 
@@ -107,28 +104,28 @@ public abstract class Parser<R> {
     }
 
     @NotNull
-    public ParsingResult<? extends AstNode> parsePlain(@NonNull Reader content) {
-        return parsePlain(new TokenSource(content));
+    public ParsingResult<? extends AstNode<T>> parsePlain(@NonNull Reader content) {
+        return parsePlain(new TokenSource<>(content, tokenizer));
     }
 
     @NotNull
-    public ParsingResult<? extends AstNode> parsePlain(@NonNull TokenSource tokens) {
-        return parsePlain(new ListTokenStream(tokens));
+    public ParsingResult<? extends AstNode<T>> parsePlain(@NonNull TokenSource<T> tokens) {
+        return parsePlain(TokenStream.of(tokens));
     }
 
     @NotNull
-    public ParsingResult<R> parse(@NonNull TokenSource tokens) {
+    public ParsingResult<R> parse(@NonNull TokenSource<T> tokens) {
         return parsePlain(tokens).map(this::convert);
     }
 
     @NotNull
-    public ParsingResult<R> parse(@NonNull List<Tokenizer.AssignedToken> content) {
+    public ParsingResult<R> parse(@NonNull List<Tokenizer.AssignedToken<T>> content) {
         return parsePlain(content).map(this::convert);
     }
 
     @NotNull
-    public ParsingResult<? extends AstNode> parsePlain(@NonNull List<Tokenizer.AssignedToken> content) {
-        return parsePlain(new ListTokenStream(content));
+    public ParsingResult<? extends AstNode<T>> parsePlain(@NonNull List<Tokenizer.AssignedToken<T>> content) {
+        return parsePlain(TokenStream.of(content));
     }
 
     @NotNull
@@ -137,7 +134,7 @@ public abstract class Parser<R> {
     }
 
     @NotNull
-    public ParsingResult<? extends AstNode> parsePlain(@NonNull InputStream content) {
-        return parsePlain(new TokenSource(content));
+    public ParsingResult<? extends AstNode<T>> parsePlain(@NonNull InputStream content) {
+        return parsePlain(new TokenSource<>(content, tokenizer));
     }
 }

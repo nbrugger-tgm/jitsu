@@ -6,6 +6,7 @@ import com.niton.jainparse.grammar.api.Grammar;
 import com.niton.jainparse.grammar.api.GrammarMatcher;
 import com.niton.jainparse.grammar.api.GrammarReference;
 import com.niton.jainparse.token.TokenStream;
+import com.niton.jainparse.token.Tokenable;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
@@ -19,11 +20,11 @@ import org.jetbrains.annotations.NotNull;
  */
 @Getter
 @Setter
-public class OptionalMatcher extends GrammarMatcher<OptionalNode> {
+public class OptionalMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<OptionalNode<T>,T> {
 
-    private Grammar<?> check;
+    private Grammar<?,T> check;
 
-    public OptionalMatcher(Grammar<?> value) {
+    public OptionalMatcher(Grammar<?,T> value) {
         this.check = value;
     }
 
@@ -34,11 +35,11 @@ public class OptionalMatcher extends GrammarMatcher<OptionalNode> {
      * @see GrammarMatcher#process(TokenStream, GrammarReference)
      */
     @Override
-    public @NotNull ParsingResult<OptionalNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
+    public @NotNull ParsingResult<OptionalNode<T>> process(@NotNull TokenStream<T> tokens, @NotNull GrammarReference<T> ref) {
         return ParsingResult.ok(
                 check.parse(tokens, ref).map(
                         OptionalNode::new
-                ).orElse((ex) -> new OptionalNode(tokens.currentLocation(), ex))
+                ).orElse((ex) -> new OptionalNode<>(tokens.currentLocation(), ex))
         );
     }
 

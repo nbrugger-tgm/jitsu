@@ -8,6 +8,7 @@ import com.niton.jainparse.grammar.api.GrammarReference;
 import com.niton.jainparse.grammar.types.TokenGrammar;
 import com.niton.jainparse.api.Location;
 import com.niton.jainparse.token.TokenStream;
+import com.niton.jainparse.token.Tokenable;
 import com.niton.jainparse.token.Tokenizer.AssignedToken;
 import org.jetbrains.annotations.NotNull;
 
@@ -19,15 +20,15 @@ import java.util.List;
  * @author Nils
  * @version 2019-05-28
  */
-public class TokenMatcher extends GrammarMatcher<TokenNode> {
-    private final TokenGrammar grammar;
+public class TokenMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<TokenNode<T>,T> {
+    private final TokenGrammar<?> grammar;
 
-    public TokenMatcher(TokenGrammar grammar) {
+    public TokenMatcher(TokenGrammar<T> grammar) {
         this.grammar = grammar;
     }
 
     @Override
-    public @NotNull ParsingResult<TokenNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
+    public @NotNull ParsingResult<TokenNode<T>> process(@NotNull TokenStream<T> tokens, @NotNull GrammarReference<T> ref) {
         var start = tokens.currentLocation();
         if (!tokens.hasNext()) {
             return ParsingResult.error(new ParsingException(
@@ -39,20 +40,20 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
                     start
             ));
         }
-        AssignedToken token = tokens.next();
+        AssignedToken<T> token = tokens.next();
         var tokenRange = Location.range(start, Location.of(
                 start.getFromLine(),
                 start.getFromColumn(),
                 tokens.currentLocation().getToLine(),
                 tokens.currentLocation().getToColumn() - 1
         ));
-        if (token.getName().equals(grammar.getTokenName())) {
-            return ParsingResult.ok(new TokenNode(List.of(token), tokenRange));
+        if (token.getType().equals(grammar.getTokenName())) {
+            return ParsingResult.ok(new TokenNode<>(List.of(token), tokenRange));
         }
         return ParsingResult.error(new ParsingException(getIdentifier(), String.format(
                 "expected \"%s\" but got \"%s\"",
                 grammar.getTokenName(),
-                token.getName()
+                token.getType()
         ), tokenRange));
     }
 
@@ -62,5 +63,4 @@ public class TokenMatcher extends GrammarMatcher<TokenNode> {
     public String getGrammar() {
         return grammar.getTokenName();
     }
-
 }

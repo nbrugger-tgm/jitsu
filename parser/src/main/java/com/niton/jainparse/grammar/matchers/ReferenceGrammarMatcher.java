@@ -7,6 +7,8 @@ import com.niton.jainparse.grammar.api.Grammar;
 import com.niton.jainparse.grammar.api.GrammarMatcher;
 import com.niton.jainparse.grammar.api.GrammarReference;
 import com.niton.jainparse.token.TokenStream;
+import com.niton.jainparse.token.Tokenable;
+import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 import static java.lang.String.format;
@@ -17,23 +19,17 @@ import static java.lang.String.format;
  * @author Nils Brugger
  * @version 2019-06-05
  */
-public class ReferenceGrammarMatcher extends GrammarMatcher<AstNode> {
+@Getter
+public class ReferenceGrammarMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<AstNode<T>,T> {
 
-	private String grammar;
+    private String grammar;
 
 	public ReferenceGrammarMatcher(String grammar) {
 		super();
 		this.grammar = grammar;
 	}
 
-	/**
-	 * @return the grammar
-	 */
-	public String getGrammar() {
-		return grammar;
-	}
-
-	/**
+    /**
 	 * @param grammar the grammar to set
 	 */
 	public void setGrammar(String grammar) {
@@ -41,8 +37,8 @@ public class ReferenceGrammarMatcher extends GrammarMatcher<AstNode> {
 	}
 
 	@Override
-	protected @NotNull ParsingResult<AstNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference ref) {
-		Grammar<?> g = ref.get(grammar);
+	protected @NotNull ParsingResult<AstNode<T>> process(@NotNull TokenStream<T> tokens, @NotNull GrammarReference<T> ref) {
+		Grammar<?,T> g = ref.get(grammar);
 		if (g == null) {
 			return ParsingResult.error(new ParsingException(getIdentifier(), format(
 					"Unknown reference! The Grammar \"%s\" was not found in reference",

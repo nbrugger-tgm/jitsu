@@ -7,6 +7,7 @@ import com.niton.jainparse.grammar.api.GrammarReference;
 import com.niton.jainparse.ast.TokenNode;
 import com.niton.jainparse.api.Location;
 import com.niton.jainparse.token.TokenStream;
+import com.niton.jainparse.token.Tokenable;
 import com.niton.jainparse.token.Tokenizer.AssignedToken;
 import lombok.Getter;
 import lombok.Setter;
@@ -24,11 +25,11 @@ import java.util.List;
  */
 @Getter
 @Setter
-public class AnyExceptMatcher extends GrammarMatcher<TokenNode> {
+public class AnyExceptMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<TokenNode<T>,T> {
 
-	private Grammar<?> dunnoaccept;
+	private Grammar<?,T> dunnoaccept;
 
-	public AnyExceptMatcher(Grammar<?> grammar) {
+	public AnyExceptMatcher(Grammar<?,T> grammar) {
 		this.dunnoaccept = grammar;
 	}
 
@@ -38,17 +39,17 @@ public class AnyExceptMatcher extends GrammarMatcher<TokenNode> {
 	 * @param reference
 	 */
 	@Override
-	public @NotNull ParsingResult<TokenNode> process(@NotNull TokenStream tokens, @NotNull GrammarReference reference) {
-		List<AssignedToken> matchedTokens = new LinkedList<>();
+	public @NotNull ParsingResult<TokenNode<T>> process(@NotNull TokenStream<T> tokens, @NotNull GrammarReference<T> reference) {
+		List<AssignedToken<T>> matchedTokens = new LinkedList<>();
 		int startLine = tokens.getLine();
 		int startColumn = tokens.getColumn();
 		while (!dunnoaccept.parsable(tokens, reference) && tokens.hasNext()) {
-			AssignedToken token = tokens.next();
+			var token = tokens.next();
 			matchedTokens.add(token);
 		}
 		int endLine = tokens.getLine();
 		int endColumn = tokens.getColumn();
-		return ParsingResult.ok(new TokenNode(matchedTokens, Location.of(startLine, startColumn, endLine, endColumn)));
+		return ParsingResult.ok(new TokenNode<>(matchedTokens, Location.of(startLine, startColumn, endLine, endColumn)));
 	}
 
 }

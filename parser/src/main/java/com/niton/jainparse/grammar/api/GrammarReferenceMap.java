@@ -1,6 +1,7 @@
 package com.niton.jainparse.grammar.api;
 
 import com.niton.jainparse.grammar.types.*;
+import com.niton.jainparse.token.Tokenable;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -14,20 +15,20 @@ import java.util.Set;
  * @author Nils Brugger
  * @version 2019-06-07
  */
-public class GrammarReferenceMap extends HashMap<String, Grammar<?>>
-        implements Iterable<Map.Entry<String, Grammar<?>>>, GrammarReference {
+public class GrammarReferenceMap<T extends Enum<T> & Tokenable> extends HashMap<String, Grammar<?,T>>
+        implements Iterable<Map.Entry<String, Grammar<?,T>>>, GrammarReference<T> {
 
     @Override
-    public Grammar<?> get(String key) {
+    public Grammar<?,T> get(String key) {
         return super.get(key);
     }
 
-    public GrammarReferenceMap map(Grammar<?> g) {
+    public GrammarReferenceMap<T> map(Grammar<?,T> g) {
         put(g.getName(), g);
         return this;
     }
 
-    public GrammarReferenceMap map(Grammar.Builder g) {
+    public GrammarReferenceMap<T> map(Grammar.Builder<T> g) {
         return map(g.get());
     }
 
@@ -37,12 +38,12 @@ public class GrammarReferenceMap extends HashMap<String, Grammar<?>>
      * @param g    the grammar to the map
      * @param name the name of the grammar
      */
-    public GrammarReferenceMap map(Grammar<?> g, String name) {
+    public GrammarReferenceMap<T> map(Grammar<?,T> g, String name) {
         put(name, g);
         return this;
     }
 
-    public GrammarReferenceMap merge(GrammarReferenceMap ref) {
+    public GrammarReferenceMap<T> merge(GrammarReferenceMap<T> ref) {
         putAll(ref);
         return this;
     }
@@ -51,7 +52,7 @@ public class GrammarReferenceMap extends HashMap<String, Grammar<?>>
      * @see java.lang.Iterable#iterator()
      */
     @Override
-    public Iterator<Entry<String, Grammar<?>>> iterator() {
+    public Iterator<Entry<String, Grammar<?,T>>> iterator() {
         return this.entrySet().iterator();
     }
 
@@ -63,16 +64,16 @@ public class GrammarReferenceMap extends HashMap<String, Grammar<?>>
         return keySet();
     }
 
-    public GrammarReferenceMap deepMap(@Nullable Grammar<?> gram) {
+    public GrammarReferenceMap<T> deepMap(@Nullable Grammar<?,T> gram) {
         if (gram == null) return this;
         if (gram.getName() != null && !(gram instanceof GrammarReferenceGrammar)) {
             map(gram);
         }
         if (gram instanceof GrammarReference) {
-            var ref = (GrammarReference) gram;
+            var ref = (GrammarReference<T>) gram;
             for (var grammarName : ref.grammarNames()) {
                 if (grammarName.equals(gram.getName())) continue;
-                Grammar<?> grammar = ref.get(grammarName);
+                Grammar<?,T> grammar = ref.get(grammarName);
                 //this if prevents from infinite recursion by linking the reference to the name rather than the actual grammar
                 if (isNameMappable(grammar)) map(grammar);
             }
@@ -81,9 +82,9 @@ public class GrammarReferenceMap extends HashMap<String, Grammar<?>>
         return this;
     }
 
-    private static boolean isNameMappable(Grammar<?> grammar) {
+    private static boolean isNameMappable(Grammar<?,?> grammar) {
         if(!(grammar instanceof GrammarReferenceGrammar)) return true;
-        var referenceGrammar = (GrammarReferenceGrammar) grammar;
+        var referenceGrammar = (GrammarReferenceGrammar<?>) grammar;
         return !grammar.getName().equals(referenceGrammar.getGrammar());
     }
 }
