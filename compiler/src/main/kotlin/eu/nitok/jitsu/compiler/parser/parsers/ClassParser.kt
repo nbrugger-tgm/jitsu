@@ -7,7 +7,6 @@ import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.ast.StatementNode.NamedTypeDeclarationNode.ClassDeclarationNode
 import eu.nitok.jitsu.compiler.ast.TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode
 import eu.nitok.jitsu.compiler.ast.withMessages
-import eu.nitok.jitsu.compiler.model.Visibility
 import eu.nitok.jitsu.compiler.parser.*
 
 fun parseClass(tokens: Tokens): ClassDeclarationNode? {
@@ -18,7 +17,7 @@ fun parseClass(tokens: Tokens): ClassDeclarationNode? {
     val messages = CompilerMessages()
     val typeParameters = parseTypeParameters(tokens, messages)
     tokens.skipWhitespace()
-    tokens.expect(DefaultToken.ROUND_BRACKET_OPEN) ?: messages.error(
+    tokens.attempt(DefaultToken.ROUND_BRACKET_OPEN) ?: messages.error(
         "Expected '{' after class declaration",
         tokens.location.toRange()
     )
@@ -42,7 +41,7 @@ fun parseClass(tokens: Tokens): ClassDeclarationNode? {
         }
         var invalid = tokens.skipUntil(DefaultToken.ROUND_BRACKET_CLOSED, DefaultToken.NEW_LINE)
         messages.error("Expect field or method declaration", invalid)
-        tokens.expect(DefaultToken.ROUND_BRACKET_CLOSED) ?: messages.error(
+        tokens.attempt(DefaultToken.ROUND_BRACKET_CLOSED) ?: messages.error(
             "Expected '}' to close class body",
             tokens.location.toRange()
         )
@@ -57,19 +56,6 @@ fun parseClass(tokens: Tokens): ClassDeclarationNode? {
         classToken,
         listOf()
     ).withMessages(messages)
-}
-
-fun parseTypeParameters(tokens: Tokens, messages: CompilerMessages): List<IdentifierNode> {
-    return tokens.enclosedRepetition(
-        DefaultToken.LEFT_ANGLE_BRACKET,
-        DefaultToken.COMMA,
-        DefaultToken.BIGGER,
-        messages,
-        "generics",
-        "type parameter"
-    ) {
-        parseIdentifier(it)
-    } ?: listOf()
 }
 
 fun parseField(tokens: Tokens): StructuralFieldNode? {
@@ -88,7 +74,7 @@ fun parseField(tokens: Tokens): StructuralFieldNode? {
     val messages = CompilerMessages()
     val type = parseExplicitType(tokens, messages)
     tokens.skipWhitespace()
-    tokens.expect(DefaultToken.SEMICOLON) ?: messages.error(
+    tokens.attempt(DefaultToken.SEMICOLON) ?: messages.error(
         "Expected ';' after field declaration",
         tokens.location.toRange()
     )

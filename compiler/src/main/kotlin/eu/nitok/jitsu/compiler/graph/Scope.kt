@@ -56,11 +56,11 @@ open class Scope constructor(
     fun resolveType(reference: Located<String>, messages: CompilerMessages): TypeDefinition {
         return types[reference.value] ?: parent?.resolveType(reference, messages) ?: run {
             messages.error("Type with name '${reference.value}' does not exist", reference.location)
-            TypeDefinition.Alias(reference, listOf(), Type.Undefined)
+            TypeDefinition.ParameterizedType.Alias(reference, listOf(), Type.Undefined)
         }
     }
 
-    fun resolveFunction(name: Located<String>, parameterTypes: Array<Type>, messages: CompilerMessages): Function? {
+    fun resolveFunction(name: Located<String>, parameterTypes: Array<Located<Type>>, messages: CompilerMessages): Function? {
         val matchingFunctions = allFunctions[name.value] ?: run {
             messages.error("No function named '${name.value}'", name.location)
             return null
@@ -86,10 +86,12 @@ open class Scope constructor(
                     )
                 }
                 match.typeError.forEach {
+                    val fullMesageChain = it.reason.fullMesageChain()
                     messages.error(
-                        "Type mismatch for parameter '${it.param.value}': expected '${it.expected}', got '${it.actual}'",
-                        name.location,
-                        CompilerMessage.Hint("Parameter '${it.param.value}' defined here", it.param.location)
+                        "Type mismatch for parameter '${it.paramDefinition.value}': '${it.expected}', '${fullMesageChain.first}'",
+                        it.parameterValueLocation,
+                        CompilerMessage.Hint("Parameter '${it.paramDefinition.value}' defined here", it.paramDefinition.location),
+                        *fullMesageChain.second.toTypedArray()
                     )
                 }
                 if (match.overflow > 0) {
@@ -114,13 +116,6 @@ open class Scope constructor(
             return null
         }
         return parent!!.resolveVariable(located, messages)
-    }
-
-    fun resolveAll(messages: CompilerMessages) {
-        accessFromSelf.forEach { it.resolve(messages) }
-        elements.forEach {
-            if (it is Accessor) it.accessFromSelf.forEach { it.resolve(messages) }
-        }
     }
 
     @Transient

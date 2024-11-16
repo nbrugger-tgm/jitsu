@@ -33,7 +33,7 @@ class Function(
         fun informChildren(children: List<Element>) {
             children.forEach {
                 if (it is FunctionAware) it.setEnclosingFunction(this)
-                if (it is Function) it.informChildren()
+                if (it is Function) it.setScopes()
                 else informChildren(it.children)
             }
         }

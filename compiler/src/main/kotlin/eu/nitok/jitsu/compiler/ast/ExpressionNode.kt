@@ -32,11 +32,11 @@ sealed interface ExpressionNode : AstNode {
 
     @Serializable
     class StringLiteralNode(
-        val content: List<StringPart>
+        val content: List<StringPart>,
+        override val location: Range
     ) : ExpressionNode, AstNodeImpl() {
         override val children: List<AstNode>
             get() = listOf()
-        override val location: Range get() = content.first().location.rangeTo(content.last().location)
 
         @Serializable
         sealed interface StringPart : AstNode {
@@ -45,13 +45,13 @@ sealed interface ExpressionNode : AstNode {
              * the `$abc` part in "I am $abc and i am ${me.age} years old"
              */
             @Serializable
-            data class Literal(
-                val literal: IdentifierNode,
+            data class VarReference(
+                val literal: VariableReferenceNode?,
                 val keywordLocation: Range
             ) : AstNodeImpl(), StringPart {
                 override val children: List<AstNode>
-                    get() = listOf(literal)
-                override val location: Range get() = keywordLocation.rangeTo(literal.location)
+                    get() = listOfNotNull(literal)
+                override val location: Range get() = keywordLocation.rangeTo(literal?.location ?: keywordLocation)
 
                 override fun toString(): String {
                     return "\$$literal"
@@ -90,12 +90,12 @@ sealed interface ExpressionNode : AstNode {
             }
 
             @Serializable
-            data class EscapeSequence(val value: String, override val location: Range) : AstNodeImpl(),
+            data class EscapeSequence(val escapedCharacter: String, override val location: Range) : AstNodeImpl(),
                 StringPart {
                 override val children: List<AstNode>
                     get() = listOf()
                 override fun toString(): String {
-                    return "\\$value"
+                    return "\\$escapedCharacter"
                 }
             }
         }

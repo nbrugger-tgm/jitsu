@@ -1,6 +1,7 @@
 package eu.nitok.jitsu.compiler.ast
 
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
+import eu.nitok.jitsu.compiler.graph.ReasonedBoolean
 import eu.nitok.jitsu.compiler.model.Walkable
 import eu.nitok.jitsu.compiler.parser.Locatable
 import eu.nitok.jitsu.compiler.parser.Range
@@ -48,6 +49,11 @@ data class CompilerMessages(
     fun apply(node: AstNode) {
         node.warnings.addAll(warnings)
         node.errors.addAll(errors)
+    }
+
+    fun error(boolean: ReasonedBoolean, location: Range) {
+        val fullMesageChain = boolean.fullMesageChain()
+        this.error(CompilerMessage(fullMesageChain.first, location, fullMesageChain.second))
     }
 }
 

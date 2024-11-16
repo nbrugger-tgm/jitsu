@@ -50,7 +50,7 @@ class Parse : Callable<List<Pair<SourceFileNode, Path>>> {
     );
 
     override fun call(): List<Pair<SourceFileNode, Path>> {
-        spec.commandLine().out.println("Compile : ${sourcepath}")
+        spec.commandLine().out.println("Compile : $sourcepath")
         val asts = sourcepath.map {
             parseFile(it.bufferedReader(bufferSize = 100 * 40), it.toUri()) to it
         }

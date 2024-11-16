@@ -1,20 +1,22 @@
 package eu.nitok.jitsu.compiler.analysis
 
-import eu.nitok.jitsu.compiler.analysis.ParameterInfo.OwnershipType.*
+import eu.nitok.jitsu.compiler.analysis.ExecutionState.VariableState.Ownership
+import eu.nitok.jitsu.compiler.analysis.ParameterInfo.PassingType.*
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.Located
-import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
+import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage.Hint
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import kotlinx.serialization.Serializable
+import kotlin.math.exp
 
 
 @Serializable
 data class ParameterInfo(
-    val ownershipType: OwnershipType,
+    val passingType: PassingType,
     val affectsOutput: Boolean
 ) {
-    enum class OwnershipType {
+    enum class PassingType {
         /**
          * The parameter does not leave the scope and the callee can still use/manage the variable afterward
          */
@@ -30,15 +32,9 @@ data class ParameterInfo(
 
 @Serializable
 data class ValueInfo(
-    /**
-     * Deterministic means that the function produces the same output given the same input. Where with methods `this`
-     * counts as input
-     */
-    val deterministic: Boolean
+    val deterministic: ReasonedBoolean,
+    val type: Type
 ) {
-    fun merge(otherValues: Iterable<ValueInfo>): ValueInfo {
-        return ValueInfo(deterministic && otherValues.all { it.deterministic })
-    }
 }
 
 @Serializable
@@ -48,36 +44,70 @@ data class FunctionInfo(
     val writeExternalState: Boolean = false,
     val parameters: Map<String, ParameterInfo>
 ) {
-    val hasSideEffects: Boolean get() = writeExternalState || calls.none { it.hasSideEffects }
+    val hasSideEffects: Boolean get() = writeExternalState || calls.any { it.hasSideEffects }
 }
 
-data class ExecutionState(
-    val localFunctions: MutableMap<String, MutableList<Type.FunctionTypeSignature>> = mutableMapOf(),
-    val localVariables: MutableMap<String, VariableState> = mutableMapOf()
+class ExecutionState(
+    val localFunctions: MutableMap<String, MutableList<Function>> = mutableMapOf(),
+    val localVariables: MutableMap<String, VariableState> = mutableMapOf(),
+    private val parentScope: Scope
 ) {
+    fun asScope(): Scope {
+        return Scope(
+            emptyList(),
+            emptyMap(),
+            localFunctions,
+            localVariables.mapValues { it.value.declaration.variable }).also {
+            it.parent = parentScope
+        }
+    }
+
     data class VariableState(
         val declaredType: Type?,
         var inferredType: Type,
-        var ownershipType: ParameterInfo.OwnershipType,
+        var ownershipState: Ownership,
         var readsExternal: Boolean,
-        val possibleValues: List<ValueInfo>
-    )
+        val possibleValues: List<ValueInfo>,
+        val declaration: Instruction.VariableDeclaration
+    ) {
+        val type get() = declaredType ?: inferredType;
+
+        enum class Ownership {
+            /**
+             * This block owns the data and is resposible for cleaning it up
+             */
+            OWNS,
+
+            /**
+             * The block only reads the data and does now own it, and therefore needs not to clean it up
+             */
+            BORROWS,
+
+            /**
+             * The variable while still in scope is moved to another block and is not available anymore
+             */
+            MOVED
+        }
+    }
 }
 
-class FunctionAnalyzer(val fn: Function, val messages: CompilerMessages) {
+class CodeBlockAnalysis(
+    private val block: CodeBlock,
+    private val expectedReturnType: Type?,
+    private val messages: CompilerMessages
+) {
 
     var returnInfo: ValueInfo? = null
 
     val calls: MutableList<FunctionInfo> = mutableListOf()
     val writeExternalState: Boolean = false;
-    val parameters: MutableMap<String, ParameterInfo.OwnershipType> = mutableMapOf()
-    val executionState = ExecutionState()
-    val parentScope = fn.body.scope.parent ?: throw IllegalStateException("Function scope has no parent")
+    val parameters: MutableMap<String, ParameterInfo.PassingType> = mutableMapOf()
+    val parentScope = block.scope.parent ?: throw IllegalStateException("Function scope has no parent")
+    val executionState = ExecutionState(parentScope = parentScope)
 
 
     fun analyze() {
-        fn.parameters.forEach { parameters[it.name.value] = BORROW }
-        for (instruction in fn.body.instructions) {
+        for (instruction in block.instructions) {
             processInstruction(instruction)
         }
     }
@@ -87,26 +117,33 @@ class FunctionAnalyzer(val fn: Function, val messages: CompilerMessages) {
             is Function -> {
                 instruction.name?.let {
                     executionState.localFunctions.computeIfAbsent(it.value) { mutableListOf() }
-                        .add(instruction.signature)
+                        .add(instruction)
                 }
             }
 
             is Instruction.FunctionCall -> processFunctionCall(instruction)
 
-            is Instruction.Return -> {
-                returnInfo = instruction.value?.let { processExpression(it, MOVE) }
-            }
+            is Instruction.Return -> processReturn(instruction)
 
             is Instruction.VariableDeclaration -> {
-                val inferredType = instruction.value.implicitType ?: Type.Undefined
-                val initialValue = processExpression(instruction.value, BORROW)
+                val inferredType =
+                    instruction.value?.calculateType(executionState.localVariables.mapValues { it.value.type })
+                        ?: Type.Undefined
+                val initialValue = instruction.value?.let { processExpression(it, BORROW) }
+                if (instruction.variable.declaredType != null && instruction.value != null) {
+                    val typeMatch = instruction.variable.declaredType.acceptsInstanceOf(inferredType)
+                    if (!typeMatch.value)
+                        messages.error(typeMatch, instruction.value.location)
+                }
                 val variableState = ExecutionState.VariableState(
                     declaredType = instruction.variable.declaredType,
                     inferredType = inferredType,
-                    ownershipType = BORROW,
+                    ownershipState = Ownership.OWNS,
                     readsExternal = false,
-                    possibleValues = listOfNotNull(initialValue)
+                    possibleValues = listOfNotNull(initialValue),
+                    declaration = instruction
                 )
+                instruction.variable.implicitType = inferredType
                 val varName = instruction.variable.name
                 if (executionState.localVariables.containsKey(varName.value)) {
                     messages.error(
@@ -120,50 +157,86 @@ class FunctionAnalyzer(val fn: Function, val messages: CompilerMessages) {
         }
     }
 
-    private fun processExpression(value: Expression, ownershipType: ParameterInfo.OwnershipType): ValueInfo {
-        return when (value) {
-            is Constant<*> -> ValueInfo(true)
-            is Instruction.FunctionCall -> processFunctionCall(value)?: run {
+    private fun processReturn(instruction: Instruction.Return) {
+        val returnValueExpression = instruction.value;
+        if (expectedReturnType != null && returnValueExpression == null) {
+            messages.error(
+                "Block requires a return value ($expectedReturnType), but no value was given", instruction.location,
+                *listOfNotNull(instruction.function.name?.location?.let {
+                    Hint(
+                        "Return type defined here",
+                        it
+                    )
+                }).toTypedArray()
+            )
+
+            return;
+        } else if (returnValueExpression == null) {
+            returnInfo = null
+            return
+        } else if (expectedReturnType == null) {
+            messages.error("Block does not define a return type", returnValueExpression.location)
+            return
+        }
+        returnInfo = processExpression(returnValueExpression, MOVE)
+        var actualType = returnValueExpression.calculateType(executionState.localVariables.mapValues { it.value.type })
+            ?: Type.Undefined
+        val typeMatch = expectedReturnType.acceptsInstanceOf(actualType)
+        if (!typeMatch.value)
+            messages.error(typeMatch, returnValueExpression.location)
+    }
+
+    private fun processExpression(expression: Expression, ownershipType: ParameterInfo.PassingType): ValueInfo {
+        val localVarTypes = executionState.localVariables.mapValues { it.value.type }
+        return when (expression) {
+            is Constant<*> -> ValueInfo(ReasonedBoolean.True("Constants are deterministic"), expression.type)
+            is Instruction.FunctionCall -> processFunctionCall(expression) ?: run {
                 messages.error(
-                    "Function ${value.reference.value} does not have a return type and cannot be used as value",
-                    value.reference.location
+                    "Function ${expression.reference.value} does not have a return type and cannot be used as value",
+                    expression.reference.location
                 )
-                return ValueInfo(true)
+                ValueInfo(ReasonedBoolean.True("Function does not have a return type"), Type.Undefined)
             }
 
             is Expression.Operation -> {
-                val left = processExpression(value.left, BORROW)
-                val right = processExpression(value.right, BORROW)
-                left.merge(listOf(right))
+                val left = processExpression(expression.left, BORROW)
+                val right = processExpression(expression.right, BORROW)
+                ValueInfo(
+                    deterministic = left.deterministic.and(right.deterministic),
+                    type = expression.calculateType(localVarTypes) ?: Type.Undefined
+                )
             }
 
-            Expression.Undefined -> ValueInfo(true)
+            is Expression.Undefined -> ValueInfo(
+                ReasonedBoolean.False("Undefined expressions are not deterministic"),
+                Type.Undefined
+            )
+
             is Expression.VariableReference -> {
-                val variableInfo = executionState.localVariables[value.reference.value]
-                if (variableInfo?.ownershipType == MOVE) {
+                expression.resolve { expression.resolveAccessTarget(messages) }
+                val variableInfo = executionState.localVariables[expression.reference.value]
+                if (variableInfo?.ownershipState == Ownership.MOVED) {
                     messages.error(
-                        "Variable ${value.reference.value} is moved and cannot be used anymore",
-                        value.reference.location
+                        "Variable ${expression.reference.value} is moved and cannot be used anymore",
+                        expression.reference.location
                     )
                 }
-                if (ownershipType == MOVE) moveVariable(value.reference)
-                variableInfo?.possibleValues?.firstOrNull()?.merge(variableInfo.possibleValues.drop(1)) ?: ValueInfo(
-                    true
+                if (ownershipType == MOVE) moveVariable(expression.reference)
+                var possibleValues = variableInfo?.possibleValues?.toTypedArray() ?: arrayOf()
+                ValueInfo(
+                    deterministic = possibleValues.map { it.deterministic }.reduceRightOrNull { a, b -> a.and(b) }
+                        ?: ReasonedBoolean.False("Variable has no possible values"),
+                    type = variableInfo?.type ?: Type.Undefined
                 )
             }
         }
     }
 
 
-    fun moveVariable(varRef: Located<String>) {
-        val parameter = fn.parameters.find { it.name.value == varRef.value }
-        if (parameter != null) {
-            parameters[parameter.name.value] = MOVE
-            return;
-        }
+    private fun moveVariable(varRef: Located<String>) {
         val variable = executionState.localVariables[varRef.value]
         if (variable != null) {
-            variable.ownershipType = MOVE
+            variable.ownershipState = Ownership.MOVED
             return
         }
         messages.error(
@@ -172,38 +245,48 @@ class FunctionAnalyzer(val fn: Function, val messages: CompilerMessages) {
         )
     }
 
-    fun processFunctionCall(functionCall: Instruction.FunctionCall):ValueInfo? {
-        val isNotGlobal = parentScope.allFunctions[functionCall.reference.value].isNullOrEmpty()
-        if (functionCall.target != null && isNotGlobal) {
+    fun <T : Accessible<T>> Access<T>.resolve(resolver: () -> T?): T? {
+        if (this is ScopeAware) this.setEnclosingScope(executionState.asScope())
+        var target = resolver()
+        target?.accessToSelf?.add(this)
+        this.target = target
+        return target
+    }
+
+    private fun processFunctionCall(functionCall: Instruction.FunctionCall): ValueInfo? {
+        val isGlobal = !parentScope.allFunctions[functionCall.reference.value].isNullOrEmpty()
+        val localTypes = executionState.localVariables.mapValues { it.value.type }
+        val actualParameterTypes = functionCall.callParameters.map { Located(it.calculateType(localTypes) ?: Type.Undefined, it.location) }
+        functionCall.setEnclosingScope(executionState.asScope())
+        functionCall.resolveAccessTarget(messages)
+        val target = functionCall.resolve {
+            functionCall.scope.resolveFunction(functionCall.reference, actualParameterTypes.toTypedArray(), messages)
+        }
+        if (target != null && !isGlobal) {
             messages.error(
                 "Function ${functionCall.reference.value} not defined yet!",
                 functionCall.reference.location,
-                CompilerMessage.Hint(
+                Hint(
                     "nested functions are not hoisted, so a function needs to be defined before it is called",
-                    functionCall.target!!.name!!.location
+                    target.name!!.location
                 )
             )
-            return ValueInfo(true)
-        } else if (functionCall.target == null) {
-            return ValueInfo(true)
+        } else if (target == null) {
+            throw IllegalStateException("Function ${functionCall.reference.value} not resolved")
         }
-        val calledFunction = functionCall.target!!.info(messages)
-        val parameterValueInfos = calledFunction.parameters.mapValues { (a, b) ->
-            functionCall.parameters[a]?.let { processExpression(it, b.ownershipType) }?: run {
-                messages.error(
-                    "Parameter $a is not provided",
-                    functionCall.reference.location
-                )
-                ValueInfo(true)
-            }
+
+        val formalParameters = target.info(messages).parameters
+        val parameters = functionCall.callParameters.mapIndexed { i, exp ->
+            val paramName = target.parameters.getOrNull(i)?.name?.value
+            processExpression(exp, formalParameters[paramName]?.passingType ?: BORROW)
         }
-        val outputInfluencingParameters = calledFunction.parameters.filter { it.value.affectsOutput }.keys
-        val outputInfluencingValueInfos = parameterValueInfos
-            .filter { it.key in outputInfluencingParameters }
-            .values.toList()
-        val targetReturnInfo = calledFunction.returnInfo ?: return null
-        calls.add(calledFunction)
-        return targetReturnInfo.merge(outputInfluencingValueInfos)
+
+        val returnInfo = target.info(messages).returnInfo ?: return null
+        return ValueInfo(
+            deterministic = parameters.map { it.deterministic }.reduceOrNull { a, b -> a.and(b) }
+                ?.and(returnInfo.deterministic) ?: ReasonedBoolean.True("No parameters"),
+            type = returnInfo.type
+        );
     }
 
 
@@ -218,7 +301,7 @@ class FunctionAnalyzer(val fn: Function, val messages: CompilerMessages) {
 }
 
 fun Function.calculateFunctionInfo(messages: CompilerMessages): FunctionInfo {
-    val analyzer = FunctionAnalyzer(this, messages)
+    val analyzer = CodeBlockAnalysis(this.body, this.returnType, messages)
     analyzer.analyze()
     return analyzer.toInfo()
 }
