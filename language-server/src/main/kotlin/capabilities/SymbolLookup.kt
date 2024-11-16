@@ -3,6 +3,11 @@ package capabilities
 
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
+import eu.nitok.jitsu.compiler.graph.TypeDefinition.DirectTypeDefinition.Enum
+import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Alias
+import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Class
+import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Interface
+import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Struct
 import eu.nitok.jitsu.compiler.model.mapTree
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
@@ -22,23 +27,24 @@ private fun TypeDefinition.documentSymbols(children: Iterable<DocumentSymbol>): 
 )
 
 private fun TypeDefinition.additionalInfo(): String?{
-    if(this is TypeDefinition.Alias){
+    if(this is Alias){
         return this.type.additionalInfo()
     }
     return null;
 }
 private fun Type.additionalInfo(): String?{
     return when(this) {
-        is Type.TypeReference -> target?.additionalInfo()
+        is Type.TypeReference -> if(resolvedCache != this) resolvedCache.additionalInfo() else target.toString()
         else -> toString()
     }
 }
 private fun TypeDefinition.symbolKind() = when (this) {
-    is TypeDefinition.Enum -> SymbolKind.Enum
-    is TypeDefinition.Interface -> SymbolKind.Interface
-    is TypeDefinition.Alias -> type.resolveTypeKind()
-    is TypeDefinition.Struct -> SymbolKind.Struct
-    is TypeDefinition.Class -> SymbolKind.Class
+    is Enum -> SymbolKind.Enum
+    is Interface -> SymbolKind.Interface
+    is Alias -> type.resolveTypeKind()
+    is Struct -> SymbolKind.Struct
+    is Class -> SymbolKind.Class
+    is TypeDefinition.TypeParameter -> SymbolKind.TypeParameter
 }
 
 private fun Type.resolveTypeKind(): SymbolKind {
@@ -56,6 +62,7 @@ private fun Type.resolveTypeKind(): SymbolKind {
         Type.Undefined -> SymbolKind.Null
         is Type.Union -> SymbolKind.Enum
         is Type.StructuralInterface -> SymbolKind.Interface
+        is Enum ->  SymbolKind.Enum
     }
 }
 
@@ -81,7 +88,7 @@ private fun <T: Accessible<T>> Accessible<T>.documentSymbols(children: Iterable<
             )
         )
 
-        is TypeDefinition.Enum.Constant -> listOf(
+        is Enum.Constant -> listOf(
             DocumentSymbol(
                 name.value,
                 SymbolKind.EnumMember,
@@ -92,7 +99,7 @@ private fun <T: Accessible<T>> Accessible<T>.documentSymbols(children: Iterable<
             )
         )
 
-        is TypeDefinition.Struct.Field -> listOf(DocumentSymbol(
+        is Struct.Field -> listOf(DocumentSymbol(
             name.value,
             SymbolKind.Field,
             range(name.location),

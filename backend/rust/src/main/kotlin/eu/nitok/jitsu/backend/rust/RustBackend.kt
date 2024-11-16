@@ -93,10 +93,10 @@ private fun Type.transpile(): String {
         Type.Boolean -> TODO()
         is Type.Float -> TODO()
         is Type.FunctionTypeSignature -> TODO()
-        is Type.Int -> "i${this.bits.bits}"
+        is Type.Int -> "i${this.size.bits}"
         Type.Null -> TODO()
         is Type.TypeReference -> this.reference.value
-        is Type.UInt -> "u${this.bits.bits}"
+        is Type.UInt -> "u${this.size.bits}"
         Type.Undefined -> TODO()
         is Type.Value -> TODO()
         is Type.StructuralInterface -> TODO()

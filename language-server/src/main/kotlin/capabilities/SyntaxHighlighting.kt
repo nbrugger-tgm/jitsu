@@ -9,11 +9,8 @@ import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.SwitchNode.CaseNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.NamedTypeDeclarationNode.EnumDeclarationNode
-import eu.nitok.jitsu.compiler.graph.TypeDefinition
 import eu.nitok.jitsu.compiler.model.flatMap
 import eu.nitok.jitsu.compiler.parser.Range
-import java.lang.instrument.ClassDefinition
-import java.security.Key
 
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -207,9 +204,9 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
         is FieldAccessNode -> this.field?.let { listOf(token(PROPERTY, it.location)) } ?: listOf()
         is NumberLiteralNode -> listOf(token(NUMBER, location))
         is OperationNode -> listOf(token(OPERATOR, operator.location))
-        is StringLiteralNode.StringPart.Literal -> listOf(
+        is StringLiteralNode.StringPart.VarReference -> listOfNotNull(
             token(symbolismType, keywordLocation),
-            token(VARIABLE, literal.location)
+            literal?.location?.let { token(VARIABLE, it) }
         )
 
         is StringLiteralNode.StringPart.Expression ->

@@ -17,7 +17,7 @@ fun parseStatement(tokens: Tokens): StatementNode? {
 
 fun parseAssignment(tokens: Tokens, kw: IdentifierNode): StatementNode.InstructionNode.AssignmentNode? {
     tokens.skipWhitespace()
-    tokens.keyword(DefaultToken.EQUAL) ?: return null
+    tokens.attempt(DefaultToken.EQUAL) ?: return null
     tokens.skipWhitespace()
     val expression = parseExpression(tokens)
     return StatementNode.InstructionNode.AssignmentNode(ExpressionNode.VariableReferenceNode(kw), expression).run {
@@ -67,8 +67,8 @@ private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> Sta
     if (semicolon.map { it.type }.orElse(null) != DefaultToken.SEMICOLON) {
         res.error(CompilerMessage("Expect semicolon at end of statement!", endOfStatementPos))
     } else {
-        tokens.skip()
     }
+    tokens.skip()
     return res
 }
 
@@ -101,10 +101,15 @@ fun parseVariableDeclaration(tokens: Tokens): StatementNode.InstructionNode.Vari
     val messages = CompilerMessages()
     tokens.skipWhitespace()
     val name = parseIdentifier(tokens)
-    tokens.skipWhitespace()
+    if (name == null) {
+        messages.error("Expected variable name", tokens.location.toRange())
+        val invalid = tokens.skipUntil(DefaultToken.SEMICOLON, DefaultToken.NEW_LINE, DefaultToken.EQUAL, DefaultToken.COLON)
+    } else {
+        tokens.skipWhitespace()
+    }
     val type = parseOptionalExplicitType(tokens, messages::error)
     tokens.skipWhitespace()
-    val eq = tokens.keyword(DefaultToken.EQUAL)
+    val eq = tokens.attempt(DefaultToken.EQUAL)
     if (eq == null) {
         messages.error("Variables need an initial value!", tokens.location.toRange())
     } else {

@@ -6,7 +6,7 @@ import org.eclipse.lsp4j.Range
 fun range(it: eu.nitok.jitsu.compiler.parser.Range): Range {
     return Range(
         Position(it.start.line-1, it.start.column-1),
-        Position(it.end.line-1, it.end.column-1)
+        Position(it.end.line-1, it.end.column)
     )
 }
 
@@ -22,13 +22,4 @@ fun location(it: eu.nitok.jitsu.compiler.parser.Location) = Position(it.line - 1
 
 fun range(it: Location): eu.nitok.jitsu.compiler.parser.Range {
     return range(it.range, it.uri)
-}
-
-fun AstNode.visit(visitor: AstNode.() -> Unit) {
-    val nodeQueue = ArrayDeque(listOf(this))
-    while (!nodeQueue.isEmpty()) {
-        val subNode = nodeQueue.removeFirst()
-        visitor(subNode);
-        nodeQueue += subNode.children
-    }
 }

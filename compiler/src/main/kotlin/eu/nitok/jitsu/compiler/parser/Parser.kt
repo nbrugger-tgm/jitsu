@@ -17,6 +17,7 @@ import java.net.URI
 import kotlin.jvm.optionals.getOrNull
 
 typealias Tokens = TokenStream<DefaultToken>
+typealias ParserFn<T> = Tokens.() -> T
 
 fun parseFile(input: Reader, uri: URI): SourceFileNode {
     val tokenSource = TokenSource(input, tokenizer);
@@ -50,7 +51,7 @@ fun Tokens.skip(vararg toSkip: DefaultToken) {
 fun Tokens.skip(n: Int = 1) {
     var count = n;
     while (count-- > 0 && hasNext()) {
-        next()
+        this@skip.next()
     }
 }
 
@@ -85,18 +86,18 @@ fun <T> Tokens.enclosedRepetition(
     elementName: String,
     function: (Tokens) -> T?
 ): List<T>? {
-    val openKw = expect(start)?.location ?: return null;
+    val openKw = attempt(start)?.location ?: return null;
     val lst = mutableListOf<T>()
-
+    skipWhitespace()
+    if (attempt(end) != null)
+        return lst
     while (hasNext()) {
-        skipWhitespace();
         when (val x = function(this)) {
             null -> {
                 skip(WHITESPACE)//dont skip line breaks
-                index()
                 val invalid = skipUntil(end, delimitter, NEW_LINE, SEMICOLON)
                 messages.error(CompilerMessage("Expected a $elementName", invalid))
-                if (peek().type != delimitter) {
+                if (peekOptional().getOrNull()?.type != delimitter) {
                     //nothing invalid was skipped - so end of block
                     break;
                 }
@@ -105,21 +106,25 @@ fun <T> Tokens.enclosedRepetition(
 
             else -> {
                 lst.add(x)
-                val postElemPos = location;
+                val postElemPos = location
                 skipWhitespace()
-                when (val delim = expect(delimitter, end)?.value?.type) {
+                when (val delim = attempt(delimitter, end)?.value?.type) {
                     null -> messages.error("Expected $delimitter or $end", postElemPos.toRange())
                     end -> return lst
-                    delimitter -> continue
+                    delimitter -> {
+                        skipWhitespace()
+                        continue
+                    }
                     else -> throw IllegalStateException("$delim not a $end or $delimitter")
                 }
-            };
+            }
         }
+        skipWhitespace()
     }
 
     skipWhitespace()
 
-    expect(end) ?: messages.error(
+    this@enclosedRepetition.attempt(end) ?: messages.error(
         "Unclosed $subject, expected $end", location.toRange(), Hint(
             "$subject started here", openKw
         )
@@ -127,22 +132,64 @@ fun <T> Tokens.enclosedRepetition(
     return lst
 }
 
-
+/**
+ * Skips all kind of whitespace, including newlines and EOF (while EOF still terminates the stream)
+ */
 fun Tokens.skipWhitespace() {
     skip(WHITESPACE, NEW_LINE)
 }
 
-fun Tokens.keyword(s: DefaultToken): Range? {
-    elevate()
-    if (!hasNext()) return null;
-    val token = range { next() }
-    return if (token.value.type == s) {
-        commit()
-        token.location
-    } else {
-        rollback()
-        null
+/**
+ * Records the range of characters consumed during the `action` and returns the located result of parsing.
+ */
+inline fun <T> Tokens.range(action: ParserFn<T>): Located<T> {
+    val start = location
+    val res = action()
+    val end = lastConsumedLocation
+    return Located(res, start.rangeTo(end))
+}
+
+/**
+ * Records the range of characters consumed during the `action` and returns the located result of parsing simmilar to [range].
+ * The difference is how nullability is handled. If the result of [action] is null then the range won't be returned since that would be nonsensical.
+ */
+inline fun <T> Tokens.nullableRange(action: ParserFn<T?>): Located<T>? {
+    val start = location
+    val res = action()
+    if (res == null) return null
+    val end = lastConsumedLocation
+    return Located(res, start.rangeTo(end))
+}
+
+/**
+ * Expects any of the given tokens, if the next token is one of them it records it and returns otherwise returns null on non match
+ *
+ * Only proceeds and progresses the stream on match
+ */
+fun Tokens.attempt(vararg tokens: DefaultToken): Located<AssignedToken<DefaultToken>>? {
+    val next = peekOptional().getOrNull() ?: return null;
+    if (tokens.contains(next.type)) {
+        return range { this.next() }
     }
+    return null;
+}
+
+/**
+ * handles a transaction by automatically rolling back and committing based on if parsing is successfull
+ * @param function a function that performs parsing and returns null when unparsable, returning null causes a rollback
+ */
+fun <T> Tokens.attempt(function: ParserFn<T>): T? {
+    if (!hasNext()) {
+        return null
+    }
+    elevate()
+    val res = this.function()
+    if (res == null) {
+        rollback()
+    } else {
+        commit()
+    }
+    return res;
 }
 
 
@@ -150,31 +197,12 @@ fun Tokens.keyword(s: DefaultToken): Range? {
  * @return The range of the keyword, or null if the keyword is not present
  */
 fun Tokens.keyword(s: String): Range? {
-    elevate()
-    val (token, location) = range { nextOptional().getOrNull() }
-    token ?: return null
-    return if (token.value == s) {
-        commit()
-        location
-    } else {
-        rollback()
-        null
+    return attempt {
+        val (token, location) = range { nextOptional().getOrNull() }
+        return@attempt if (token == null) null
+        else if (token.value == s) location
+        else null
     }
-}
-
-inline fun <T> Tokens.range(action: Tokens.() -> T): Located<T> {
-    val start = location
-    val res = action()
-    val end = lastConsumedLocation
-    return Located(res, start.rangeTo(end))
-}
-
-fun Tokens.expect(vararg tokens: DefaultToken): Located<AssignedToken<DefaultToken>>? {
-    val next = peekOptional().getOrNull() ?: return null;
-    if (tokens.contains(next.type)) {
-        return range { next() }
-    }
-    return null;
 }
 
 val Tokens.lastConsumedLocation: Location

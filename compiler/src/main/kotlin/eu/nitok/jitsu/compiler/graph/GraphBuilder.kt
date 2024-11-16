@@ -7,7 +7,9 @@ import eu.nitok.jitsu.compiler.ast.StatementNode.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.FunctionDeclarationNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.*
 import eu.nitok.jitsu.compiler.graph.Instruction.VariableDeclaration
+import eu.nitok.jitsu.compiler.graph.TypeDefinition.TypeParameter
 import eu.nitok.jitsu.compiler.model.sequence
+import eu.nitok.jitsu.compiler.model.walk
 
 private class GraphBuilder {
     val messages: CompilerMessages = CompilerMessages()
@@ -21,9 +23,19 @@ private fun GraphBuilder.buildGraph(srcFile: SourceFileNode): JitsuFile {
     val file = JitsuFile(processStatements(srcFile.statements) {
         if (it !is Declaration) messages.error("Statement not allowed at root level", it.location)
     }, messages)
-    file.informChildren()
+    file.setScopes()
+    file.walk {
+        if (it is Access<*>) it.finalize(messages)
+
+        //code blocks require sequential processing for functions & variable accesses
+        if (it is CodeBlock) it.walk {
+            if (it is Access.TypeAccess) it.finalize(messages)
+            return@walk true;
+        }
+        return@walk it !is CodeBlock
+    }
     file.sequence().forEach {
-        if (it is Access<*>) it.resolve(messages)
+        if (it is Finalizable) it.finalizeGraph(messages)
     }
     return file;
 }
@@ -59,19 +71,35 @@ private fun GraphBuilder.processStatements(
     return Scope(constants, types, functions, variables, messages)
 }
 
-private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.ClassDeclarationNode): TypeDefinition.Class? {
+private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.ClassDeclarationNode): TypeDefinition.ParameterizedType.Class? {
     return classNode.name?.let { name ->
         val fields = classNode.fields.map { field ->
-            TypeDefinition.Struct.Field(
+            TypeDefinition.ParameterizedType.Struct.Field(
                 field.name.located,
                 field.mutableKw != null,
                 resolveType(field.type)
             )
         }
-        return TypeDefinition.Class(name.located, classNode.typeParameters.map { it.located }, fields, classNode.methods.map {
-            var base = buildFunctionGraph(it.function);
-            Function(base.name,base.returnType, listOf(Function.Parameter(Located("this", name.location), Type.TypeReference(name.located, mapOf()), null)) + base.parameters, base.body, base.scope)
-        })
+        return TypeDefinition.ParameterizedType.Class(
+            name.located,
+            classNode.typeParameters.map { buildTypeParameterGraph(it) },
+            fields,
+            classNode.methods.map {
+                var base = buildFunctionGraph(it.function);
+                Function(
+                    base.name,
+                    base.returnType,
+                    listOf(
+                        Function.Parameter(
+                            Located("this", name.location),
+                            Type.TypeReference(name.located, listOf()),
+                            null
+                        )
+                    ) + base.parameters,
+                    base.body,
+                    base.scope
+                )
+            })
     }
 }
 
@@ -82,13 +110,19 @@ private fun GraphBuilder.buildInstructionGraph(statement: InstructionNode): Inst
         is AssignmentNode,
         is CodeBlockNode,
         is YieldStatement,
-        is SwitchNode -> TODO()
+        is SwitchNode -> TODO();
 
         is FunctionCallNode -> Instruction.FunctionCall(
             statement.function.located,
-            statement.parameters.map { buildExpressionGraph(it) })
+            statement.parameters.map { buildExpressionGraph(it) },
+            statement.location
+        )
 
-        is ReturnNode -> Instruction.Return(buildExpressionGraph(statement.expression))
+        is ReturnNode -> Instruction.Return(
+            statement.expression?.let { node -> buildExpressionGraph(node) },
+            statement.keywordLocation
+        )
+
         is VariableDeclarationNode -> buildGraph(statement)
         is LineCommentNode -> null;
         is FunctionDeclarationNode -> buildFunctionGraph(statement)
@@ -97,7 +131,7 @@ private fun GraphBuilder.buildInstructionGraph(statement: InstructionNode): Inst
 
 fun buildGraph(statement: VariableDeclarationNode): VariableDeclaration {
     val explicitType = statement.type?.let { resolveType(it) }
-    val initialValue = buildExpressionGraph(statement.value)
+    val initialValue = statement.value?.let { node -> buildExpressionGraph(node) }
     val variable = Variable(
         false,
         statement.name?.located ?: Located("unnamed", statement.keywordLocation),
@@ -110,13 +144,19 @@ fun buildGraph(statement: VariableDeclarationNode): VariableDeclaration {
     )
 }
 
-fun buildGraph(statement: NamedTypeDeclarationNode.TypeAliasNode): TypeDefinition.Alias? {
-    return statement.name?.let { TypeDefinition.Alias(it.located, listOf(), resolveType(statement.type)) }
+fun buildGraph(statement: NamedTypeDeclarationNode.TypeAliasNode): TypeDefinition.ParameterizedType.Alias? {
+    return statement.name?.let {
+        TypeDefinition.ParameterizedType.Alias(
+            it.located,
+            statement.typeParameters.map { buildTypeParameterGraph(it) },
+            resolveType(statement.type)
+        )
+    }
 }
 
 private fun buildGraph(
     it: NamedTypeDeclarationNode.InterfaceTypeNode
-) = TypeDefinition.Interface(
+) = TypeDefinition.ParameterizedType.Interface(
     it.name.located,
     listOf(),
     it.functions.map { func -> NamedFunctionSignature(func.name.located, buildGraph(func.typeSignature)) }
@@ -128,13 +168,17 @@ private fun buildGraph(
     it.returnType?.let { resolveType(it) },
     it.parameters.map {
         val type = resolveType(it.type);
-        Type.FunctionTypeSignature.Parameter(it.name.located, type)
+        Type.FunctionTypeSignature.Parameter(it.name.located, type, false)
     }
 )
 
-private fun buildGraph(enum: NamedTypeDeclarationNode.EnumDeclarationNode): TypeDefinition.Enum {
-    return TypeDefinition.Enum(enum.name.located, enum.constants.map { TypeDefinition.Enum.Constant(it.located) })
+private fun buildGraph(enum: NamedTypeDeclarationNode.EnumDeclarationNode): TypeDefinition.DirectTypeDefinition.Enum {
+    return TypeDefinition.DirectTypeDefinition.Enum(
+        enum.name.located,
+        enum.constants.map { TypeDefinition.DirectTypeDefinition.Enum.Constant(it.located) })
 }
+
+private fun buildTypeParameterGraph(node: IdentifierNode): TypeParameter = TypeParameter(node.located)
 
 private fun buildGraph(
     array: TypeNode.ArrayTypeNode
@@ -143,18 +187,17 @@ private fun buildGraph(
     array.fixedSize?.run { buildExpressionGraph(this) }
 )
 
-fun buildExpressionGraph(expression: ExpressionNode?): Expression {
+fun buildExpressionGraph(expression: ExpressionNode): Expression {
     return when (expression) {
-        null -> Expression.Undefined
         is ExpressionNode.BooleanLiteralNode -> Constant.BooleanConstant(expression.value, expression.location)
         is ExpressionNode.NumberLiteralNode.FloatLiteralNode -> TODO()
         is ExpressionNode.NumberLiteralNode.IntegerLiteralNode -> resolveIntConstant(expression)
         is ExpressionNode.OperationNode -> Expression.Operation(
             buildExpressionGraph(expression.left),
             expression.operator.value,
-            buildExpressionGraph(expression.right)
+            expression.right?.let { buildExpressionGraph(it) } ?: Expression.Undefined(expression.operator.location)
         );
-        is ExpressionNode.StringLiteralNode -> TODO()
+        is ExpressionNode.StringLiteralNode -> Constant.StringConstant(expression.toString(), expression.location)
         is ExpressionNode.VariableReferenceNode -> resolveVariableReference(expression)
         is ExpressionNode.FieldAccessNode -> TODO()
         is ExpressionNode.IndexAccessNode -> TODO()
@@ -171,7 +214,8 @@ fun buildExpressionGraph(expression: ExpressionNode?): Expression {
 fun resolveFunctionCall(expression: FunctionCallNode): Instruction.FunctionCall {
     return Instruction.FunctionCall(
         expression.function.located,
-        expression.parameters.map { buildExpressionGraph(it) }
+        expression.parameters.map { buildExpressionGraph(it) },
+        expression.location
     )
 }
 
@@ -187,7 +231,7 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
         val type = resolveType(it.type)
         Function.Parameter(
             it.name.located, type,
-            buildExpressionGraph(it.defaultValue)
+            it.defaultValue?.let { buildExpressionGraph(it) }
         )
     }
     val functionBody = when (val body = functionNode.body) {
@@ -356,9 +400,9 @@ private fun resolveIntConstant(
 ): Constant<Any> {
     val value = expression.value
     return if (value.startsWith("-"))
-        Constant.IntConstant(value.toLong(), originLocation = expression.location)
+        Constant.IntConstant(value.toLong(), location = expression.location)
     else
-        Constant.UIntConstant(value.toULong(), originLocation = expression.location)
+        Constant.UIntConstant(value.toULong(), location = expression.location)
 }
 
 val IdentifierNode.located: Located<String> get() = Located(value, location)
@@ -366,13 +410,16 @@ val IdentifierNode.located: Located<String> get() = Located(value, location)
 fun resolveType(type: TypeNode?): Type {
     if (type == null) return Type.Undefined
     return when (type) {
-        is TypeNode.ArrayTypeNode -> TODO()
-        is TypeNode.FloatTypeNode -> TODO()
+        is TypeNode.ArrayTypeNode -> Type.Array(
+            resolveType(type.type),
+            type.fixedSize?.let { buildExpressionGraph(it) })
+
+        is TypeNode.FloatTypeNode -> Type.Float(type.bitSize)
         is TypeNode.FunctionTypeSignatureNode -> TODO()
         is TypeNode.IntTypeNode -> Type.Int(type.bitSize)
-        is TypeNode.NameTypeNode -> Type.TypeReference(type.name.located, mapOf())
+        is TypeNode.NameTypeNode -> Type.TypeReference(type.name.located, type.genericTypes.map { resolveType(it) })
         is TypeNode.StructuralInterfaceTypeNode -> Type.StructuralInterface(type.fields.map {
-            TypeDefinition.Struct.Field(
+            TypeDefinition.ParameterizedType.Struct.Field(
                 it.name.located,
                 false,
                 resolveType(it.type)

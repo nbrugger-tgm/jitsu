@@ -9,10 +9,12 @@ data class Variable(
     val reassignable: Boolean = false,
     override val name: Located<String>,
     val declaredType: Type?,
-    val initialValue: Expression?
+    private val initialValue: Expression?
 ) : Element, Accessible<Variable> {
-    val implicitType get() = initialValue?.implicitType
+    var implicitType: Type? = null
+        internal set;
     val type: Type get() = declaredType ?: implicitType ?: Type.Undefined
+
     @Transient
     override val accessToSelf: MutableList<Access<Variable>> = mutableListOf()
     override val children: List<Element> get() = listOfNotNull(declaredType)

@@ -49,6 +49,7 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
     override fun didChange(params: DidChangeTextDocumentParams?) {
         val url = params?.textDocument?.uri ?: return
         if (params.contentChanges.size == 1) {
+            customLogger.println("changed to ${params.contentChanges[0].text}")
             rawTexts[url] = params.contentChanges[0].text
         } else {
             val oldText = (rawTexts[url]?.split("\n") ?: return).toMutableList()

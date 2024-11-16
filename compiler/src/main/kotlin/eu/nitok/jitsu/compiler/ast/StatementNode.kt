@@ -256,13 +256,12 @@ sealed interface StatementNode : AstNode {
         @Serializable
         data class TypeAliasNode(
             override val name: IdentifierNode?,
+            val typeParameters: List<IdentifierNode>,
             @SerialName("definition") val type: TypeNode?,
             override val location: Range,
             val keywordLocation: Range,
             override val attributes: List<AttributeNode>
         ) : NamedTypeDeclarationNode, AstNodeImpl(), CanHaveAttributes {
-
-
             override val children: List<AstNode>
                 get() = attributes + listOfNotNull(name, type)
         }
