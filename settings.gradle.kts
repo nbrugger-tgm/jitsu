@@ -28,7 +28,7 @@ include(
     "compiler",
     "playground",
     "language-server",
-    "wrapper",
+    "gradle-plugin",
     "cli"
 )
 
