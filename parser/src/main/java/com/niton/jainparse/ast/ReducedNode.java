@@ -217,6 +217,9 @@ public class ReducedNode {
         return 17 * (isLeaf ? 5 : 13) * name.hashCode() * Objects.hashCode(children) * Objects.hashCode(value);
     }
 
+    /**
+     * @return the value from this node downwards joinded together.
+     */
     public String join() {
         if(isLeaf()) {
             return value;
