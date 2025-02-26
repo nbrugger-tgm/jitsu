@@ -2,10 +2,12 @@ package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.Located
+import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.model.BitSize
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlin.time.Duration.Companion.milliseconds
 
 @Serializable
 sealed interface Type : Element {
@@ -14,7 +16,7 @@ sealed interface Type : Element {
     fun acceptsInstanceOf(type: Type): ReasonedBoolean {
         return if (type is Undefined) ReasonedBoolean.True("While UNDEFINED cannot be assigned to anything, the error lies in the definition of the type not its usage");
         else if (type is Union) {
-            var optionAssignability = type.options.map { accepts(it) }
+            var optionAssignability = type.options.map { mapAssignabilityBoolean(accepts(it), it, this) }
             if (optionAssignability.all { boolean -> boolean.value })
                 ReasonedBoolean.True(
                     "Each type in the union is assignable to $this",
@@ -25,7 +27,12 @@ sealed interface Type : Element {
                     "Not all types in the union ($type) are assignable to $this",
                     *optionAssignability.filter { !it.value }.toTypedArray()
                 )
-        } else accepts(type)
+        } else mapAssignabilityBoolean(accepts(type), type, this)
+    }
+
+    fun mapAssignabilityBoolean(boolean: ReasonedBoolean, from: Type, to: Type): ReasonedBoolean {
+        return if (boolean.value) ReasonedBoolean.True("$from is assignable to $to", boolean)
+        else ReasonedBoolean.False("$from is not assignable to $to", boolean)
     }
 
     fun accepts(type: Type): ReasonedBoolean
@@ -154,7 +161,7 @@ sealed interface Type : Element {
 
         override fun accepts(type: Type): ReasonedBoolean {
             if (type !is Array) return ReasonedBoolean.False("$type is not an array and can therefore not be assigned to an array")
-            val elementsAccept = this.type.accepts(type.type)
+            val elementsAccept = this.type.acceptsInstanceOf(type.type)
             return if (elementsAccept.value) {
                 ReasonedBoolean.True("$type is an array with an assignable element type", elementsAccept)
             } else {
@@ -225,7 +232,7 @@ sealed interface Type : Element {
     @Serializable
     data class TypeReference(
         override val reference: Located<String>,
-        val genericParameters: List<Type>
+        val genericParameters: List<Located<Type>>
     ) : Type, Access.TypeAccess, ScopeAware {
         override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type {
             var target = target
@@ -240,11 +247,27 @@ sealed interface Type : Element {
                     ?: this//maybe a dedicated "GenericType" should be created
                 is TypeDefinition.ParameterizedType -> {
                     var resolvedGenerics =
-                        genericParameters.mapIndexed { index, type -> type.resolve(messages, generics) to index }
-                            .associateBy({
-                                //TODO bug here, Index 2 out of bounds for length 2
-                                target.generics[it.second].name.value
-                            }, { it.first })
+                        genericParameters.mapIndexedNotNull<Located<Type>, Pair<Type, String>> { index, type ->
+                            val resolved = type.value.resolve(messages, generics)
+                            var targetGenericName = target.generics.getOrNull(index)?.name?.value
+                            if (targetGenericName == null) {
+                                messages.error(
+                                    "Generic parameter $resolved ($index) does not exist in the definition of $target",
+                                    type.location,
+                                    if (!target.generics.isEmpty())
+                                        CompilerMessage.Hint(
+                                            "Generics of target type are defined here",
+                                            target.generics.first().name.location.rangeTo(target.generics.last().name.location)
+                                        )
+                                    else
+                                        CompilerMessage.Hint(
+                                            "Target type has no generics defined",
+                                            target.name.location
+                                        )
+                                )
+                                null
+                            } else resolved to targetGenericName
+                        }.associateBy({it.second},{it.first})
                     target.toType(messages, resolvedGenerics)
                 }
             }
@@ -265,7 +288,7 @@ sealed interface Type : Element {
                         if (type.genericParameters.size <= i) {
                             return ReasonedBoolean.False("$type does not have generic parameter $i")
                         }
-                        val accepts = type.genericParameters[i].accepts(value)
+                        val accepts = type.genericParameters[i].value.acceptsInstanceOf(value.value)
                         if (!accepts.value) {
                             return ReasonedBoolean.False("$i of $type is not assignable to $value", accepts)
                         }
@@ -279,7 +302,7 @@ sealed interface Type : Element {
         }
 
         @Transient
-        override val children: List<Element> = genericParameters
+        override val children: List<Element> = genericParameters.map { it.value }
 
         @Transient
         override var target: TypeDefinition? = null;
@@ -304,7 +327,7 @@ sealed interface Type : Element {
                 prefix = "<",
                 postfix = ">",
                 separator = ", "
-            ) { it.toString() } else ""
+            ) { it.value.toString() } else ""
         }
 
         override fun finalize(messages: CompilerMessages) {
@@ -323,7 +346,7 @@ sealed interface Type : Element {
         }
 
         override fun accepts(type: Type): ReasonedBoolean {
-            var optionsAccept = options.map { it.accepts(type) }
+            var optionsAccept = options.map { it.acceptsInstanceOf(type) }
             var matches = optionsAccept.filter { it.value }
             if (matches.isNotEmpty()) return ReasonedBoolean.True(
                 "$type is assignable to one or more options of $this",
