@@ -168,7 +168,7 @@ public abstract class Grammar<R extends AstNode<T>, T extends Enum<T> & Tokenabl
     public abstract boolean isLeftRecursive(GrammarReference<T> ref);
 
     public Grammar<?,T> merged() {
-        return new MergedGrammar(this);
+        return new MergedGrammar<>(this);
     }
 
     @Override
@@ -177,25 +177,25 @@ public abstract class Grammar<R extends AstNode<T>, T extends Enum<T> & Tokenabl
     }
 
     public Grammar<?,T> or(Grammar<?,T>... alternatives) {
-        var combined = new Grammar<?>[alternatives.length + 1];
+        var combined = new Grammar[alternatives.length + 1];
         combined[0] = this;
         System.arraycopy(alternatives, 0, combined, 1, alternatives.length);
-        return new MultiGrammar<>(combined);
+        return new MultiGrammar<T>(combined);
     }
 
-    public ChainGrammar then(Grammar<?> tokenDefiner) {
-        var chain = new ChainGrammar();
+    public ChainGrammar<T> then(Grammar<?, T> tokenDefiner) {
+        var chain = new ChainGrammar<T>();
         chain.addGrammar(this);
         chain.addGrammar(tokenDefiner);
         return chain;
     }
 
-    public ChainGrammar then(Tokenable tokenDefiner) {
+    public ChainGrammar<T> then(T tokenDefiner) {
         return then(token(tokenDefiner));
     }
 
-    public ChainGrammar then(String name, Grammar<?> tokenDefiner) {
-        var chain = new ChainGrammar();
+    public ChainGrammar<T> then(String name, Grammar<?,T> tokenDefiner) {
+        var chain = new ChainGrammar<T>();
         chain.addGrammar(this);
         chain.addGrammar(tokenDefiner, name);
         return chain;
@@ -250,22 +250,18 @@ public abstract class Grammar<R extends AstNode<T>, T extends Enum<T> & Tokenabl
             if (!directRecursion && chain.getName().equals(g)) {
                 throw new IllegalArgumentException("directRecursion forbidden! (" + g + " grammar in " + g + " grammar). This can be enabled using 'setDirectRecursion(boolean)'");
             }
-            return new RuleApplier(g, new Builder.ReferenceGrammarConverter());
+            return new RuleApplier(g, new Builder.ReferenceGrammarConverter<>());
         }
 
         public RuleApplier grammar(Grammar<?,T> g) {
             return new RuleApplier(g);
         }
 
-        public RuleApplier token(Tokenable g) {
-            return new RuleApplier(g, new Builder.TokenGrammarConverter());
+        public RuleApplier token(T g) {
+            return new RuleApplier(g, new Builder.TokenGrammarConverter<>());
         }
 
-        public RuleApplier token(String g) {
-            return new RuleApplier(g, new Builder.TokenNameGrammarConverter());
-        }
-
-        public RuleApplier grammars(Grammar<?,T>... g) {
+        public final RuleApplier grammars(Grammar<?, T>... g) {
             return new MultiRuleApplier(g);
         }
 
@@ -281,19 +277,16 @@ public abstract class Grammar<R extends AstNode<T>, T extends Enum<T> & Tokenabl
                 }
             }
 
-            return new MultiRuleApplier(new Builder.ReferenceGrammarConverter(), g);
+            return new MultiRuleApplier(new Builder.ReferenceGrammarConverter<>(), g);
         }
 
         public RuleApplier grammars(GrammarName... g) {
-            return new MultiRuleApplier(new Builder.NamedGrammarConverter(), g);
+            return new MultiRuleApplier(new Builder.NamedGrammarConverter<>(), g);
         }
 
-        public RuleApplier tokens(Tokenable... g) {
-            return new MultiRuleApplier(new Builder.TokenGrammarConverter(), g);
-        }
-
-        public RuleApplier tokens(String... g) {
-            return new MultiRuleApplier(new Builder.TokenNameGrammarConverter(), g);
+        @SafeVarargs
+        public final RuleApplier tokens(T... g) {
+            return new MultiRuleApplier(new Builder.TokenGrammarConverter<>(), g);
         }
 
         public RuleApplier keyword(String keyword) {
@@ -320,20 +313,13 @@ public abstract class Grammar<R extends AstNode<T>, T extends Enum<T> & Tokenabl
         private static class NamedGrammarConverter<T extends Enum<T> & Tokenable> implements GrammarConverter<GrammarName,T> {
             @Override
             public Grammar<?,T> toGrammar(GrammarName s) {
-                return new GrammarReferenceGrammar(s.getName());
+                return new GrammarReferenceGrammar<>(s.getName());
             }
         }
 
-        private static class TokenGrammarConverter<T extends Enum<T> & Tokenable> implements GrammarConverter<Tokenable> {
+        private static class TokenGrammarConverter<T extends Enum<T> & Tokenable> implements GrammarConverter<T,T> {
             public Grammar<?,T> toGrammar(T s) {
                 return new TokenGrammar<>(s);
-            }
-        }
-
-        private static class EnumGrammarConverter implements GrammarConverter<Enum<?>> {
-            @Override
-            public Grammar<?> toGrammar(Enum<?> s) {
-                return new GrammarReferenceGrammar(s.name());
             }
         }
 
@@ -343,13 +329,13 @@ public abstract class Grammar<R extends AstNode<T>, T extends Enum<T> & Tokenabl
          * methodes
          */
         public class RuleApplier {
-            private Grammar<?> g;
+            private Grammar<?,T> g;
 
-            public <T> RuleApplier(T s, GrammarConverter<T> converter) {
+            private <G> RuleApplier(G s, GrammarConverter<G,T> converter) {
                 g = converter.toGrammar(s);
             }
 
-            public RuleApplier(Grammar<?> t) {
+            public RuleApplier(Grammar<?,T> t) {
                 g = t;
             }
 
@@ -357,7 +343,7 @@ public abstract class Grammar<R extends AstNode<T>, T extends Enum<T> & Tokenabl
              * @see IgnoreGrammar
              */
             public RuleApplier ignore() {
-                g = new IgnoreGrammar(g);
+                g = new IgnoreGrammar<>(g);
                 return this;
             }
 
@@ -365,7 +351,7 @@ public abstract class Grammar<R extends AstNode<T>, T extends Enum<T> & Tokenabl
              * @see RepeatGrammar
              */
             public RuleApplier repeat() {
-                g = new RepeatGrammar(g, 0);
+                g = new RepeatGrammar<>(g, 0);
                 return this;
             }
 
@@ -373,21 +359,21 @@ public abstract class Grammar<R extends AstNode<T>, T extends Enum<T> & Tokenabl
              * @see OptionalGrammar
              */
             public RuleApplier optional() {
-                g = new OptionalGrammar(g);
+                g = new OptionalGrammar<>(g);
                 return this;
             }
 
             public RuleApplier anyExcept() {
-                g = new AnyExceptGrammar(g);
+                g = new AnyExceptGrammar<>(g);
                 return this;
             }
 
-            public Builder add() {
+            public Builder<T> add() {
                 chain.addGrammar(g);
                 return Builder.this;
             }
 
-            public Builder add(String message) {
+            public Builder<T> add(String message) {
                 return name(message);
             }
 
@@ -396,19 +382,21 @@ public abstract class Grammar<R extends AstNode<T>, T extends Enum<T> & Tokenabl
              *
              * @param name the name to give
              */
-            public synchronized Builder name(String name) {
+            public synchronized Builder<T> name(String name) {
                 chain.addGrammar(g, name);
                 return Builder.this;
             }
         }
 
         public class MultiRuleApplier extends RuleApplier {
-            public <T> MultiRuleApplier(GrammarConverter<T> converter, T... s) {
-                this(Arrays.stream(s).map(converter::toGrammar).toArray(i -> new Grammar<?>[i]));
+            @SafeVarargs
+            <K> MultiRuleApplier(GrammarConverter<K,T> converter, K... s) {
+                this(Arrays.stream(s).map(converter::toGrammar).toArray(Grammar[]::new));
             }
 
-            public MultiRuleApplier(Grammar<?>... t) {
-                super(new MultiGrammar(t));
+            @SafeVarargs
+            public MultiRuleApplier(Grammar<?,T>... t) {
+                super(new MultiGrammar<>(t));
             }
         }
     }

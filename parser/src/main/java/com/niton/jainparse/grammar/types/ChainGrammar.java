@@ -2,11 +2,13 @@ package com.niton.jainparse.grammar.types;
 
 import com.niton.jainparse.ast.SequenceNode;
 import com.niton.jainparse.grammar.api.Grammar;
+import com.niton.jainparse.grammar.api.GrammarMatcher;
 import com.niton.jainparse.grammar.api.GrammarReference;
 import com.niton.jainparse.grammar.api.WrapperGrammar;
 import com.niton.jainparse.grammar.matchers.ChainMatcher;
 import com.niton.jainparse.token.Tokenable;
 import lombok.*;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.Stream;
@@ -20,7 +22,7 @@ import java.util.stream.Stream;
  */
 @Getter
 @NoArgsConstructor
-public class ChainGrammar<T extends Enum<T> & Tokenable> extends WrapperGrammar<SequenceNode<T>,T> implements GrammarReference<T> {
+public class ChainGrammar<T extends Enum<T> & Tokenable> extends WrapperGrammar<SequenceNode<T>,T> {
     private final List<Grammar<?,T>> chain = new LinkedList<>();
     private final Map<Integer, String> naming = new HashMap<>();
     private boolean isLeftRecursive = false;
@@ -53,34 +55,33 @@ public class ChainGrammar<T extends Enum<T> & Tokenable> extends WrapperGrammar<
      * @see Grammar#createExecutor()
      */
     @Override
-    public ChainMatcher<T> createExecutor() {
-        return new ChainMatcher(this);
+    protected GrammarMatcher<SequenceNode<T>,T> createExecutor() {
+        return new ChainMatcher<>(this);
     }
 
     @Override
-    public boolean isLeftRecursive(GrammarReference ref) {
+    public boolean isLeftRecursive(GrammarReference<T> ref) {
         return isLeftRecursive;
     }
 
     @Override
-    protected Stream<Grammar<?>> getWrapped() {
+    protected Stream<Grammar<?,T>> getWrapped() {
         return chain.stream();
     }
     @Override
-    public ChainGrammar then(Grammar<?> grammar) {
+    public ChainGrammar<T> then(Grammar<?,T> grammar) {
         if(getName() != null) return super.then(grammar);
-        val newGram = new ChainGrammar(chain, naming);
+        val newGram = new ChainGrammar<>(chain, naming);
         newGram.addGrammar(grammar);
         return newGram;
     }
 
     @Override
-    public ChainGrammar then(String name, Grammar<?> grammar) {
+    public ChainGrammar<T> then(String name, Grammar<?,T> grammar) {
         if(getName() != null) return super.then(grammar);
-        val newGram = new ChainGrammar(chain, naming);
+        val newGram = new ChainGrammar<>(chain, naming);
         newGram.addGrammar(grammar, name);
 
         return newGram;
     }
-
 }

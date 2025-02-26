@@ -56,11 +56,4 @@ public class TokenMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<
                 token.getType()
         ), tokenRange));
     }
-
-    /**
-     * @return the tokenName
-     */
-    public String getGrammar() {
-        return grammar.getTokenName();
-    }
 }

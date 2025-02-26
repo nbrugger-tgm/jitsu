@@ -30,7 +30,7 @@ import static java.lang.String.format;
  */
 @Getter
 @Setter
-public class ChainMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<SequenceNode<T>,T> {
+public class ChainMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<SequenceNode<T>, T> {
 
     private static final Set<RecursionMarker> recursionMarkers = new HashSet<>();
     private final ChainGrammar<T> chain;
@@ -75,7 +75,7 @@ public class ChainMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<
         for (var grammar : chain.getChain()) {
             ParsingResult<? extends AstNode<T>> res;
             if (i == 0 && (chain.isLeftRecursive() && recursionMarker.firstNodeSubstitute != null)) {
-                res = ParsingResult.ok(recursionMarker.firstNodeSubstitute);
+                res = ParsingResult.ok((AstNode<T>) recursionMarker.firstNodeSubstitute);
             } else {
                 GrammarMatcher.additionalInfo = chain.getNaming().get(i);
                 if (GrammarMatcher.additionalInfo == null)
@@ -142,7 +142,7 @@ public class ChainMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<
             GrammarReference<T> reference,
             RecursionMarker recursionMarker
     ) {
-        Grammar<?,T> leftmostGrammar = chain.getChain().get(0);
+        Grammar<?, T> leftmostGrammar = chain.getChain().get(0);
         var leftElement = leftmostGrammar.parse(tokens, reference);
         if (!leftElement.wasParsed()) {
             return ParsingResult.error(new ParsingException(getIdentifier(), "Couldn't parse first element of" + chain.getIdentifier(), leftElement.exception()));
@@ -165,7 +165,7 @@ public class ChainMatcher<T extends Enum<T> & Tokenable> extends GrammarMatcher<
             }
             leftNode = newSubst.unwrap();
         }
-        var last = recursionMarker.lastSameTypeNode;
+        var last = (SequenceNode<T>) recursionMarker.lastSameTypeNode;
         if (last == null) {
             return ParsingResult.error(leftNode.getParsingException());
         } else {

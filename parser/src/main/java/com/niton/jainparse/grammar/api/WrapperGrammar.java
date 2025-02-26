@@ -9,26 +9,26 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public abstract class WrapperGrammar<T extends AstNode<TKN>, TKN extends Enum<TKN> & Tokenable> extends Grammar<T, TKN> {
+public abstract class WrapperGrammar<T extends AstNode<TKN>, TKN extends Enum<TKN> & Tokenable> extends Grammar<T, TKN> implements GrammarReference<TKN>{
 
     protected abstract Stream<Grammar<?, TKN>> getWrapped();
 
-    private Stream<Grammar<?, TKN>> getAllWrapped() {
+    protected Stream<Grammar<?, TKN>> getAllWrapped() {
         return Stream.concat(getWrapped(), getWrapped().flatMap(g -> g instanceof WrapperGrammar ? ((WrapperGrammar<?, TKN>) g).getAllWrapped() : Stream.empty()));
     }
 
-//    @Override
-//    public @Nullable Grammar<?, TKN> get(String key) {
-//        if (getName().equals(key))
-//            return this;
-//        return getAllWrapped().filter(g -> g.getName() != null && g.getName().equals(key)).findFirst().orElse(null);
-//    }
-//
-//    @Override
-//    public Set<String> grammarNames() {
-//        return Stream.concat(getAllWrapped(), Stream.of(this))
-//                .map(Grammar::getName)
-//                .filter(Objects::nonNull)
-//                .collect(Collectors.toSet());
-//    }
+    @Override
+    public @Nullable Grammar<?, TKN> get(String key) {
+        if (getName().equals(key))
+            return this;
+        return getAllWrapped().filter(g -> g.getName() != null && g.getName().equals(key)).findFirst().orElse(null);
+    }
+
+    @Override
+    public Set<String> grammarNames() {
+        return Stream.concat(getAllWrapped(), Stream.of(this))
+                .map(Grammar::getName)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
 }

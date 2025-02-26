@@ -2,6 +2,7 @@ package com.niton.jainparse.grammar.types;
 
 import com.niton.jainparse.ast.OptionalNode;
 import com.niton.jainparse.grammar.api.Grammar;
+import com.niton.jainparse.grammar.api.GrammarMatcher;
 import com.niton.jainparse.grammar.api.GrammarReference;
 import com.niton.jainparse.grammar.api.WrapperGrammar;
 import com.niton.jainparse.grammar.matchers.IgnoreMatcher;
@@ -21,11 +22,11 @@ import java.util.stream.Stream;
 @Setter
 public class IgnoreGrammar<T extends Enum<T> & Tokenable> extends WrapperGrammar<OptionalNode<T>, T> {
     private final Grammar<?,T> grammar;
-    private final IgnoreMatcher matcher;
+    private final GrammarMatcher<OptionalNode<T>,T> matcher;
 
     public IgnoreGrammar(Grammar<?,T> grammar) {
         this.grammar = grammar;
-        this.matcher = new IgnoreMatcher(grammar);
+        this.matcher = new IgnoreMatcher<>(grammar);
     }
 
 
@@ -43,7 +44,7 @@ public class IgnoreGrammar<T extends Enum<T> & Tokenable> extends WrapperGrammar
      * @see Grammar#createExecutor()
      */
     @Override
-    public IgnoreMatcher<T> createExecutor() {
+    public GrammarMatcher<OptionalNode<T>,T> createExecutor() {
         return matcher;
     }
 
