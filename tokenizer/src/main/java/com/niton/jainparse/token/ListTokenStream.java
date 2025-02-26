@@ -12,6 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * A Stream of tokens that supports stack based navigation
@@ -161,7 +162,20 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
 
     @Override
     public String toString() {
-        return levelIndexes.toString();
+        if(!hasNext()) return "ListTokenStream[fully consumed]";
+        return "["+levelIndexes.stream().map(idx -> {
+            StringBuilder builder = new StringBuilder();
+            if(idx > 0) {
+                builder.append(tokens.get(idx - 1).getValue());
+            }
+            builder.append('[')
+                    .append(tokens.get(idx).getValue())
+                    .append(']');
+            if(idx < tokens.size() - 1) {
+                builder.append(tokens.get(idx + 1).getValue());
+            }
+            return builder.toString();
+        }).collect(Collectors.joining(", "))+"]";
     }
 
     @Override
@@ -198,6 +212,24 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
         if(getColumn() == 0) {
             return Location.oneChar(getLine()-1, getLastLineColumn());
         }
-        return Location.oneChar(getLine(), getColumn());
+        return Location.oneChar(getLine(), getColumn()-1);
+    }
+
+    @Override
+    public AssignedToken<T> splice(int i) {
+        var next = peekOptional();
+        if(next.isEmpty()) return null;
+        var value = next.get().getValue();
+        if(value.length() < i) return null;
+        if(value.length() == i) {
+            return next();
+        }
+        var toSplit = next();
+        var split = new AssignedToken<>(toSplit.getValue().substring(0, i), toSplit.getType());
+        split.setStart(toSplit.getStart());
+        toSplit.setStart(toSplit.getStart() + i);
+        toSplit.setValue(toSplit.getValue().substring(i));
+        tokens.add(index()-1, split);
+        return split;
     }
 }

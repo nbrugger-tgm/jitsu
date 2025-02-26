@@ -68,4 +68,11 @@ public interface TokenStream<T extends Enum<T> & Tokenable> {
     static <T extends Enum<T> & Tokenable> TokenStream<T> of(List<Tokenizer.AssignedToken<T>> tokens) {
         return new ListTokenStream<>(tokens);
     }
+
+    /**
+     * Splice splits the current/next token into two parts with the first part being of the given size and then returned
+     * @return a token split of from another one with the size {@code i} null if the current token is shorter than {@code i}
+     */
+    @Nullable
+    Tokenizer.AssignedToken<T> splice(int i);
 }
