@@ -40,15 +40,15 @@ public abstract class Grammar<R extends AstNode<T>, T extends Enum<T> & Tokenabl
         return new AnyExceptGrammar<>(except);
     }
 
-    public static <T extends Enum<T> & Tokenable> Grammar<?, T> reference(String name) {
+    public static <T extends Enum<T> & Tokenable> Grammar<?, T> createReference(String name) {
         return new GrammarReferenceGrammar<T>(name);
     }
 
-    public static <T extends Enum<T> & Tokenable> Grammar<?, ?> reference(GrammarName name) {
+    public static <T extends Enum<T> & Tokenable> Grammar<?, ?> createReference(GrammarName name) {
         return new GrammarReferenceGrammar<T>(name.getName());
     }
 
-    public static <T extends Enum<T> & Tokenable> Grammar<?,T> reference(Grammar<?,T> name) {
+    public static <T extends Enum<T> & Tokenable> Grammar<?,T> createReference(Grammar<?,T> name) {
         return new GrammarReferenceGrammar<>(name.getName());
     }
 

@@ -1,7 +1,6 @@
 package com.niton.jainparse;
 
 import com.niton.jainparse.ast.ReducedNode;
-import com.niton.jainparse.exceptions.ParsingException;
 import com.niton.jainparse.grammar.api.GrammarReferenceMap;
 import com.niton.jainparse.parser.DefaultParser;
 import com.sun.net.httpserver.HttpServer;
@@ -36,15 +35,15 @@ public class ManualTest {
 		   )
 		   .map(
 				   anyOf(
-						   reference("Multiplicative"),
-						   reference("Additive")
+						   createReference("Multiplicative"),
+						   createReference("Additive")
 				   ).setName("Operation")
 		   )
 		   .map(
 				   anyOf(
-						   reference("Number"),
-						   reference("Singed Number"),
-						   reference("Enclosed Expression")
+						   createReference("Number"),
+						   createReference("Singed Number"),
+						   createReference("Enclosed Expression")
 				   ).setName("Non calc expression")
 		   )
 		   .map(
