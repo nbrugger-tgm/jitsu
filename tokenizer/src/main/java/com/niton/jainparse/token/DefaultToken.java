@@ -36,7 +36,7 @@ public enum DefaultToken implements Tokenable {
 	SQUARE_BRACKET_CLOSED("\\]"),
 
 
-	SMALLER("<"),
+	LEFT_ANGLE_BRACKET("<"),
 	BIGGER(">"),
 
 
