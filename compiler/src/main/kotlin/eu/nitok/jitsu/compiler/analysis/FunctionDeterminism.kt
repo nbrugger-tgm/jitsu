@@ -8,7 +8,6 @@ import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage.Hint
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import kotlinx.serialization.Serializable
-import kotlin.math.exp
 
 
 @Serializable
@@ -50,6 +49,7 @@ data class FunctionInfo(
 class ExecutionState(
     val localFunctions: MutableMap<String, MutableList<Function>> = mutableMapOf(),
     val localVariables: MutableMap<String, VariableState> = mutableMapOf(),
+    var parameters: MutableMap<String, ParameterState>,
     private val parentScope: Scope
 ) {
     fun asScope(): Scope {
@@ -57,7 +57,8 @@ class ExecutionState(
             emptyList(),
             emptyMap(),
             localFunctions,
-            localVariables.mapValues { it.value.declaration.variable }).also {
+            localVariables.mapValues { it.value.declaration.variable }
+        ).also {
             it.parent = parentScope
         }
     }
@@ -101,7 +102,7 @@ class CodeBlockAnalysis(
 
     val calls: MutableList<FunctionInfo> = mutableListOf()
     val writeExternalState: Boolean = false;
-    val parameters: MutableMap<String, ParameterInfo.PassingType> = mutableMapOf()
+    val parameters: MutableMap<String, ParameterInfo> = mutableMapOf()
     val parentScope = block.scope.parent ?: throw IllegalStateException("Function scope has no parent")
     val executionState = ExecutionState(parentScope = parentScope)
 
@@ -203,7 +204,8 @@ class CodeBlockAnalysis(
                 val right = processExpression(expression.right, BORROW)
                 ValueInfo(
                     deterministic = left.deterministic.and(right.deterministic),
-                    type = expression.calculateType(localVarTypes) ?: Type.Undefined
+                    type = expression.calculateType(localVarTypes) ?: Type.Undefined,
+                    affectedBy = left.affectedBy + right.affectedBy
                 )
             }
 
@@ -256,7 +258,8 @@ class CodeBlockAnalysis(
     private fun processFunctionCall(functionCall: Instruction.FunctionCall): ValueInfo? {
         val isGlobal = !parentScope.allFunctions[functionCall.reference.value].isNullOrEmpty()
         val localTypes = executionState.localVariables.mapValues { it.value.type }
-        val actualParameterTypes = functionCall.callParameters.map { Located(it.calculateType(localTypes) ?: Type.Undefined, it.location) }
+        val actualParameterTypes =
+            functionCall.callParameters.map { Located(it.calculateType(localTypes) ?: Type.Undefined, it.location) }
         functionCall.setEnclosingScope(executionState.asScope())
         functionCall.resolveAccessTarget(messages)
         val target = functionCall.resolve {

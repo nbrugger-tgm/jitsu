@@ -417,7 +417,7 @@ fun resolveType(type: TypeNode?): Type {
         is TypeNode.FloatTypeNode -> Type.Float(type.bitSize)
         is TypeNode.FunctionTypeSignatureNode -> TODO()
         is TypeNode.IntTypeNode -> Type.Int(type.bitSize)
-        is TypeNode.NameTypeNode -> Type.TypeReference(type.name.located, type.genericTypes.map { resolveType(it) })
+        is TypeNode.NameTypeNode -> Type.TypeReference(type.name.located, type.genericTypes.map { Located(resolveType(it), it.location) })
         is TypeNode.StructuralInterfaceTypeNode -> Type.StructuralInterface(type.fields.map {
             TypeDefinition.ParameterizedType.Struct.Field(
                 it.name.located,
