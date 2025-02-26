@@ -23,8 +23,8 @@ sealed interface ReasonedBoolean {
         val hints = hints.toMutableList()
         fun appendCauses(causes: List<ReasonedBoolean>, indent: String = "") {
             causes.forEach {
-                msg += "\n$indent\tCaused by: ${it.message}"
-                appendCauses(it.causes, "$indent\t")
+                msg += "\n$indent  Because : ${it.message}"
+                appendCauses(it.causes, "$indent  ")
                 hints += it.hints
             }
         }

@@ -54,6 +54,10 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
             override fun setEnclosingScope(parent: Scope) {
                 scope.parent = parent
             }
+
+            override fun toString(): String {
+                return "${name.value}${if (generics.isNotEmpty()) "<${generics.joinToString(", ")}>" else ""}"
+            }
         }
 
         @Serializable
@@ -138,5 +142,9 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
     ) : TypeDefinition() {
         @Transient
         override val children: List<Element> = emptyList();
+
+        override fun toString(): String {
+            return name.value
+        }
     }
 }

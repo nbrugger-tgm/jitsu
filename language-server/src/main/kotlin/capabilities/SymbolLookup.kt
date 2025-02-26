@@ -17,7 +17,7 @@ import range
 
 private fun TypeDefinition.documentSymbols(children: Iterable<DocumentSymbol>): List<DocumentSymbol> = listOf(
     DocumentSymbol(
-        name.value,
+        this.toString(),
         symbolKind(),
         range(name.location),
         range(name.location),
