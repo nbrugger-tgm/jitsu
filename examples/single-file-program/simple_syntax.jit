@@ -1,9 +1,17 @@
-fn main(): u8 {
-    var a:u8 = 12; 
-    var b:u8 = 18;
-    return add(a, b);
+fn main():u32 {
+    var input: u64 = 2347483647;
+    var number : u32 | i32 = input;
+    var return1 = test(number, number);
+    var return2 = testGeneric(number, number);
+    return return1 + return2;
 }
 
-fn add(a: u8, b: u8): u8 {
+fn test(a: u32 | i64, b: u64 | i32): u32 {
+    return a + b;
+}
+
+type Or<A,B> = A | B;
+
+fn testGeneric(a: Or<u32, i64>, b: Or<u64, i32>): u32 {
     return a + b;
 }
