@@ -4,4 +4,4 @@
 
 rootProject.name = 'jainparse'
 
-include "core", "parser", "tokenizer", "generator", "grammar-parser"
+include "core", "tokenizer"
