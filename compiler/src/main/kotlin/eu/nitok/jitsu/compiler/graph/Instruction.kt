@@ -2,7 +2,6 @@ package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.Located
-import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -19,11 +18,6 @@ sealed interface Instruction : Element {
         override fun setEnclosingFunction(parent: Function) {
             function = parent
         }
-    }
-
-    @Serializable
-    data class VariableDeclaration(val variable: Variable, val value: Expression?) : Instruction {
-        override val children: List<Element> get() = listOfNotNull(variable, value)
     }
 
     @Serializable

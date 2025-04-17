@@ -44,6 +44,20 @@ sealed interface Access<T : Accessible<T>> {
     }
 
     sealed interface FunctionAccess : Access<Function>
-    sealed interface VariableAccess : Access<Variable>
+    sealed interface VariableAccess : Access<Variable> {
+        val accessKind : AccessKind
+        enum class AccessKind {
+            /**
+             * The parameter does not leave the scope and the callee can still use/manage the variable afterward
+             */
+            BORROW,
+
+            /**
+             * The parameter needs to be managed by the function and the callee needs to either give controll to the function
+             * or hand the function a copy.
+             */
+            MOVE
+        }
+    }
     sealed interface TypeAccess : Access<TypeDefinition>
 }

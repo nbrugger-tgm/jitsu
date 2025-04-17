@@ -1,5 +1,5 @@
 fn main():u32 {
-    var input: u64 = 2347483647;
+    var input = 23470000;
     var number : u32 | i32 = input;
     var return1 = test(number, number);
     var return2 = testGeneric(number, number);

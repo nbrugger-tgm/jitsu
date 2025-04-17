@@ -1,12 +1,10 @@
 package eu.nitok.jitsu.compiler.graph
 
+
 import eu.nitok.jitsu.compiler.ast.*
-
-
 import eu.nitok.jitsu.compiler.ast.StatementNode.*
 import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.FunctionDeclarationNode
 import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.*
-import eu.nitok.jitsu.compiler.graph.Instruction.VariableDeclaration
 import eu.nitok.jitsu.compiler.graph.TypeDefinition.TypeParameter
 import eu.nitok.jitsu.compiler.model.sequence
 import eu.nitok.jitsu.compiler.model.walk
@@ -61,7 +59,7 @@ private fun GraphBuilder.processStatements(
             is VariableDeclarationNode -> {
                 val declaration = buildGraph(statement)
                 instructionHandler(statement)
-                variables.add(declaration.variable)
+                variables.add(declaration)
             }
 
             is InstructionNode -> instructionHandler(statement)
@@ -85,7 +83,7 @@ private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.Cla
             classNode.typeParameters.map { buildTypeParameterGraph(it) },
             fields,
             classNode.methods.map {
-                var base = buildFunctionGraph(it.function);
+                val base = buildFunctionGraph(it.function);
                 Function(
                     base.name,
                     base.returnType,
@@ -96,8 +94,7 @@ private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.Cla
                             null
                         )
                     ) + base.parameters,
-                    base.body,
-                    base.scope
+                    base.body
                 )
             })
     }
@@ -132,16 +129,13 @@ private fun GraphBuilder.buildInstructionGraph(statement: InstructionNode): Inst
 fun buildGraph(statement: VariableDeclarationNode): VariableDeclaration {
     val explicitType = statement.type?.let { resolveType(it) }
     val initialValue = statement.value?.let { node -> buildExpressionGraph(node) }
-    val variable = Variable(
+    val variableDeclaration = VariableDeclaration(
         false,
         statement.name?.located ?: Located("unnamed", statement.keywordLocation),
         explicitType,
         initialValue
     )
-    return VariableDeclaration(
-        variable,
-        initialValue
-    )
+    return variableDeclaration
 }
 
 fun buildGraph(statement: NamedTypeDeclarationNode.TypeAliasNode): TypeDefinition.ParameterizedType.Alias? {
@@ -237,27 +231,23 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
     val functionBody = when (val body = functionNode.body) {
         is CodeBlockNode.SingleExpressionCodeBlock -> TODO()//buildExpressionGraph(body.expression, function.bodyScope)
         is CodeBlockNode.StatementsCodeBlock -> buildCodeBlockGraph(body.statements)
-        null -> CodeBlock(
-            listOf(),
-            Scope(mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf(), messages)
-        );
+        null -> CodeBlock(listOf());
     }
     return Function(
         name?.located,
         resolveType(functionNode.returnType),
         parameters,
-        functionBody,
-        messages
+        functionBody
     );
 }
 
 private fun GraphBuilder.buildCodeBlockGraph(statements: List<StatementNode>): CodeBlock {
     val instructions = mutableListOf<Instruction>()
-    val scope = processStatements(statements) {
+    processStatements(statements) {
         val instruction = buildInstructionGraph(it)
         if (instruction != null) instructions.add(instruction)
     }
-    return CodeBlock(instructions, scope)
+    return CodeBlock(instructions)
 }
 
 fun resolveConstantOperation(scope: Scope, expression: ExpressionNode.OperationNode): Constant<Any>? {
