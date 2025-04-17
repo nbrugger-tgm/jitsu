@@ -16,7 +16,7 @@ sealed interface Type : Element {
     fun acceptsInstanceOf(type: Type): ReasonedBoolean {
         return if (type is Undefined) ReasonedBoolean.True("While UNDEFINED cannot be assigned to anything, the error lies in the definition of the type not its usage");
         else if (type is Union) {
-            var optionAssignability = type.options.map { mapAssignabilityBoolean(accepts(it), it, this) }
+            val optionAssignability = type.options.map { mapAssignabilityBoolean(accepts(it), it, this) }
             if (optionAssignability.all { boolean -> boolean.value })
                 ReasonedBoolean.True(
                     "Each type in the union is assignable to $this",
@@ -27,7 +27,7 @@ sealed interface Type : Element {
                     "Not all types in the union ($type) are assignable to $this",
                     *optionAssignability.filter { !it.value }.toTypedArray()
                 )
-        } else mapAssignabilityBoolean(accepts(type), type, this)
+        } else accepts(type)
     }
 
     fun mapAssignabilityBoolean(boolean: ReasonedBoolean, from: Type, to: Type): ReasonedBoolean {
@@ -72,6 +72,7 @@ sealed interface Type : Element {
             return if (type is UInt && type.size.bits <= this.size.bits) ReasonedBoolean.True(
                 "unsigned integers accept unsigned integers their size and smaller"
             )
+            else if(type is UInt) ReasonedBoolean.False("$type is too large to fit into a $this")
             else if (type is Int || type is Float) ReasonedBoolean.False("Unsigned integers only accept unsigned integers. To assign non uint numbers convert them first")
             else ReasonedBoolean.False("$type cannot be assigned to $this")
         }
@@ -346,15 +347,15 @@ sealed interface Type : Element {
         }
 
         override fun accepts(type: Type): ReasonedBoolean {
-            var optionsAccept = options.map { it.acceptsInstanceOf(type) }
-            var matches = optionsAccept.filter { it.value }
+            val optionsAccept = options.map { it.toString() to it.acceptsInstanceOf(type) }
+            val matches = optionsAccept.filter { it.second.value }
             if (matches.isNotEmpty()) return ReasonedBoolean.True(
                 "$type is assignable to one or more options of $this",
-                *matches.toTypedArray()
+                causes = matches
             )
             return ReasonedBoolean.False(
-                "None of the types in $this can be assigned an instance of $type",
-                *optionsAccept.toTypedArray()
+                "$type is not assignable to any of: ${options.joinToString(", ")}",
+                causes = optionsAccept
             )
         }
 

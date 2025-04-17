@@ -12,22 +12,9 @@ class Function(
     override val name: Located<String>?,
     val returnType: Type?,
     val parameters: List<Parameter>,
-    val body: CodeBlock,
-    override val scope: Scope
+    val body: CodeBlock
 ) : Instruction, Element, Accessible<Function>, Accessor, ScopeAware, ScopeProvider, Finalizable {
-    constructor(
-        name: Located<String>?,
-        returnType: Type?,
-        parameters: List<Parameter>,
-        body: CodeBlock,
-        messages: CompilerMessages
-    ) : this(
-        name, returnType, parameters, body, Scope(
-            listOf(), listOf(), listOf(),
-            parameters.map { it.asVariable() },
-            messages
-        )
-    )
+    override val scope: Scope = Scope(listOf(), mapOf(), mapOf(), parameters.associateBy { it.name.value })
 
     init {
         fun informChildren(children: List<Element>) {
@@ -53,7 +40,7 @@ class Function(
     }
     val signature: Type.FunctionTypeSignature = Type.FunctionTypeSignature(
         returnType,
-        parameters.map { Type.FunctionTypeSignature.Parameter(it.name, it.type, it.defaultValue != null) }
+        parameters.map { Type.FunctionTypeSignature.Parameter(it.name, it.declaredType, it.initialValue != null) }
     )
 
     override val children: List<Element> get() = listOfNotNull(returnType) + parameters + body
@@ -66,16 +53,22 @@ class Function(
 
     @Serializable
     data class Parameter(
-        val name: Located<String>,
-        val type: Type,
-        val defaultValue: Expression?
-    ) : Element {
-        fun asVariable(): Variable = Variable(false, name, type, defaultValue)
-        override val children: List<Element> get() = listOfNotNull(type, defaultValue)
+        override val name: Located<String>,
+        override val declaredType: Type,
+        override val initialValue: Expression?
+    ) : Variable, Element {
+        /**
+         * alias for [declaredType]
+         */
+        val type get() = declaredType
+        override val accessToSelf: MutableList<in Access<Variable>> = mutableListOf()
+        override val children: List<Element> get() = listOfNotNull(declaredType, initialValue)
 
         override fun toString(): String {
-            return "${name.value}: $type${if (defaultValue != null) " = $defaultValue" else ""}"
+            return "${name.value}: $declaredType${if (initialValue != null) " = $initialValue" else ""}"
         }
+
+        override val reassignable: Boolean = false
     }
 
     override fun finalizeGraph(messages: CompilerMessages) {

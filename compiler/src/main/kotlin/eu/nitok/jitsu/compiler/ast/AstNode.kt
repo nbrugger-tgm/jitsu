@@ -3,10 +3,8 @@ package eu.nitok.jitsu.compiler.ast
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.graph.ReasonedBoolean
 import eu.nitok.jitsu.compiler.model.Walkable
-import eu.nitok.jitsu.compiler.parser.Locatable
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 
 @Serializable
 sealed interface AstNode : Walkable<AstNode> {
@@ -52,7 +50,7 @@ data class CompilerMessages(
     }
 
     fun error(boolean: ReasonedBoolean, location: Range) {
-        val fullMesageChain = boolean.fullMesageChain()
+        val fullMesageChain = boolean.fullMessageChain()
         this.error(CompilerMessage(fullMesageChain.first, location, fullMesageChain.second))
     }
 }

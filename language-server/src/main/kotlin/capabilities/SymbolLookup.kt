@@ -77,17 +77,19 @@ private fun <T: Accessible<T>> Accessible<T>.documentSymbols(children: Iterable<
     return when (this) {
         is Function -> documentSymbols(children)?.let { listOf(it) } ?: children
         is TypeDefinition -> documentSymbols(children)
-        is Variable -> listOf(
-            DocumentSymbol(
-                name.value,
-                SymbolKind.Variable,
-                range(name.location),
-                range(name.location),
-                type.toString(),
-                children.toList()
+        is Variable -> when(this) {
+            is VariableDeclaration -> listOf(
+                DocumentSymbol(
+                    name.value,
+                    SymbolKind.Variable,
+                    range(name.location),
+                    range(name.location),
+                    declaredType.toString(),
+                    children.toList()
+                )
             )
-        )
-
+            else -> listOf()
+        }
         is Enum.Constant -> listOf(
             DocumentSymbol(
                 name.value,

@@ -16,7 +16,7 @@ sealed interface Expression : Element {
     @Serializable
     data class Undefined(override val location: Range) : Expression {
         @Transient
-        override val isConstant: ReasonedBoolean = ReasonedBoolean.False("No value is defined", listOf(), listOf())
+        override val isConstant: ReasonedBoolean = ReasonedBoolean.False("No value is defined")
         override fun calculateType(context: Map<String, Type>): Type {
             return Type.Undefined
         }
@@ -57,9 +57,9 @@ sealed interface Expression : Element {
     class VariableReference(override val reference: Located<String>) : Expression, Access.VariableAccess, ScopeAware {
         @Transient
         private lateinit var scope: Scope
-        override val isConstant: ReasonedBoolean get() = ReasonedBoolean.False("Cuz not implemented yet", listOf(), listOf())
+        override val isConstant: ReasonedBoolean get() = ReasonedBoolean.False("Cuz not implemented yet")
         override fun calculateType(context: Map<String, Type>): Type? {
-            return context[reference.value] ?: scope.resolveVariable(reference, CompilerMessages())?.implicitType
+            return context[reference.value] ?: scope.resolveVariable(reference, CompilerMessages())?.initialValue?.calculateType(context)
         }
 
         override val location: Range get() = reference.location

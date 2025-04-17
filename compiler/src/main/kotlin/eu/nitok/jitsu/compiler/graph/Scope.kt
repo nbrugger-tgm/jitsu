@@ -86,7 +86,7 @@ open class Scope constructor(
                     )
                 }
                 match.typeError.forEach {
-                    val fullMesageChain = it.reason.fullMesageChain()
+                    val fullMesageChain = it.reason.fullMessageChain()
                     messages.error(
                         "Type mismatch for parameter '${it.paramDefinition.value}': '${it.expected}', '${fullMesageChain.first}'",
                         it.parameterValueLocation,
@@ -96,7 +96,7 @@ open class Scope constructor(
                 }
                 if (match.overflow > 0) {
                     messages.error(
-                        "Too many parameters (expected: ${match.function.parameters.filter { it.defaultValue == null }.size}, got: ${parameterTypes.size})",
+                        "Too many parameters (expected: ${match.function.parameters.filter { it.initialValue == null }.size}, got: ${parameterTypes.size})",
                         name.location,
                         CompilerMessage.Hint("Function defined here", match.function.name!!.location)
                     )

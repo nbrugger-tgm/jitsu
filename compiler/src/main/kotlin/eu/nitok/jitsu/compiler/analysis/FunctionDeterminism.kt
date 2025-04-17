@@ -15,24 +15,13 @@ data class ParameterInfo(
     val passingType: PassingType,
     val affectsOutput: Boolean
 ) {
-    enum class PassingType {
-        /**
-         * The parameter does not leave the scope and the callee can still use/manage the variable afterward
-         */
-        BORROW,
-
-        /**
-         * The parameter needs to be managed by the function and the callee needs to either give controll to the function
-         * or hand the function a copy.
-         */
-        MOVE
-    }
 }
 
 @Serializable
 data class ValueInfo(
     val deterministic: ReasonedBoolean,
-    val type: Type
+    val type: Type,
+    val affectedBy: List<ValueInfo> = listOf()
 ) {
 }
 
@@ -49,7 +38,6 @@ data class FunctionInfo(
 class ExecutionState(
     val localFunctions: MutableMap<String, MutableList<Function>> = mutableMapOf(),
     val localVariables: MutableMap<String, VariableState> = mutableMapOf(),
-    var parameters: MutableMap<String, ParameterState>,
     private val parentScope: Scope
 ) {
     fun asScope(): Scope {
@@ -57,7 +45,7 @@ class ExecutionState(
             emptyList(),
             emptyMap(),
             localFunctions,
-            localVariables.mapValues { it.value.declaration.variable }
+            localVariables.mapValues { it.value.declaration }
         ).also {
             it.parent = parentScope
         }
@@ -69,7 +57,7 @@ class ExecutionState(
         var ownershipState: Ownership,
         var readsExternal: Boolean,
         val possibleValues: List<ValueInfo>,
-        val declaration: Instruction.VariableDeclaration
+        val declaration: VariableDeclaration
     ) {
         val type get() = declaredType ?: inferredType;
 
@@ -95,7 +83,8 @@ class ExecutionState(
 class CodeBlockAnalysis(
     private val block: CodeBlock,
     private val expectedReturnType: Type?,
-    private val messages: CompilerMessages
+    private val messages: CompilerMessages,
+    parentScope: Scope
 ) {
 
     var returnInfo: ValueInfo? = null
@@ -103,7 +92,6 @@ class CodeBlockAnalysis(
     val calls: MutableList<FunctionInfo> = mutableListOf()
     val writeExternalState: Boolean = false;
     val parameters: MutableMap<String, ParameterInfo> = mutableMapOf()
-    val parentScope = block.scope.parent ?: throw IllegalStateException("Function scope has no parent")
     val executionState = ExecutionState(parentScope = parentScope)
 
 
@@ -114,6 +102,9 @@ class CodeBlockAnalysis(
     }
 
     private fun processInstruction(instruction: Instruction) {
+        if(instruction is ScopeAware) instruction.setEnclosingScope(executionState.asScope())
+        if(instruction is Access<*>) instruction.finalize(messages)
+        if(instruction is ScopeProvider) instruction.setScopes()
         when (instruction) {
             is Function -> {
                 instruction.name?.let {
@@ -126,26 +117,26 @@ class CodeBlockAnalysis(
 
             is Instruction.Return -> processReturn(instruction)
 
-            is Instruction.VariableDeclaration -> {
+            is VariableDeclaration -> {
                 val inferredType =
-                    instruction.value?.calculateType(executionState.localVariables.mapValues { it.value.type })
+                    instruction.initialValue?.calculateType(executionState.localVariables.mapValues { it.value.type })
                         ?: Type.Undefined
-                val initialValue = instruction.value?.let { processExpression(it, BORROW) }
-                if (instruction.variable.declaredType != null && instruction.value != null) {
-                    val typeMatch = instruction.variable.declaredType.acceptsInstanceOf(inferredType)
+                val initialValue = instruction.initialValue?.let { processExpression(it, BORROW) }
+                if (instruction.declaredType != null && instruction.initialValue != null) {
+                    val typeMatch = instruction.declaredType.acceptsInstanceOf(inferredType)
                     if (!typeMatch.value)
-                        messages.error(typeMatch, instruction.value.location)
+                        messages.error(typeMatch, instruction.initialValue.location)
                 }
                 val variableState = ExecutionState.VariableState(
-                    declaredType = instruction.variable.declaredType,
+                    declaredType = instruction.declaredType,
                     inferredType = inferredType,
                     ownershipState = Ownership.OWNS,
                     readsExternal = false,
                     possibleValues = listOfNotNull(initialValue),
                     declaration = instruction
                 )
-                instruction.variable.implicitType = inferredType
-                val varName = instruction.variable.name
+                instruction.implicitType = inferredType
+                val varName = instruction.name
                 if (executionState.localVariables.containsKey(varName.value)) {
                     messages.error(
                         "Variable ${varName.value} is already declared",
@@ -180,7 +171,7 @@ class CodeBlockAnalysis(
             return
         }
         returnInfo = processExpression(returnValueExpression, MOVE)
-        var actualType = returnValueExpression.calculateType(executionState.localVariables.mapValues { it.value.type })
+        val actualType = returnValueExpression.calculateType(executionState.localVariables.mapValues { it.value.type })
             ?: Type.Undefined
         val typeMatch = expectedReturnType.acceptsInstanceOf(actualType)
         if (!typeMatch.value)
@@ -188,6 +179,9 @@ class CodeBlockAnalysis(
     }
 
     private fun processExpression(expression: Expression, ownershipType: ParameterInfo.PassingType): ValueInfo {
+        if(expression is ScopeAware) expression.setEnclosingScope(executionState.asScope())
+        if(expression is Access<*>) expression.finalize(messages)
+        if(expression is ScopeProvider) expression.setScopes()
         val localVarTypes = executionState.localVariables.mapValues { it.value.type }
         return when (expression) {
             is Constant<*> -> ValueInfo(ReasonedBoolean.True("Constants are deterministic"), expression.type)
@@ -215,7 +209,6 @@ class CodeBlockAnalysis(
             )
 
             is Expression.VariableReference -> {
-                expression.resolve { expression.resolveAccessTarget(messages) }
                 val variableInfo = executionState.localVariables[expression.reference.value]
                 if (variableInfo?.ownershipState == Ownership.MOVED) {
                     messages.error(
@@ -224,7 +217,7 @@ class CodeBlockAnalysis(
                     )
                 }
                 if (ownershipType == MOVE) moveVariable(expression.reference)
-                var possibleValues = variableInfo?.possibleValues?.toTypedArray() ?: arrayOf()
+                val possibleValues = variableInfo?.possibleValues?.toTypedArray() ?: arrayOf()
                 ValueInfo(
                     deterministic = possibleValues.map { it.deterministic }.reduceRightOrNull { a, b -> a.and(b) }
                         ?: ReasonedBoolean.False("Variable has no possible values"),
@@ -248,15 +241,13 @@ class CodeBlockAnalysis(
     }
 
     fun <T : Accessible<T>> Access<T>.resolve(resolver: () -> T?): T? {
-        if (this is ScopeAware) this.setEnclosingScope(executionState.asScope())
-        var target = resolver()
+        val target = resolver()
         target?.accessToSelf?.add(this)
         this.target = target
         return target
     }
 
     private fun processFunctionCall(functionCall: Instruction.FunctionCall): ValueInfo? {
-        val isGlobal = !parentScope.allFunctions[functionCall.reference.value].isNullOrEmpty()
         val localTypes = executionState.localVariables.mapValues { it.value.type }
         val actualParameterTypes =
             functionCall.callParameters.map { Located(it.calculateType(localTypes) ?: Type.Undefined, it.location) }
@@ -265,16 +256,7 @@ class CodeBlockAnalysis(
         val target = functionCall.resolve {
             functionCall.scope.resolveFunction(functionCall.reference, actualParameterTypes.toTypedArray(), messages)
         }
-        if (target != null && !isGlobal) {
-            messages.error(
-                "Function ${functionCall.reference.value} not defined yet!",
-                functionCall.reference.location,
-                Hint(
-                    "nested functions are not hoisted, so a function needs to be defined before it is called",
-                    target.name!!.location
-                )
-            )
-        } else if (target == null) {
+        if (target == null) {
             throw IllegalStateException("Function ${functionCall.reference.value} not resolved")
         }
 
@@ -288,7 +270,7 @@ class CodeBlockAnalysis(
         return ValueInfo(
             deterministic = parameters.map { it.deterministic }.reduceOrNull { a, b -> a.and(b) }
                 ?.and(returnInfo.deterministic) ?: ReasonedBoolean.True("No parameters"),
-            type = returnInfo.type
+            type = target.returnType!!
         );
     }
 
@@ -298,13 +280,15 @@ class CodeBlockAnalysis(
             calls,
             returnInfo,
             writeExternalState,
-            parameters.mapValues { ParameterInfo(it.value, true) }
+            mapOf()
+//            this@CodeBlockAnalysis.parameters.mapValues { ParameterInfo(it.value.passingType, true) }
         )
     }
 }
 
 fun Function.calculateFunctionInfo(messages: CompilerMessages): FunctionInfo {
-    val analyzer = CodeBlockAnalysis(this.body, this.returnType, messages)
+    val analyzer = CodeBlockAnalysis(this.body, this.returnType, messages, scope)
     analyzer.analyze()
     return analyzer.toInfo()
 }
+

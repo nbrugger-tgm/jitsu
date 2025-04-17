@@ -14,7 +14,7 @@ sealed class Constant<out T> : Expression, Element {
     @SerialName("resolved_type")
     abstract val type: Type
     abstract val literal: String
-    @Transient override val isConstant: ReasonedBoolean = ReasonedBoolean.True("$value is a constant", listOf() ,listOf())
+    @Transient override val isConstant: ReasonedBoolean = ReasonedBoolean.True("$value is a constant")
 
     @Contextual
     abstract val value: T
