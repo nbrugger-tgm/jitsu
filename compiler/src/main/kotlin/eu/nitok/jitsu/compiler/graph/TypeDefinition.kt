@@ -5,11 +5,26 @@ import eu.nitok.jitsu.compiler.ast.Located
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
+/**
+ * A template for a [Type] not a type by itself
+ */
 @Serializable
 sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
     abstract override val name: Located<String>
     override val accessToSelf: MutableList<in Access<TypeDefinition>> = mutableListOf()
 
+    /**
+     * A type that is not directly usable since it is parameterized
+     *
+     * Examples:
+     * - List&lt;T>
+     * - Either&lt;A,B>
+     * - Optional&lt;T>
+     *
+     * These types are only full types when referenced with their parameters filled like `List<String>`
+     *
+     * To form a [Type] from a [ParameterizedType] you need a [Type.TypeReference]
+     */
     sealed class ParameterizedType : TypeDefinition() {
         abstract val generics: List<TypeParameter>
         abstract fun toType(messages: CompilerMessages, typeParameters: Map<String, Type>): Type;
@@ -101,6 +116,9 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
         }
     }
 
+    /**
+     * A [Type] template that is specific enought to be a type by itself
+     */
     sealed class DirectTypeDefinition : TypeDefinition(), Type {
         @Serializable
         data class Enum(
