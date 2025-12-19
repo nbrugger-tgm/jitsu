@@ -37,8 +37,12 @@ sealed interface Type : Element {
 
     fun accepts(type: Type): ReasonedBoolean
 
+    sealed interface Primitive : Type {
+        val size: BitSize
+    }
+
     @Serializable
-    data class Int(val size: BitSize) : Type {
+    data class Int(override val size: BitSize) : Primitive {
         override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type = this
         override fun toString(): String {
             return "i${size.bits}"
@@ -62,7 +66,7 @@ sealed interface Type : Element {
     }
 
     @Serializable
-    data class UInt(val size: BitSize) : Type {
+    data class UInt(override val size: BitSize) : Primitive {
         override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type = this
         override fun toString(): String {
             return "u${size.bits}"
@@ -83,7 +87,7 @@ sealed interface Type : Element {
     }
 
     @Serializable
-    data class Float(val size: BitSize = BitSize.BIT_32) : Type {
+    data class Float(override val size: BitSize = BitSize.BIT_32) : Primitive {
         override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type = this
         override fun toString(): String {
             return "f${size.bits}"
@@ -182,7 +186,7 @@ sealed interface Type : Element {
     }
 
     @Serializable
-    data object Boolean : Type {
+    data object Boolean : Primitive {
         override fun toString(): String {
             return "boolean"
         }
@@ -199,6 +203,8 @@ sealed interface Type : Element {
 
         @Transient
         override val children: List<Element> = emptyList()
+        override val size: BitSize
+            get() = BitSize.BIT_1
     }
 
     @Serializable
