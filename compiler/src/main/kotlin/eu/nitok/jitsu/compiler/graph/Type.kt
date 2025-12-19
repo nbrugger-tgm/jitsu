@@ -251,7 +251,7 @@ sealed interface Type : Element {
             return when (target) {
                 is TypeDefinition.DirectTypeDefinition -> target.resolve(messages, generics)
                 is TypeDefinition.TypeParameter -> generics[reference.value]
-                    ?: this//maybe a dedicated "GenericType" should be created
+                    ?: Type.Undefined
                 is TypeDefinition.ParameterizedType -> {
                     var resolvedGenerics =
                         genericParameters.mapIndexedNotNull<Located<Type>, Pair<Type, String>> { index, type ->
