@@ -162,12 +162,21 @@ private fun parseSingleType(tokens: Tokens): TypeNode? {
     return namedType.withMessages(messages)
 }
 
-private fun parseBitsizedNumberType(tokens: TokenStream<DefaultToken>): TypeNode? {
-    tokens.elevate()
-    val letterToken = tokens.attempt(DefaultToken.LETTERS)
-    if (letterToken == null) {
-        tokens.rollback()
-        return null
+private fun parseBitsizedNumberType(tokens: Tokens): TypeNode? {
+    val letterToken = tokens.attempt(DefaultToken.LETTERS) ?: return null
+    return tokens.attempt {
+        val bitSize = {
+            attempt(DefaultToken.NUMBER)?.let { numberToken ->
+                BitSize.byBits(numberToken.value.value.toInt())?.locatedAt(numberToken.location)
+            }
+        }
+        val type = when (letterToken.value.value) {
+            "i" -> bitSize()?.let { TypeNode.IntTypeNode(it.value, letterToken.location.rangeTo(it.location)) }
+            "u" -> bitSize()?.let { TypeNode.UIntTypeNode(it.value, letterToken.location.rangeTo(it.location)) }
+            "f" -> bitSize()?.let { TypeNode.FloatTypeNode(it.value, letterToken.location.rangeTo(it.location)) }
+            else -> null
+        }
+        type
     }
     val bitSize = {
         tokens.attempt(DefaultToken.NUMBER)?.let { numberToken ->
