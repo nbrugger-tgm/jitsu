@@ -12,9 +12,30 @@ class Function(
     override val name: Located<String>?,
     val returnType: Type?,
     val parameters: List<Parameter>,
-    val body: CodeBlock
+    val body: Body
 ) : Instruction, Element, Accessible<Function>, Accessor, ScopeAware, ScopeProvider, Finalizable {
     override val scope: Scope = Scope(listOf(), mapOf(), mapOf(), parameters.associateBy { it.name.value })
+
+    @Serializable
+    sealed interface Body : Element {
+        @Serializable
+        object Native : Body {
+            override val children: List<Element> get() = emptyList()
+        }
+
+        /**
+         * The body should have been implemented but is not. This is an error that is reported by the parser
+         */
+        @Serializable
+        object Missing : Body {
+            override val children: List<Element> get() = emptyList()
+        }
+
+        @Serializable
+        data class Implementation(val block: CodeBlock) : Body {
+            override val children: List<Element> get() = listOf(block)
+        }
+    }
 
     init {
         fun informChildren(children: List<Element>) {
@@ -31,13 +52,13 @@ class Function(
         scope.parent = parent
     }
 
-    @Transient
     private lateinit var infoCache: FunctionInfo
     fun info(msg: CompilerMessages): FunctionInfo {
-        if(!::infoCache.isInitialized)
+        if (!::infoCache.isInitialized)
             infoCache = calculateFunctionInfo(msg)
         return infoCache
     }
+
     val signature: Type.FunctionTypeSignature = Type.FunctionTypeSignature(
         returnType,
         parameters.map { Type.FunctionTypeSignature.Parameter(it.name, it.declaredType, it.initialValue != null) }
@@ -48,8 +69,10 @@ class Function(
     @Transient
     override val accessToSelf: MutableList<Access<Function>> = mutableListOf()
 
-    @Transient
-    override val accessFromSelf: List<Access<*>> = findAccessesFromSelf(body.instructions)
+    override val accessFromSelf: List<Access<*>> by lazy {
+        if (body is Body.Implementation) findAccessesFromSelf(body.block.instructions)
+        else emptyList()
+    }
 
     @Serializable
     data class Parameter(

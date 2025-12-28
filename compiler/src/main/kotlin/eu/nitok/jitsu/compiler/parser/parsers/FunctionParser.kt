@@ -11,13 +11,17 @@ import eu.nitok.jitsu.compiler.ast.withMessages
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage.Hint
 import eu.nitok.jitsu.compiler.parser.*
+import java.lang.annotation.Native
 import kotlin.jvm.optionals.getOrNull
 
 val fnKeyword = "fn"
+val nativeKeyword = "native"
 private val fnKeywords = listOf(fnKeyword, "fun", "func", "function")
 
 fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     tokens.elevate()
+    val native = tokens.keyword(nativeKeyword)
+    if(native != null) tokens.skipWhitespace()
     val kw = tokens.range { nextOptional().getOrNull() ?: return null; }
     if (kw.value.type != LETTERS || !fnKeywords.contains(kw.value.value)) {
         tokens.rollback()
@@ -42,13 +46,27 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     tokens.skipWhitespace()
     val parameters = parseParameters(tokens, messages, kw)
     tokens.skipWhitespace()
-    val returnType = parseOptionalExplicitType(tokens, messages::error)
+    val returnType = parseExplicitType(tokens, messages)
     tokens.skipWhitespace()
     val body = parseCodeBlock(tokens)
-    if (body == null) {
+    if (body == null && native == null) {
         messages.error("Expected function body (starting with '{')", tokens.location.toRange())
+    } else if(native != null && body != null) {
+        messages.error("Native functions cannot have bodies since they execute C code", body.location,
+            Hint("Native declaration", native)
+        )
     }
-    return FunctionDeclarationNode(functionName, parameters, returnType, body, kw.location, listOf()).withMessages(
+    return FunctionDeclarationNode(
+        name = functionName,
+        parameters = parameters,
+        returnType = returnType,
+        body = native.let {
+            if(it == null) body
+            else FunctionBodyNode.NativeImplementation(it)
+        },
+        keywordLocation = kw.location,
+        attributes = listOf()
+    ).withMessages(
         messages
     )
 }
