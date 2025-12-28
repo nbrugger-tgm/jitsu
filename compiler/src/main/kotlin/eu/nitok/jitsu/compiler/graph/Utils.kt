@@ -1,7 +1,9 @@
 package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
+import kotlinx.serialization.Serializable
 
+@Serializable
 sealed interface ReasonedBoolean {
     fun and(boolean: ReasonedBoolean): ReasonedBoolean {
         return if (this.value && boolean.value) True("Both are true", this, boolean)
@@ -34,7 +36,7 @@ sealed interface ReasonedBoolean {
     val message: String
     val hints: List<CompilerMessage.Hint>
     val causes: List<Pair<String?, ReasonedBoolean>>
-
+    @Serializable
     data class True(
         override val message: String,
         override val hints: List<CompilerMessage.Hint> = listOf(),
@@ -54,7 +56,7 @@ sealed interface ReasonedBoolean {
 
         override val value: Boolean get() = true
     }
-
+    @Serializable
     data class False(
         override val message: String,
         override val hints: List<CompilerMessage.Hint> = listOf(),
@@ -75,6 +77,8 @@ sealed interface ReasonedBoolean {
         override val value: Boolean get() = false
     }
 }
+
+fun Collection<ReasonedBoolean>.any() = find { it.value }
 
 fun <K, V> Map<K, V>.merge(other: Map<K, V>, merge: (V, V) -> V): Map<K, V> {
     val mutable = this.toMutableMap()
