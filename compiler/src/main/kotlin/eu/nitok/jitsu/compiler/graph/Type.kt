@@ -7,7 +7,6 @@ import eu.nitok.jitsu.compiler.model.BitSize
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlin.time.Duration.Companion.milliseconds
 
 @Serializable
 sealed interface Type : Element {

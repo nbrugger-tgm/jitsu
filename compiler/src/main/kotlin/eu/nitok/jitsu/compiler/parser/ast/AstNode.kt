@@ -3,7 +3,6 @@ package eu.nitok.jitsu.compiler.ast
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.graph.ReasonedBoolean
 import eu.nitok.jitsu.compiler.model.Walkable
-import eu.nitok.jitsu.compiler.parser.Locatable
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Serializable
 

@@ -2,7 +2,7 @@ package eu.nitok.jitsu.compiler.parser.parsers
 
 import com.niton.jainparse.token.DefaultToken
 import com.niton.jainparse.token.DefaultToken.*
-import eu.nitok.jitsu.compiler.ast.BiOperator
+import eu.nitok.jitsu.compiler.model.BiOperator
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.ExpressionNode
 import eu.nitok.jitsu.compiler.ast.ExpressionNode.StringLiteralNode

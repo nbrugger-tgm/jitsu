@@ -1,10 +1,8 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.compiler.ast.BiOperator
+import eu.nitok.jitsu.compiler.model.BiOperator
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.Located
-import eu.nitok.jitsu.compiler.ast.locatedAt
-import eu.nitok.jitsu.compiler.parser.Locatable
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient

@@ -1,4 +1,4 @@
-package eu.nitok.jitsu.compiler.ast
+package eu.nitok.jitsu.compiler.model
 
 enum class BiOperator(val rune: String,val functionName: String) {
     GREATER_EQUAL(">=", "greater_or_equal_to"),

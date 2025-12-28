@@ -1,6 +1,7 @@
 package eu.nitok.jitsu.compiler.ast
 
 import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.AssignmentNode.AssignmentTarget
+import eu.nitok.jitsu.compiler.model.BiOperator
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Serializable
 
