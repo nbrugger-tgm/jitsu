@@ -54,4 +54,13 @@ public enum DefaultToken implements Tokenable {
 	public String pattern() {
 		return regex;
 	}
+
+    @Override
+    public String toString() {
+        if(this.regex.length() == 1) {
+            return this.regex;
+        } else {
+            return this.name();
+        }
+    }
 }

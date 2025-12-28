@@ -134,6 +134,9 @@ sealed interface ExpressionNode : AstNode {
         override val children: List<AstNode>
             get() = listOfNotNull(left, right)
         override val location: Range = left.location.rangeTo(right?.location?: operator.location)
+        override fun toString(): String {
+            return "($left ${operator.value.rune} $right)"
+        }
     }
 
     @Serializable
