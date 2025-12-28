@@ -17,16 +17,18 @@ sealed interface Type : Element {
         return if (type is Undefined) ReasonedBoolean.True("While UNDEFINED cannot be assigned to anything, the error lies in the definition of the type not its usage");
         else if (type is Union) {
             val optionAssignability = type.options.map { mapAssignabilityBoolean(accepts(it), it, this) }
-            if (optionAssignability.all { boolean -> boolean.value })
-                ReasonedBoolean.True(
-                    "Each type in the union is assignable to $this",
-                    *optionAssignability.toTypedArray()
-                )
-            else
+            if (optionAssignability.all { boolean -> boolean.value }) ReasonedBoolean.True(
+                "Each type in the union is assignable to $this",
+                *optionAssignability.toTypedArray()
+            )
+            else {
+                val assignWholeUnion = accepts(type)
+                if(assignWholeUnion.value) return assignWholeUnion;
                 ReasonedBoolean.False(
-                    "Not all types in the union ($type) are assignable to $this",
-                    *optionAssignability.filter { !it.value }.toTypedArray()
+                    "Not all types in the union ($type), nor the union itself are/is assignable to $this",
+                    *(optionAssignability.filter { !it.value } + assignWholeUnion).toTypedArray()
                 )
+            }
         } else accepts(type)
     }
 
