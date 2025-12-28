@@ -2,7 +2,6 @@ package eu.nitok.jitsu.compiler.parser.parsers
 
 import com.niton.jainparse.token.DefaultToken
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
-import eu.nitok.jitsu.compiler.ast.IdentifierNode
 import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.ast.StatementNode.NamedTypeDeclarationNode.ClassDeclarationNode
 import eu.nitok.jitsu.compiler.ast.TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode
@@ -15,7 +14,7 @@ fun parseClass(tokens: Tokens): ClassDeclarationNode? {
     val name = parseIdentifier(tokens)
     tokens.skipWhitespace()
     val messages = CompilerMessages()
-    val typeParameters = parseTypeParameters(tokens, messages)
+    val typeParameters = parseTypeParameterDefinition(tokens, messages)
     tokens.skipWhitespace()
     tokens.attempt(DefaultToken.ROUND_BRACKET_OPEN) ?: messages.error(
         "Expected '{' after class declaration",
@@ -49,7 +48,7 @@ fun parseClass(tokens: Tokens): ClassDeclarationNode? {
     }
     return ClassDeclarationNode(
         name,
-        typeParameters,
+        typeParameters?:listOf(),
         fields,
         methods,
         classToken.rangeTo(tokens.lastConsumedLocation),

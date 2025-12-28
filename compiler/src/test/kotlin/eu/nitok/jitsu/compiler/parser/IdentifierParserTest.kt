@@ -1,19 +1,12 @@
 package eu.nitok.jitsu.compiler.parser
 
-import com.niton.jainparse.token.DefaultToken
-import com.niton.jainparse.token.TokenSource
-import com.niton.jainparse.token.TokenStream
 import eu.nitok.jitsu.compiler.parser.parsers.parseIdentifier
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import java.io.StringReader
 
-class IdentifierParserKtTest {
-    private fun tokenize(txt: String): Tokens {
-        val tokens = TokenSource(StringReader(txt), DefaultToken.entries.toTypedArray());
-        val tokenStream = TokenStream.of(tokens)
-        return tokenStream
-    }
+@DisplayName("parseIdentifier()")
+class IdentifierParserTest : ParsingTest() {
 
     @Test
     fun parseJustLetterIdentifier() {

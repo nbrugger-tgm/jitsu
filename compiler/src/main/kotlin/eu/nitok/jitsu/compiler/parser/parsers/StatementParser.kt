@@ -107,7 +107,7 @@ fun parseVariableDeclaration(tokens: Tokens): StatementNode.InstructionNode.Vari
     } else {
         tokens.skipWhitespace()
     }
-    val type = parseOptionalExplicitType(tokens, messages::error)
+    val type = parseExplicitType(tokens, messages)
     tokens.skipWhitespace()
     val eq = tokens.attempt(DefaultToken.EQUAL)
     if (eq == null) {

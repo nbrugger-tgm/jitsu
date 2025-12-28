@@ -3,6 +3,7 @@ package eu.nitok.jitsu.compiler.ast
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
 import eu.nitok.jitsu.compiler.graph.ReasonedBoolean
 import eu.nitok.jitsu.compiler.model.Walkable
+import eu.nitok.jitsu.compiler.parser.Locatable
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Serializable
 
@@ -43,6 +44,8 @@ data class CompilerMessages(
     fun error(error: CompilerMessage) = errors.add(error)
     fun error(message: String, location: Range, vararg hints: CompilerMessage.Hint) =
         errors.add(CompilerMessage(message, location, hints.toList()))
+    fun error(message: String, location: Located<*>, vararg hints: CompilerMessage.Hint) =
+        error(message, location.location, *hints)
 
     fun apply(node: AstNode) {
         node.warnings.addAll(warnings)
@@ -56,4 +59,12 @@ data class CompilerMessages(
 }
 
 @Serializable
-data class Located<T>(val value: T, val location: Range)
+data class Located<T>(val value: T, val location: Range) {
+    inline fun <N> map(fn: (T)->N): Located<N> {
+        return Located(fn(value), location)
+    }
+}
+
+fun <T> T.locatedAt(location: Range): Located<T> {
+    return Located(this, location)
+}
