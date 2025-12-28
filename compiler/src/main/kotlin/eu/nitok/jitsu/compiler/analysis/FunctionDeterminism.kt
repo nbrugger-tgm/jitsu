@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.compiler.analysis
 
 import eu.nitok.jitsu.compiler.analysis.ExecutionState.VariableState.Ownership
-import eu.nitok.jitsu.compiler.analysis.ParameterInfo.PassingType.*
+import eu.nitok.jitsu.compiler.analysis.PassingType.*
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage.Hint
@@ -9,6 +9,9 @@ import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import kotlinx.serialization.Serializable
 
+enum class PassingType {
+    BORROW, MOVE
+}
 
 @Serializable
 data class ParameterInfo(
@@ -29,10 +32,13 @@ data class ValueInfo(
 data class FunctionInfo(
     val calls: List<FunctionInfo>,
     val returnInfo: ValueInfo?,
-    val writeExternalState: Boolean = false,
+    val writeExternalState: ReasonedBoolean = ReasonedBoolean.False("On their own functions do not write external state"),
     val parameters: Map<String, ParameterInfo>
 ) {
-    val hasSideEffects: Boolean get() = writeExternalState || calls.any { it.hasSideEffects }
+    val hasSideEffects: ReasonedBoolean
+        get() = writeExternalState.or(
+            calls.map { it.hasSideEffects }.any() ?: ReasonedBoolean.False("Doesn't call any functions")
+        )
 }
 
 class ExecutionState(
@@ -53,13 +59,13 @@ class ExecutionState(
 
     data class VariableState(
         val declaredType: Type?,
-        var inferredType: Type,
+        var inferredType: Type?,
         var ownershipState: Ownership,
-        var readsExternal: Boolean,
+        var readsExternal: ReasonedBoolean,
         val possibleValues: List<ValueInfo>,
-        val declaration: VariableDeclaration
+        val declaration: Variable
     ) {
-        val type get() = declaredType ?: inferredType;
+        val type get() = declaredType ?: inferredType ?: Type.Undefined;
 
         enum class Ownership {
             /**
@@ -86,11 +92,10 @@ class CodeBlockAnalysis(
     private val messages: CompilerMessages,
     parentScope: Scope
 ) {
-
     var returnInfo: ValueInfo? = null
 
     val calls: MutableList<FunctionInfo> = mutableListOf()
-    val writeExternalState: Boolean = false;
+    val writeExternalState: ReasonedBoolean = ReasonedBoolean.False("no external variable is accessed");
     val parameters: MutableMap<String, ParameterInfo> = mutableMapOf()
     val executionState = ExecutionState(parentScope = parentScope)
 
@@ -102,9 +107,9 @@ class CodeBlockAnalysis(
     }
 
     private fun processInstruction(instruction: Instruction) {
-        if(instruction is ScopeAware) instruction.setEnclosingScope(executionState.asScope())
-        if(instruction is Access<*>) instruction.finalize(messages)
-        if(instruction is ScopeProvider) instruction.setScopes()
+        if (instruction is ScopeAware) instruction.setEnclosingScope(executionState.asScope())
+        if (instruction is Access<*>) instruction.finalize(messages)
+        if (instruction is ScopeProvider) instruction.setScopes()
         when (instruction) {
             is Function -> {
                 instruction.name?.let {
@@ -118,24 +123,33 @@ class CodeBlockAnalysis(
             is Instruction.Return -> processReturn(instruction)
 
             is VariableDeclaration -> {
-                val inferredType =
-                    instruction.initialValue?.calculateType(executionState.localVariables.mapValues { it.value.type })
-                        ?: Type.Undefined
+                //if we only borrow the value here what if we later move the value somewhere?
+                //does my code account for that? If the value is later moved i have to own it which
+                //might change the relation to (for example) the variable refernece (like turning a
+                //reference lookup into a copy)
                 val initialValue = instruction.initialValue?.let { processExpression(it, BORROW) }
-                if (instruction.declaredType != null && instruction.initialValue != null) {
-                    val typeMatch = instruction.declaredType.acceptsInstanceOf(inferredType)
+                if (instruction.declaredType != null && initialValue != null) {
+                    val typeMatch = instruction.declaredType.acceptsInstanceOf(initialValue.type)
                     if (!typeMatch.value)
                         messages.error(typeMatch, instruction.initialValue.location)
                 }
                 val variableState = ExecutionState.VariableState(
                     declaredType = instruction.declaredType,
-                    inferredType = inferredType,
+                    inferredType = initialValue?.type ?: run {
+                        if (instruction.declaredType == null) messages.error(
+                            "Variable does not have definitive type. Either specify type or add intitial value for inference",
+                            instruction.name
+                        )
+                        null
+                    },
+                    //Why do we own if the value is borrowed??
                     ownershipState = Ownership.OWNS,
-                    readsExternal = false,
+                    //This should be intrgrated an taken from initialValue
+                    readsExternal = ReasonedBoolean.False("probably wrong"),
                     possibleValues = listOfNotNull(initialValue),
                     declaration = instruction
                 )
-                instruction.implicitType = inferredType
+                instruction.implicitType = variableState.inferredType
                 val varName = instruction.name
                 if (executionState.localVariables.containsKey(varName.value)) {
                     messages.error(
@@ -150,7 +164,7 @@ class CodeBlockAnalysis(
     }
 
     private fun processReturn(instruction: Instruction.Return) {
-        val returnValueExpression = instruction.value;
+        val returnValueExpression = instruction.value
         if (expectedReturnType != null && returnValueExpression == null) {
             messages.error(
                 "Block requires a return value ($expectedReturnType), but no value was given", instruction.location,
@@ -171,34 +185,37 @@ class CodeBlockAnalysis(
             return
         }
         returnInfo = processExpression(returnValueExpression, MOVE)
-        val actualType = returnValueExpression.calculateType(executionState.localVariables.mapValues { it.value.type })
-            ?: Type.Undefined
+        val actualType = returnValueExpression.calculateType(
+            executionState.localVariables.mapValues { it.value.type },
+            messages
+        ) ?: Type.Undefined
         val typeMatch = expectedReturnType.acceptsInstanceOf(actualType)
         if (!typeMatch.value)
             messages.error(typeMatch, returnValueExpression.location)
     }
 
-    private fun processExpression(expression: Expression, ownershipType: ParameterInfo.PassingType): ValueInfo {
-        if(expression is ScopeAware) expression.setEnclosingScope(executionState.asScope())
-        if(expression is Access<*>) expression.finalize(messages)
-        if(expression is ScopeProvider) expression.setScopes()
+    private fun processExpression(expression: Expression, ownershipType: PassingType): ValueInfo {
+        if (expression is ScopeAware) expression.setEnclosingScope(executionState.asScope())
+        if (expression is Access<*>) expression.finalize(messages)
+        if (expression is ScopeProvider) expression.setScopes()
         val localVarTypes = executionState.localVariables.mapValues { it.value.type }
         return when (expression) {
             is Constant<*> -> ValueInfo(ReasonedBoolean.True("Constants are deterministic"), expression.type)
-            is Instruction.FunctionCall -> processFunctionCall(expression) ?: run {
-                messages.error(
-                    "Function ${expression.reference.value} does not have a return type and cannot be used as value",
-                    expression.reference.location
-                )
-                ValueInfo(ReasonedBoolean.True("Function does not have a return type"), Type.Undefined)
-            }
+            is Instruction.FunctionCall ->
+                processFunctionCall(expression) ?: run {
+                    messages.error(
+                        "Function ${expression.reference.value} does not have a return type and cannot be used as value",
+                        expression.reference.location
+                    )
+                    ValueInfo(ReasonedBoolean.True("Function does not have a return type"), Type.Undefined)
+                }
 
             is Expression.Operation -> {
                 val left = processExpression(expression.left, BORROW)
                 val right = processExpression(expression.right, BORROW)
                 ValueInfo(
                     deterministic = left.deterministic.and(right.deterministic),
-                    type = expression.calculateType(localVarTypes) ?: Type.Undefined,
+                    type = expression.calculateType(localVarTypes, messages) ?: Type.Undefined,
                     affectedBy = left.affectedBy + right.affectedBy
                 )
             }
@@ -209,19 +226,19 @@ class CodeBlockAnalysis(
             )
 
             is Expression.VariableReference -> {
-                val variableInfo = executionState.localVariables[expression.reference.value]
-                if (variableInfo?.ownershipState == Ownership.MOVED) {
+                val localVariableInfo = executionState.localVariables[expression.reference.value]
+                if (localVariableInfo?.ownershipState == Ownership.MOVED) {
                     messages.error(
                         "Variable ${expression.reference.value} is moved and cannot be used anymore",
                         expression.reference.location
                     )
                 }
                 if (ownershipType == MOVE) moveVariable(expression.reference)
-                val possibleValues = variableInfo?.possibleValues?.toTypedArray() ?: arrayOf()
+                val possibleValues = localVariableInfo?.possibleValues?.toTypedArray() ?: arrayOf()
                 ValueInfo(
                     deterministic = possibleValues.map { it.deterministic }.reduceRightOrNull { a, b -> a.and(b) }
                         ?: ReasonedBoolean.False("Variable has no possible values"),
-                    type = variableInfo?.type ?: Type.Undefined
+                    type = localVariableInfo?.type ?: Type.Undefined
                 )
             }
         }
@@ -234,6 +251,7 @@ class CodeBlockAnalysis(
             variable.ownershipState = Ownership.MOVED
             return
         }
+        //atm this is wrong, currently function parameters are not tracked in execution state.localVariables
         messages.error(
             "Moving global is forbidden (wip)",
             varRef.location
@@ -249,15 +267,15 @@ class CodeBlockAnalysis(
 
     private fun processFunctionCall(functionCall: Instruction.FunctionCall): ValueInfo? {
         val localTypes = executionState.localVariables.mapValues { it.value.type }
-        val actualParameterTypes =
-            functionCall.callParameters.map { Located(it.calculateType(localTypes) ?: Type.Undefined, it.location) }
         functionCall.setEnclosingScope(executionState.asScope())
-        functionCall.resolveAccessTarget(messages)
-        val target = functionCall.resolve {
-            functionCall.scope.resolveFunction(functionCall.reference, actualParameterTypes.toTypedArray(), messages)
-        }
+        functionCall.calculateType(localTypes, messages)
+        val target = functionCall.target
         if (target == null) {
-            throw IllegalStateException("Function ${functionCall.reference.value} not resolved")
+            return ValueInfo(
+                ReasonedBoolean.False("Function not found"),
+                Type.Undefined
+            );
+            //throw IllegalStateException("Function ${functionCall.reference.value} not resolved")
         }
 
         val formalParameters = target.info(messages).parameters
@@ -287,8 +305,57 @@ class CodeBlockAnalysis(
 }
 
 fun Function.calculateFunctionInfo(messages: CompilerMessages): FunctionInfo {
-    val analyzer = CodeBlockAnalysis(this.body, this.returnType, messages, scope)
+    return when(body) {
+        is Function.Body.Implementation -> analyzeImplementation(body, messages)
+        Function.Body.Missing -> TODO()
+        Function.Body.Native -> nativeFunctionInformation()
+    }
+}
+
+private fun Function.analyzeImplementation(
+    body: Function.Body.Implementation,
+    messages: CompilerMessages
+): FunctionInfo {
+    val analyzer = CodeBlockAnalysis(body.block, this.returnType, messages, scope)
+    analyzer.executionState.localVariables.putAll(parameters.associate {
+        it.name.value to ExecutionState.VariableState(
+            declaredType = it.declaredType,
+            inferredType = null,
+            ownershipState = Ownership.BORROWS,
+            possibleValues = listOf(
+                ValueInfo(
+                    deterministic = ReasonedBoolean.True("Parameters are per definiton deterministic"),
+                    affectedBy = listOf(),
+                    type = it.declaredType
+                )
+            ),
+            readsExternal = ReasonedBoolean.False("Parameters are not external state"),
+            declaration = it
+        )
+    })
     analyzer.analyze()
     return analyzer.toInfo()
 }
+
+private fun Function.nativeFunctionInformation(): FunctionInfo = FunctionInfo(
+    calls = listOf(),
+    returnInfo = ValueInfo(
+        deterministic = ReasonedBoolean.True("TODO!!: Native functions must be annotated with deterministic/non-deterministic"),
+        type = returnType!!,
+        affectedBy = parameters.map {
+            ValueInfo(
+                deterministic = ReasonedBoolean.True("Parameters are deterministic by definition"),
+                type = it.declaredType,
+                affectedBy = emptyList()
+            )
+        }
+    ),
+    writeExternalState = ReasonedBoolean.False("TODO!!: Native functions must be annotated with write-external state info"),
+    parameters = parameters.associate {
+        it.name.value to ParameterInfo(
+            passingType = BORROW,//TODO!! figure out how to determine native function passing
+            affectsOutput = true
+        )
+    }
+)
 

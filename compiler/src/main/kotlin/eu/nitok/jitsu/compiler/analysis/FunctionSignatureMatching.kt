@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.compiler.analysis
 
+import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.Located
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.compiler.graph.ReasonedBoolean
@@ -46,7 +47,11 @@ private fun Type.FunctionTypeSignature.matches(argumentTypes: Array<Located<Type
         }
         val expected = parameters[i].type
         val actual = argumentTypes[i]
-        val match = expected.acceptsInstanceOf(actual.value)
+        val messages = CompilerMessages()
+        val match = expected.acceptsInstanceOf(actual.value.resolve(messages,/*TODO fill with propper generics from class or generic method*/ mapOf()))
+        if(messages.errors.isNotEmpty()) {
+            throw IllegalStateException("Error during resolvation!"+ messages.errors.map{it.toString()})
+        }
         if (match is ReasonedBoolean.False) {
             typeError.add(TypeMissMatch(parameters[i].name,actual.location, expected, match))
         } else {
