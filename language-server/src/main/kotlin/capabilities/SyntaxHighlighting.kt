@@ -155,6 +155,7 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
                             is TypeNode.NameTypeNode,
                             is TypeNode.VoidTypeNode,
                             is TypeNode.UIntTypeNode,
+                            is TypeNode.BooleanTypeNode,
                             is TypeNode.ValueTypeNode -> TYPE
 
                             is TypeNode.UnionTypeNode -> ENUM
