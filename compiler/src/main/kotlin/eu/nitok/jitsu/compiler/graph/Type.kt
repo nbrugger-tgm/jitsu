@@ -76,7 +76,7 @@ sealed interface Type : Element {
             return if (type is UInt && type.size.bits <= this.size.bits) ReasonedBoolean.True(
                 "unsigned integers accept unsigned integers their size and smaller"
             )
-            else if(type is UInt) ReasonedBoolean.False("$type is too large to fit into a $this")
+            else if (type is UInt) ReasonedBoolean.False("$type is too large to fit into a $this")
             else if (type is Int || type is Float) ReasonedBoolean.False("Unsigned integers only accept unsigned integers. To assign non uint numbers convert them first")
             else ReasonedBoolean.False("$type cannot be assigned to $this")
         }
@@ -252,9 +252,10 @@ sealed interface Type : Element {
                 is TypeDefinition.DirectTypeDefinition -> target.resolve(messages, generics)
                 is TypeDefinition.TypeParameter -> generics[reference.value]
                     ?: Type.Undefined
+
                 is TypeDefinition.ParameterizedType -> {
                     var resolvedGenerics =
-                        genericParameters.mapIndexedNotNull<Located<Type>, Pair<Type, String>> { index, type ->
+                        genericParameters.mapIndexedNotNull { index, type ->
                             val resolved = type.value.resolve(messages, generics)
                             var targetGenericName = target.generics.getOrNull(index)?.name?.value
                             if (targetGenericName == null) {
@@ -274,7 +275,7 @@ sealed interface Type : Element {
                                 )
                                 null
                             } else resolved to targetGenericName
-                        }.associateBy({it.second},{it.first})
+                        }.associateBy({ it.second }, { it.first })
                     target.toType(messages, resolvedGenerics)
                 }
             }
