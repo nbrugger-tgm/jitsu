@@ -33,7 +33,8 @@ include(
 )
 
 include(
-    "backend:rust"
+    "backend:rust",
+    "backend:c"
 )
 
 include(
