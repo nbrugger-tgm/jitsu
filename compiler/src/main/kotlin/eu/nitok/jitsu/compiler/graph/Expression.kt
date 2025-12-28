@@ -3,6 +3,8 @@ package eu.nitok.jitsu.compiler.graph
 import eu.nitok.jitsu.compiler.ast.BiOperator
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.Located
+import eu.nitok.jitsu.compiler.ast.locatedAt
+import eu.nitok.jitsu.compiler.parser.Locatable
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -10,14 +12,14 @@ import kotlinx.serialization.Transient
 @Serializable
 sealed interface Expression : Element {
     val isConstant: ReasonedBoolean;
-    fun calculateType(context: Map<String, Type> = mapOf()): Type?
+    fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type?
     val location: Range
 
     @Serializable
     data class Undefined(override val location: Range) : Expression {
         @Transient
         override val isConstant: ReasonedBoolean = ReasonedBoolean.False("No value is defined")
-        override fun calculateType(context: Map<String, Type>): Type {
+        override fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type {
             return Type.Undefined
         }
 
@@ -26,7 +28,11 @@ sealed interface Expression : Element {
     }
 
     @Serializable
-    data class Operation(val left: Expression, val operator: BiOperator, val right: Expression) : Expression {
+    data class Operation(val left: Expression, val operator: Located<BiOperator>, val right: Expression) :
+        Expression,
+        ScopeAware,
+    Access.FunctionAccess{
+        private lateinit var scope: Scope
         override val isConstant: ReasonedBoolean
             get() = if (!left.isConstant.value) ReasonedBoolean.False(
                 "Left expression is not constant",
@@ -38,12 +44,17 @@ sealed interface Expression : Element {
             )
             else ReasonedBoolean.True("Left and right expressions are constant", right.isConstant, left.isConstant)
 
-        override fun calculateType(context: Map<String, Type>): Type? {
-            val leftType = left.calculateType(context)
-            val rightType = right.calculateType(context)
-            if (leftType == null || rightType == null) return null
-            if (leftType != rightType) return null
-            return leftType
+        override fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type? {
+            if(target == null) {
+                val leftType = Located(left.calculateType(context,messages)?:Type.Undefined, left.location)
+                val rightType = Located(right.calculateType(context,messages)?: Type.Undefined, right.location)
+                target = scope.resolveFunction(
+                    operator.map { it.functionName },
+                    arrayOf(leftType, rightType),
+                    messages
+                )
+            }
+            return target?.returnType
         }
 
         override val location: Range
@@ -51,6 +62,19 @@ sealed interface Expression : Element {
 
         @Transient
         override val children: List<Element> = listOfNotNull(left, right)
+        override fun setEnclosingScope(parent: Scope) {
+            this.scope = parent
+        }
+
+        override var target: Function? = null
+        @Transient
+        override lateinit var accessor: Accessor
+        override val reference: Located<String> = operator.map { it.rune }
+
+        override fun resolveAccessTarget(messages: CompilerMessages): Function? {
+            //see FunctionCall#resolveAccessTarget for more information
+            return target;
+        }
     }
 
     @Serializable
@@ -58,8 +82,8 @@ sealed interface Expression : Element {
         @Transient
         private lateinit var scope: Scope
         override val isConstant: ReasonedBoolean get() = ReasonedBoolean.False("Cuz not implemented yet")
-        override fun calculateType(context: Map<String, Type>): Type? {
-            return context[reference.value] ?: scope.resolveVariable(reference, CompilerMessages())?.initialValue?.calculateType(context)
+        override fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type? {
+            return context[reference.value] ?: target?.declaredType?:target?.initialValue?.calculateType(context, messages)
         }
 
         override val location: Range get() = reference.location
@@ -79,5 +103,8 @@ sealed interface Expression : Element {
         override fun resolveAccessTarget(messages: CompilerMessages): Variable? {
             return scope.resolveVariable(reference, messages)
         }
+
+        override val accessKind: Access.VariableAccess.AccessKind
+            get() = Access.VariableAccess.AccessKind.BORROW
     }
 }

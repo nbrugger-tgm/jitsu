@@ -2,6 +2,7 @@ package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.compiler.ast.CompilerMessages
 import eu.nitok.jitsu.compiler.ast.Located
+import eu.nitok.jitsu.compiler.ast.locatedAt
 import eu.nitok.jitsu.compiler.parser.Range
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -41,7 +42,17 @@ sealed interface Instruction : Element {
         override val isConstant: ReasonedBoolean
             get() = ReasonedBoolean.False("Function call constant analysis not implemented yet")
 
-        override fun calculateType(context: Map<String, Type>): Type? {
+        override fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type? {
+            if(target == null) {
+                val callSiteTypes = callParameters.map {
+                    (it.calculateType(context,messages)?: Type.Undefined).locatedAt(it.location)
+                }.toTypedArray()
+                target = scope.resolveFunction(
+                    reference,
+                    callSiteTypes,
+                    messages
+                )
+            }
             return target?.returnType
         }
 
