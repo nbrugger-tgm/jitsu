@@ -161,13 +161,6 @@ sealed interface Type : Element {
         val size: Expression?,
         val dimensions: kotlin.Int = 1
     ) : Type {
-        fun Type.cacheResolved(fn: (messages: CompilerMessages, generics: Map<String, Type>)-> Type):
-                ((messages: CompilerMessages, generics: Map<String, Type>)-> Type) {
-            TODO()
-        }
-        private val cachedResolve = cacheResolved { messages, generics ->
-            Array(elementType.resolve(messages, generics), size, dimensions)
-        }
         override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type {
             return Array(elementType.resolve(messages, generics), size, dimensions)
         }
