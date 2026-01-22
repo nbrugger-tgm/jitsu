@@ -40,3 +40,7 @@ include(
 include(
     "vs-extension",
 )
+
+include(
+    "recusion-report"
+)

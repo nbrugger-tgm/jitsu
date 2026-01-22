@@ -308,7 +308,7 @@ fun Function.calculateFunctionInfo(messages: CompilerMessages): FunctionInfo {
     return when(body) {
         is Function.Body.Implementation -> analyzeImplementation(body, messages)
         Function.Body.Missing -> TODO()
-        Function.Body.Native -> nativeFunctionInformation()
+        is Function.Body.Native -> nativeFunctionInformation()
     }
 }
 

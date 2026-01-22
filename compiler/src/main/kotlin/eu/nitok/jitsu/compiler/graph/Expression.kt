@@ -29,7 +29,7 @@ sealed interface Expression : Element {
     data class Operation(val left: Expression, val operator: Located<BiOperator>, val right: Expression) :
         Expression,
         ScopeAware,
-    Access.FunctionAccess{
+        Access.FunctionAccess {
         private lateinit var scope: Scope
         override val isConstant: ReasonedBoolean
             get() = if (!left.isConstant.value) ReasonedBoolean.False(

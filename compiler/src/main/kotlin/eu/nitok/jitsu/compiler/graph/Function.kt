@@ -19,7 +19,7 @@ class Function(
     @Serializable
     sealed interface Body : Element {
         @Serializable
-        object Native : Body {
+        data class Native(val nativeTarget: String) : Body {
             override val children: List<Element> get() = emptyList()
         }
 
