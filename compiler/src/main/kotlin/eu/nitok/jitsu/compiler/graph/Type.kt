@@ -1,9 +1,11 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.compiler.ast.CompilerMessages
-import eu.nitok.jitsu.compiler.ast.Located
-import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
-import eu.nitok.jitsu.compiler.model.BitSize
+import eu.nitok.jitsu.common.ReasonedBoolean
+
+import eu.nitok.jitsu.parser.ast.CompilerMessages
+import eu.nitok.jitsu.parser.ast.Located
+import eu.nitok.jitsu.common.CompilerMessage
+import eu.nitok.jitsu.common.BitSize
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient

@@ -1,9 +1,11 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.common.ReasonedBoolean
 
-import eu.nitok.jitsu.compiler.ast.Located
-import eu.nitok.jitsu.compiler.model.BitSize
-import eu.nitok.jitsu.compiler.parser.Range
+
+import eu.nitok.jitsu.parser.ast.Located
+import eu.nitok.jitsu.common.BitSize
+import eu.nitok.jitsu.common.Range
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

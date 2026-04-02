@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-    api("com.niton.jainparse:tokenizer")
+    implementation(project(":parser"))
+    api(project(":compiler-utils"))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
 }
-

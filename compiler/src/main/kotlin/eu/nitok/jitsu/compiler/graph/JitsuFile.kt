@@ -1,6 +1,6 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.compiler.ast.CompilerMessages
+import eu.nitok.jitsu.parser.ast.CompilerMessages
 import kotlinx.serialization.Serializable
 
 @Serializable

@@ -1,13 +1,13 @@
 package eu.nitok.jitsu.compiler.graph
 
 
-import eu.nitok.jitsu.compiler.ast.*
-import eu.nitok.jitsu.compiler.ast.StatementNode.*
-import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.FunctionDeclarationNode
-import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.*
+import eu.nitok.jitsu.parser.ast.*
+import eu.nitok.jitsu.parser.ast.StatementNode.*
+import eu.nitok.jitsu.parser.ast.StatementNode.Declaration.FunctionDeclarationNode
+import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.*
 import eu.nitok.jitsu.compiler.graph.TypeDefinition.TypeParameter
-import eu.nitok.jitsu.compiler.model.sequence
-import eu.nitok.jitsu.compiler.model.walk
+import eu.nitok.jitsu.common.sequence
+import eu.nitok.jitsu.common.walk
 
 private class GraphBuilder {
     val messages: CompilerMessages = CompilerMessages()

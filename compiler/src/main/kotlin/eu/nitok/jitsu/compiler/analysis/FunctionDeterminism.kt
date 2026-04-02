@@ -1,9 +1,11 @@
 package eu.nitok.jitsu.compiler.analysis
 
+import eu.nitok.jitsu.common.ReasonedBoolean
+
 import eu.nitok.jitsu.compiler.analysis.ExecutionState.VariableState.Ownership
-import eu.nitok.jitsu.compiler.ast.CompilerMessages
-import eu.nitok.jitsu.compiler.ast.Located
-import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage.Hint
+import eu.nitok.jitsu.parser.ast.CompilerMessages
+import eu.nitok.jitsu.parser.ast.Located
+import eu.nitok.jitsu.common.CompilerMessage.Hint
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Access.VariableAccess.AccessKind.*
 import eu.nitok.jitsu.compiler.graph.Function

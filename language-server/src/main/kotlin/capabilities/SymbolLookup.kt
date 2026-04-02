@@ -8,7 +8,7 @@ import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Alias
 import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Class
 import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Interface
 import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Struct
-import eu.nitok.jitsu.compiler.model.mapTree
+import eu.nitok.jitsu.common.mapTree
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
 import range

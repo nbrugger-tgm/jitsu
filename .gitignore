@@ -8,3 +8,10 @@ node_modules
 
 trace.txt
 log.txt
+
+# Eclipse/Java LSP
+.settings
+.project
+.classpath
+bin
+.factorypath

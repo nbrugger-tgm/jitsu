@@ -1,10 +1,10 @@
 package eu.nitok.jitsu.compiler.analysis
 
-import eu.nitok.jitsu.compiler.ast.Located
+import eu.nitok.jitsu.parser.ast.Located
 import eu.nitok.jitsu.compiler.graph.Function
-import eu.nitok.jitsu.compiler.graph.ReasonedBoolean
+import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.compiler.graph.Type
-import eu.nitok.jitsu.compiler.parser.Range
+import eu.nitok.jitsu.common.Range
 
 sealed interface FunctionSignatureMatch {
     data object NoMatch : FunctionSignatureMatch

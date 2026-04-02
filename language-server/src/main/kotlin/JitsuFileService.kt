@@ -1,11 +1,11 @@
 import capabilities.documentSymbols
 import capabilities.syntaxDiagnostic
 import capabilities.syntaxHighlight
-import eu.nitok.jitsu.compiler.ast.SourceFileNode
+import eu.nitok.jitsu.parser.ast.SourceFileNode
 import eu.nitok.jitsu.compiler.graph.*
-import eu.nitok.jitsu.compiler.model.sequence
-import eu.nitok.jitsu.compiler.parser.Location
-import eu.nitok.jitsu.compiler.parser.parseFile
+import eu.nitok.jitsu.common.sequence
+import eu.nitok.jitsu.common.Location
+import eu.nitok.jitsu.parser.parseFile
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.TextDocumentService

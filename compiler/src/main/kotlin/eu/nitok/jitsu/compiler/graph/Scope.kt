@@ -2,10 +2,10 @@ package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.compiler.analysis.FunctionSignatureMatch
 import eu.nitok.jitsu.compiler.analysis.matchFunctionSignatures
-import eu.nitok.jitsu.compiler.ast.CompilerMessages
-import eu.nitok.jitsu.compiler.ast.Located
-import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
-import eu.nitok.jitsu.compiler.parser.Range
+import eu.nitok.jitsu.parser.ast.CompilerMessages
+import eu.nitok.jitsu.parser.ast.Located
+import eu.nitok.jitsu.common.CompilerMessage
+import eu.nitok.jitsu.common.Range
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient

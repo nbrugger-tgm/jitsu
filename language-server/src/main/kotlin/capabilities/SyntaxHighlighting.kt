@@ -2,15 +2,15 @@ package capabilities
 
 import capabilities.SemanticTokenTypes.*
 import customLogger
-import eu.nitok.jitsu.compiler.ast.*
-import eu.nitok.jitsu.compiler.ast.ExpressionNode.*
-import eu.nitok.jitsu.compiler.ast.StatementNode.*
-import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.*
-import eu.nitok.jitsu.compiler.ast.StatementNode.Declaration.*
-import eu.nitok.jitsu.compiler.ast.StatementNode.InstructionNode.SwitchNode.CaseNode
-import eu.nitok.jitsu.compiler.ast.StatementNode.NamedTypeDeclarationNode.EnumDeclarationNode
-import eu.nitok.jitsu.compiler.model.flatMap
-import eu.nitok.jitsu.compiler.parser.Range
+import eu.nitok.jitsu.parser.ast.*
+import eu.nitok.jitsu.parser.ast.ExpressionNode.*
+import eu.nitok.jitsu.parser.ast.StatementNode.*
+import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.*
+import eu.nitok.jitsu.parser.ast.StatementNode.Declaration.*
+import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.SwitchNode.CaseNode
+import eu.nitok.jitsu.parser.ast.StatementNode.NamedTypeDeclarationNode.EnumDeclarationNode
+import eu.nitok.jitsu.common.flatMap
+import eu.nitok.jitsu.common.Range
 
 import java.util.concurrent.atomic.AtomicInteger
 

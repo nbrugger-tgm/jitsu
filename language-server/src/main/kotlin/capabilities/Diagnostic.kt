@@ -1,10 +1,10 @@
 package capabilities
 
-import eu.nitok.jitsu.compiler.ast.AstNode
-import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
+import eu.nitok.jitsu.parser.ast.AstNode
+import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.compiler.graph.JitsuFile
 import eu.nitok.jitsu.compiler.graph.Scope
-import eu.nitok.jitsu.compiler.model.flatMap
+import eu.nitok.jitsu.common.flatMap
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
 import range
