@@ -1,5 +1,7 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.common.HasLocation
+import eu.nitok.jitsu.common.Locatable
 import eu.nitok.jitsu.common.ReasonedBoolean
 
 import eu.nitok.jitsu.parser.ast.BiOperator

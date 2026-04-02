@@ -1,14 +1,18 @@
 package eu.nitok.jitsu.common
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 sealed interface ReasonedBoolean {
     fun and(boolean: ReasonedBoolean): ReasonedBoolean {
-        return if (this.value && boolean.value) True("Both are true", this, boolean)
+        return if (boolean == this) this
+        else if (this.value && boolean.value) True("Both are true", this, boolean)
         else if (!this.value) this
         else boolean
     }
 
     fun or(boolean: ReasonedBoolean): ReasonedBoolean {
-        return if (this.value && boolean.value) True("Both are true", this, boolean)
+        return if (boolean == this) this
         else if (this.value) this
         else if (boolean.value) boolean
         else False("Both are false", this, boolean)
@@ -33,6 +37,7 @@ sealed interface ReasonedBoolean {
     val hints: List<CompilerMessage.Hint>
     val causes: List<Pair<String?, ReasonedBoolean>>
 
+    @Serializable
     data class True(
         override val message: String,
         override val hints: List<CompilerMessage.Hint> = listOf(),
@@ -51,8 +56,12 @@ sealed interface ReasonedBoolean {
         constructor(message: String, vararg causes: ReasonedBoolean) : this(message, causes = causes.toList())
 
         override val value: Boolean get() = true
+
+        override fun toString() =
+            "True(because: $message ${causes.map { it.first?.apply { "$it: ${it.second}" } ?: it.second }})"
     }
 
+    @Serializable
     data class False(
         override val message: String,
         override val hints: List<CompilerMessage.Hint> = listOf(),
@@ -71,5 +80,7 @@ sealed interface ReasonedBoolean {
         constructor(message: String, vararg causes: ReasonedBoolean) : this(message, causes = causes.toList())
 
         override val value: Boolean get() = false
+        override fun toString() =
+            "False(because: $message ${causes.map { it.first?.apply { "$it: ${it.second}" } ?: it.second }})"
     }
 }

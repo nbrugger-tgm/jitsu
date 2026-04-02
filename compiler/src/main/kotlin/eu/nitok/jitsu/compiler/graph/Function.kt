@@ -1,7 +1,6 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.compiler.analysis.FunctionInfo
-import eu.nitok.jitsu.compiler.analysis.calculateFunctionInfo
+import eu.nitok.jitsu.compiler.analysis.FunctionSummary
 import eu.nitok.jitsu.parser.ast.CompilerMessages
 import eu.nitok.jitsu.parser.ast.Located
 import kotlinx.serialization.Serializable
@@ -10,7 +9,7 @@ import kotlinx.serialization.Transient
 @Serializable
 class Function(
     override val name: Located<String>?,
-    val returnType: Type?,
+    val returnType: Located<Type>?,
     val parameters: List<Parameter>,
     val body: CodeBlock
 ) : Instruction, Element, Accessible<Function>, Accessor, ScopeAware, ScopeProvider, Finalizable {
@@ -32,18 +31,14 @@ class Function(
     }
 
     @Transient
-    private lateinit var infoCache: FunctionInfo
-    fun info(msg: CompilerMessages): FunctionInfo {
-        if(!::infoCache.isInitialized)
-            infoCache = calculateFunctionInfo(msg)
-        return infoCache
-    }
+    var summary: FunctionSummary? = null
+        internal set
     val signature: Type.FunctionTypeSignature = Type.FunctionTypeSignature(
-        returnType,
+        returnType?.value,
         parameters.map { Type.FunctionTypeSignature.Parameter(it.name, it.declaredType, it.initialValue != null) }
     )
 
-    override val children: List<Element> get() = listOfNotNull(returnType) + parameters + body
+    override val children: List<Element> get() = listOfNotNull(returnType?.value) + parameters + body
 
     @Transient
     override val accessToSelf: MutableList<Access<Function>> = mutableListOf()
@@ -61,7 +56,7 @@ class Function(
          * alias for [declaredType]
          */
         val type get() = declaredType
-        override val accessToSelf: MutableList<in Access<Variable>> = mutableListOf()
+        override val accessToSelf: MutableList<Access<Variable>> = mutableListOf()
         override val children: List<Element> get() = listOfNotNull(declaredType, initialValue)
 
         override fun toString(): String {
@@ -72,7 +67,11 @@ class Function(
     }
 
     override fun finalizeGraph(messages: CompilerMessages) {
-        infoCache = calculateFunctionInfo(messages)
+        // no-op: analysis moved to AnalysisRepository
+    }
+
+    override fun toString(): String {
+        return "Function[${name?.value}$signature]@${hashCode().toString(18)}"
     }
 }
 

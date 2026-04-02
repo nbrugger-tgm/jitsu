@@ -35,6 +35,7 @@ class JitsuLanguageServer : LanguageServer, LanguageClientAware{
         result.capabilities.diagnosticProvider.isWorkspaceDiagnostics = false;
 
         result.capabilities.definitionProvider = Either.forLeft(true)
+        result.capabilities.referencesProvider = Either.forLeft(true);
         return CompletableFuture.completedFuture(result)
     }
 

@@ -29,7 +29,11 @@ sealed interface Type : Element {
                     "Not all types in the union ($type) are assignable to $this",
                     *optionAssignability.filter { !it.value }.toTypedArray()
                 )
-        } else accepts(type)
+        } else {
+            val reason = accepts(type)
+            if(!reason.value) ReasonedBoolean.False("$type not assignable to $this",reason)
+            else reason
+        }
     }
 
     fun mapAssignabilityBoolean(boolean: ReasonedBoolean, from: Type, to: Type): ReasonedBoolean {

@@ -10,7 +10,7 @@ import kotlinx.serialization.Transient
 @Serializable
 sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
     abstract override val name: Located<String>
-    override val accessToSelf: MutableList<in Access<TypeDefinition>> = mutableListOf()
+    override val accessToSelf: MutableList<Access<TypeDefinition>> = mutableListOf()
 
     sealed class ParameterizedType : TypeDefinition() {
         abstract val generics: List<TypeParameter>
@@ -27,7 +27,7 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
                 Accessible<Field> {
                 override val children: List<Element> get() = listOf(type)
                 @Transient
-                override val accessToSelf: MutableList<in Access<Field>> = mutableListOf()
+                override val accessToSelf: MutableList<Access<Field>> = mutableListOf()
             }
 
             val allFields: Set<Field> get() = embedded.flatMap { it.value.allFields }.toSet() + fields
@@ -131,7 +131,7 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
             data class Constant(override val name: Located<String>) : Element, Accessible<Constant> {
                 override val children: List<Element> get() = listOf()
                 @Transient
-                override val accessToSelf: MutableList<in Access<Constant>> = mutableListOf()
+                override val accessToSelf: MutableList<Access<Constant>> = mutableListOf()
                 @Transient
                 lateinit var enum: Enum
             }

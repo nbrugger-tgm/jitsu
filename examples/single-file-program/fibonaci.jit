@@ -1,6 +1,6 @@
 fn main(args: String[1]) {
-    val inputStr = args[0];
-    val parsingResult = parse_int(inputStr).expect("Cannot parse \n $inputStr");
+    var inputStr = args[0];
+    var parsingResult = parse_int(inputStr).expect("Cannot parse \n $inputStr");
 
     println("fibo($input) = ${fibo(input)}");
 }

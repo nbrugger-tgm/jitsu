@@ -8,7 +8,7 @@ import kotlinx.serialization.Transient
 @Serializable
 sealed interface Accessible<T : Accessible<T>> {
     @Transient
-    val accessToSelf: MutableList<in Access<T>>
+    val accessToSelf: MutableList<Access<T>>
     val name: Located<String>?
 }
 

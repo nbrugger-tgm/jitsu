@@ -6,6 +6,7 @@ import eu.nitok.jitsu.parser.ast.StatementNode.*
 import eu.nitok.jitsu.parser.ast.StatementNode.Declaration.FunctionDeclarationNode
 import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.*
 import eu.nitok.jitsu.compiler.graph.TypeDefinition.TypeParameter
+import eu.nitok.jitsu.compiler.analysis.AnalysisRepository
 import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.common.walk
 
@@ -34,6 +35,15 @@ private fun GraphBuilder.buildGraph(srcFile: SourceFileNode): JitsuFile {
     }
     file.sequence().forEach {
         if (it is Finalizable) it.finalizeGraph(messages)
+    }
+    val repository = AnalysisRepository()
+    val topLevelFunctions = file.scope.functions.values.flatten()
+    repository.analyzeAll(topLevelFunctions, messages)
+    file.analysisRepository = repository
+    file.sequence().forEach {
+        if (it is Function) {
+            it.summary = repository.getFunctionSummary(it)
+        }
     }
     return file;
 }
@@ -235,7 +245,7 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
     }
     return Function(
         name?.located,
-        resolveType(functionNode.returnType),
+        functionNode.returnType?.let { Located(resolveType(it), it.location) },
         parameters,
         functionBody
     );

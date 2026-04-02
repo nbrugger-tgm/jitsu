@@ -43,6 +43,8 @@ data class CompilerMessages(
     fun error(error: CompilerMessage) = errors.add(error)
     fun error(message: String, location: Range, vararg hints: CompilerMessage.Hint) =
         errors.add(CompilerMessage(message, location, hints.toList()))
+    fun error(message: String, location: Located<*>, vararg hints: CompilerMessage.Hint) =
+        errors.add(CompilerMessage(message, location.location, hints.toList()))
 
     fun apply(node: AstNode) {
         node.warnings.addAll(warnings)

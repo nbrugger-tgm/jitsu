@@ -3,6 +3,7 @@ fn main():u32 {
     var number : u32 | i32 = input;
     var return1 = test(number, number);
     var return2 = testGeneric(number, number);
+    typetest();
     return return1 + return2;
 }
 
@@ -14,4 +15,12 @@ type Or<A,B> = A | B;
 
 fn testGeneric(a: Or<u32, i64>, b: Or<u64, i32>): u32 {
     return a + b;
+}
+
+fn typetest(){
+    var x: f32 = 1;
+    overloaded(x);
+}
+
+fn overloaded(y: f32) {
 }

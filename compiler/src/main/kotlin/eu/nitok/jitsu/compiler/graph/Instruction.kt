@@ -44,7 +44,7 @@ sealed interface Instruction : Element {
             get() = ReasonedBoolean.False("Function call constant analysis not implemented yet")
 
         override fun calculateType(context: Map<String, Type>): Type? {
-            return target?.returnType
+            return target?.returnType?.value
         }
 
         override val children: List<Element> get() = callParameters.toList()

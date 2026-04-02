@@ -1,10 +1,10 @@
 import capabilities.documentSymbols
 import capabilities.syntaxDiagnostic
 import capabilities.syntaxHighlight
-import eu.nitok.jitsu.parser.ast.SourceFileNode
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.common.Location
+import eu.nitok.jitsu.parser.ast.SourceFileNode
 import eu.nitok.jitsu.parser.parseFile
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
@@ -135,6 +135,19 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
                     .find { it.reference.location.contains(referencePos) }
             }?.target?.name?.location?.let { range(it, params.textDocument.uri) }
             Either.forLeft(listOfNotNull(graph).toMutableList())
+        }
+    }
+
+    override fun references(params: ReferenceParams): CompletableFuture<List<org.eclipse.lsp4j.Location?>?>? {
+        return CompletableFuture.supplyAsync {
+            val definitionPos = location(params.position)
+            val graph = graphs[params.textDocument.uri]?.value
+            val definition = graph?.sequence()
+                ?.filterIsInstance<Accessible<*>>()
+                ?.find { it.name?.location?.contains(definitionPos)?:false }
+            definition?.accessToSelf?.map {
+                it.reference.location.let { range(it, params.textDocument.uri) }
+            }?:emptyList()
         }
     }
 

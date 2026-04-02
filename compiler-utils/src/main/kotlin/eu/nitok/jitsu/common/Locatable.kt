@@ -2,8 +2,7 @@ package eu.nitok.jitsu.common
 
 import kotlinx.serialization.Serializable
 
-@Serializable
-sealed interface Locatable {
+interface Locatable {
     fun format(): String;
 
     /**
