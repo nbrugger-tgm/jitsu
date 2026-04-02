@@ -1,9 +1,9 @@
 package eu.nitok.jitsu.compiler.cli.commands
 
-import eu.nitok.jitsu.compiler.ast.Located
+import eu.nitok.jitsu.parser.ast.Located
 import eu.nitok.jitsu.compiler.graph.JitsuFile
 import eu.nitok.jitsu.compiler.graph.buildGraph
-import eu.nitok.jitsu.compiler.model.flatMap
+import eu.nitok.jitsu.common.flatMap
 import kotlinx.serialization.encodeToString
 import picocli.CommandLine.*
 import picocli.CommandLine.Model.CommandSpec

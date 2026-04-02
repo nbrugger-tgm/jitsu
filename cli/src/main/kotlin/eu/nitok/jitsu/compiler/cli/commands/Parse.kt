@@ -1,10 +1,10 @@
 package eu.nitok.jitsu.compiler.cli.commands
 
-import eu.nitok.jitsu.compiler.ast.SourceFileNode
+import eu.nitok.jitsu.parser.ast.SourceFileNode
 import eu.nitok.jitsu.compiler.cli.Jitsu
-import eu.nitok.jitsu.compiler.diagnostic.CompilerMessage
-import eu.nitok.jitsu.compiler.model.flatMap
-import eu.nitok.jitsu.compiler.parser.parseFile
+import eu.nitok.jitsu.common.CompilerMessage
+import eu.nitok.jitsu.common.flatMap
+import eu.nitok.jitsu.parser.parseFile
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encodeToString
