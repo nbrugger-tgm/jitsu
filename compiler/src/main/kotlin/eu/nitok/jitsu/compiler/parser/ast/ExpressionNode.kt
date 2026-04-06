@@ -10,7 +10,6 @@ sealed interface ExpressionNode : AstNode {
     @Serializable
     sealed interface NumberLiteralNode : ExpressionNode {
         @Serializable
-        //Long because of unsigned values
         class IntegerLiteralNode(val value: String, override val location: Range) : AstNodeImpl(),
             NumberLiteralNode {
             override val children: List<AstNode>
