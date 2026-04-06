@@ -234,7 +234,14 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
     val functionBody = when (val body = functionNode.body) {
         is CodeBlockNode.SingleExpressionCodeBlock -> TODO()//buildExpressionGraph(body.expression, function.bodyScope)
         is CodeBlockNode.StatementsCodeBlock -> Function.Body.Implementation(buildCodeBlockGraph(body.statements))
-        is FunctionDeclarationNode.FunctionBodyNode.NativeImplementation -> Function.Body.Native
+        is FunctionDeclarationNode.FunctionBodyNode.NativeImplementation -> Function.Body.Native(
+            //TODO: resolve attribute name, this is just a fallback if no name is given
+            "jitsu_native_${name}${
+                parameters.joinToString("_", prefix = "_") {
+                    it.type.toString().replace(Regex("[^0-9a-bA-B]"), "_")
+                }
+            }",
+        )
         null -> Function.Body.Missing
     }
     return Function(
