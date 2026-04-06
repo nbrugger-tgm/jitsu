@@ -7,6 +7,7 @@ import eu.nitok.jitsu.compiler.model.BitSize
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import java.util.Collections.emptyList
 
 @Serializable
 sealed interface Type : Element {
@@ -156,33 +157,33 @@ sealed interface Type : Element {
 
     @Serializable
     data class Array(
-        val type: Type,
+        val elementType: Type,
         val size: Expression?,
         val dimensions: kotlin.Int = 1
     ) : Type {
 
         override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type {
-            return Array(type.resolve(messages, generics), size, dimensions)
+            return Array(elementType.resolve(messages, generics), size, dimensions)
         }
 
         override fun accepts(type: Type): ReasonedBoolean {
             if (type !is Array) return ReasonedBoolean.False("$type is not an array and can therefore not be assigned to an array")
-            val elementsAccept = this.type.acceptsInstanceOf(type.type)
+            val elementsAccept = this.elementType.acceptsInstanceOf(type.elementType)
             return if (elementsAccept.value) {
                 ReasonedBoolean.True("$type is an array with an assignable element type", elementsAccept)
             } else {
                 ReasonedBoolean.False(
-                    "Element type of $type (${type.type}) is not compatible with ${this.type}",
+                    "Element type of $type (${type.elementType}) is not compatible with ${this.elementType}",
                     elementsAccept
                 )
             }
         }
 
         @Transient
-        override val children: List<Element> = listOfNotNull(type, size)
+        override val children: List<Element> = listOfNotNull(elementType, size)
 
         override fun toString(): String {
-            return "$type[${size?.toString() ?: ""}]"
+            return "$elementType[${size?.toString() ?: ""}]"
         }
     }
 
