@@ -2,9 +2,10 @@ package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.common.ReasonedBoolean
 
-import eu.nitok.jitsu.parser.ast.CompilerMessages
-import eu.nitok.jitsu.parser.ast.Located
+import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.common.Located
 import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locatedAt
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlin.math.min
@@ -43,7 +44,17 @@ sealed interface Instruction : Element {
         override val isConstant: ReasonedBoolean
             get() = ReasonedBoolean.False("Function call constant analysis not implemented yet")
 
-        override fun calculateType(context: Map<String, Type>): Type? {
+        override fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type? {
+            if(target == null) {
+                val callSiteTypes = callParameters.map {
+                    (it.calculateType(context,messages)?: Type.Undefined).locatedAt(it.location)
+                }.toTypedArray()
+                target = scope.resolveFunction(
+                    reference,
+                    callSiteTypes,
+                    messages
+                )
+            }
             return target?.returnType?.value
         }
 

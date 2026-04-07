@@ -1,6 +1,6 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.parser.ast.CompilerMessages
+import eu.nitok.jitsu.common.CompilerMessages
 
 /**
  * An interface for elements that need to finalize their state after the whole graph has been built

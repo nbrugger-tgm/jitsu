@@ -4,8 +4,8 @@ import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
-import eu.nitok.jitsu.parser.ast.CompilerMessages
-import eu.nitok.jitsu.parser.ast.Located
+import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.common.Located
 
 class CodeBlockAnalyzer(
     private val function: Function,
@@ -51,7 +51,7 @@ class CodeBlockAnalyzer(
     )
 
     fun analyze(): AnalysisResult {
-        for (param in function.parameters) {
+         for (param in function.parameters) {
             localVariables[param.name.value] = VariableState(
                 declaredType = param.declaredType,
                 narrowedType = param.declaredType,
@@ -63,9 +63,10 @@ class CodeBlockAnalyzer(
                 deterministic = ReasonedBoolean.True("Parameters are deterministic")
             )
         }
-
-        for (instruction in function.body.instructions) {
-            processInstruction(instruction)
+        if(function.body is Function.Body.Implementation) {
+            for (instruction in function.body.block.instructions) {
+                processInstruction(instruction)
+            }
         }
 
         val parameterModes: Map<String, ParameterMode> = function.parameters.associate { param: Function.Parameter ->
@@ -253,7 +254,7 @@ class CodeBlockAnalyzer(
         val right = analyzeExpression(op.right)
 
         val deterministic = left.deterministic.and(right.deterministic)
-        val type = op.calculateType(localVariables.mapValues { it.value.narrowedType }) ?: Type.Undefined
+        val type = op.calculateType(typeContext, messages) ?: Type.Undefined
 
         val constValue: AbstractValue =
             AbstractValue.Unknown //If both are constant this can be constant as well in the future
@@ -373,7 +374,7 @@ class CodeBlockAnalyzer(
                     ReasonedBoolean.True("Target '${call.reference.value}' has no known summary")
                 )
 
-                val returnType = call.calculateType() ?: Type.Undefined
+                val returnType = call.calculateType(typeContext, messages) ?: Type.Undefined
                 ExpressionResult(
                     type = returnType,
                     deterministic = ReasonedBoolean.True("Unknown target '${call.reference.value}'"),
@@ -389,7 +390,7 @@ class CodeBlockAnalyzer(
                 ReasonedBoolean.True("Unresolved target '${call.reference.value}'")
             )
 
-            val returnType = call.calculateType() ?: Type.Undefined
+            val returnType = call.calculateType(typeContext, messages) ?: Type.Undefined
             ExpressionResult(
                 type = returnType,
                 deterministic = ReasonedBoolean.True("Unresolved target '${call.reference.value}'"),
@@ -398,6 +399,8 @@ class CodeBlockAnalyzer(
             )
         }
     }
+
+    private val typeContext: Map<String, Type> = localVariables.mapValues { it.value.narrowedType }
 
     private fun buildVariableSummary(state: VariableState): VariableSummary {
         val effectivelyConstant: ReasonedBoolean =

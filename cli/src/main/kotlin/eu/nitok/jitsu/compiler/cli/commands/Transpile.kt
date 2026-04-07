@@ -15,7 +15,7 @@ class Transpile: Callable<List<Path>> {
     @Mixin
     lateinit var cli: Process
     @CommandLine.Option(names = ["-b", "--backend"], description = ["The backend to compile to (llvm, rust, c, js)"])
-    var backendName = "rust"
+    var backendName = "c"
     override fun call(): List<Path> {
         val graphs = cli.call()
         val backend = BackendRegistry.create(backendName)

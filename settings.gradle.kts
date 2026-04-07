@@ -35,5 +35,9 @@ include(
 )
 
 include(
+    "backend:c"
+)
+
+include(
     "vs-extension",
 )

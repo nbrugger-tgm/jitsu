@@ -281,15 +281,14 @@ class AnalysisTypesTest {
             val summary = VariableSummary(
                 declaredType = i32,
                 narrowedType = i32,
-                isEffectivelyConstant = true,
-                effectivelyConstantReason = "Variable is never reassigned and initializer is constant",
+                effectivelyConstant = ReasonedBoolean.True("it is how it is"),
                 compileTimeValue = AbstractValue.Const("42", valueType = i32)
             )
             val serialized = json.encodeToString(VariableSummary.serializer(), summary)
             val deserialized = json.decodeFromString(VariableSummary.serializer(), serialized)
             assertThat(deserialized.declaredType).isEqualTo(i32)
             assertThat(deserialized.narrowedType).isEqualTo(i32)
-            assertThat(deserialized.isEffectivelyConstant).isTrue()
+            assertThat(deserialized.effectivelyConstant.value).isTrue()
             assertThat(deserialized.compileTimeValue).isEqualTo(AbstractValue.Const("42", valueType = i32))
         }
 

@@ -83,8 +83,8 @@ class AnalysisIntegrationTest {
         val repo = file.analysisRepository!!
 
         val fn = file.sequence().filterIsInstance<Function>().first()
-        val varDecl = fn.body.instructions
-            .filterIsInstance<eu.nitok.jitsu.compiler.graph.VariableDeclaration>()
+        val varDecl = (fn.body as Function.Body.Implementation).block.instructions
+            .filterIsInstance<VariableDeclaration>()
             .first()
 
         val varSummary = repo.getVariableSummary(varDecl)
@@ -137,7 +137,7 @@ class AnalysisIntegrationTest {
             }
         """.trimIndent())
         val fn = file.sequence().filterIsInstance<Function>().first { it.name?.value == "main" }
-        val body = fn.body.instructions
+        val body = (fn.body as Function.Body.Implementation).block.instructions
 
         // Find the variable reference to 'input' in 'var number: u32 = input;'
         val numberDecl = body.filterIsInstance<VariableDeclaration>().first { it.name.value == "number" }
@@ -165,7 +165,7 @@ class AnalysisIntegrationTest {
         val helperFn = file.sequence().filterIsInstance<Function>().first { it.name?.value == "helper" }
 
         // Find the function call 'helper()' in 'var result = helper();'
-        val resultDecl = fn.body.instructions.filterIsInstance<VariableDeclaration>().first { it.name.value == "result" }
+        val resultDecl = (fn.body as Function.Body.Implementation).block.instructions.filterIsInstance<VariableDeclaration>().first { it.name.value == "result" }
         val helperCall = resultDecl.initialValue as? Instruction.FunctionCall
         assertThat(helperCall).isNotNull()
         assertThat(helperCall!!.target).isNotNull()
@@ -195,7 +195,7 @@ class AnalysisIntegrationTest {
         val testFn = file.sequence().filterIsInstance<Function>().first { it.name?.value == "test" }
         val testGenericFn = file.sequence().filterIsInstance<Function>().first { it.name?.value == "testGeneric" }
 
-        val body = mainFn.body.instructions
+        val body = (mainFn.body as Function.Body.Implementation).block.instructions
 
         // 'input' reference in 'var number : u32 | i32 = input;' resolves
         val numberDecl = body.filterIsInstance<VariableDeclaration>().first { it.name.value == "number" }

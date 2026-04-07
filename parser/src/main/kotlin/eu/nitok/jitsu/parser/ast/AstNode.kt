@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.parser.ast
 
 import eu.nitok.jitsu.common.CompilerMessage
-import eu.nitok.jitsu.common.ReasonedBoolean
+import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.Walkable
 import eu.nitok.jitsu.common.Range
 import kotlinx.serialization.Serializable
@@ -21,8 +21,13 @@ sealed interface AstNode : Walkable<AstNode> {
     }
 }
 fun <T: AstNode> T.withMessages(messages: CompilerMessages) : T{
-    messages.apply(this)
+    messages.applyTo(this)
     return this;
+}
+
+fun CompilerMessages.applyTo(node: AstNode) {
+    node.warnings.addAll(warnings)
+    node.errors.addAll(errors)
 }
 
 @Serializable
@@ -31,31 +36,3 @@ sealed class AstNodeImpl : AstNode {
     override val errors: MutableList<CompilerMessage> = mutableListOf()
 }
 
-@Serializable
-data class CompilerMessages(
-    val warnings: MutableList<CompilerMessage> = mutableListOf(),
-    val errors: MutableList<CompilerMessage> = mutableListOf()
-) {
-    fun warn(warning: CompilerMessage) = warnings.add(warning)
-    fun warn(message: String, location: Range, vararg hints: CompilerMessage.Hint) =
-        warnings.add(CompilerMessage(message, location, hints.toList()))
-
-    fun error(error: CompilerMessage) = errors.add(error)
-    fun error(message: String, location: Range, vararg hints: CompilerMessage.Hint) =
-        errors.add(CompilerMessage(message, location, hints.toList()))
-    fun error(message: String, location: Located<*>, vararg hints: CompilerMessage.Hint) =
-        errors.add(CompilerMessage(message, location.location, hints.toList()))
-
-    fun apply(node: AstNode) {
-        node.warnings.addAll(warnings)
-        node.errors.addAll(errors)
-    }
-
-    fun error(boolean: ReasonedBoolean, location: Range) {
-        val fullMesageChain = boolean.fullMessageChain()
-        this.error(CompilerMessage(fullMesageChain.first, location, fullMesageChain.second))
-    }
-}
-
-@Serializable
-data class Located<T>(val value: T, val location: Range)

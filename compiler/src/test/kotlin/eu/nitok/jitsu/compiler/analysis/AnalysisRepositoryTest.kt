@@ -5,8 +5,8 @@ import eu.nitok.jitsu.common.Location
 import eu.nitok.jitsu.common.Range
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
-import eu.nitok.jitsu.parser.ast.CompilerMessages
-import eu.nitok.jitsu.parser.ast.Located
+import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.common.Located
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -26,14 +26,14 @@ class AnalysisRepositoryTest {
         repo = AnalysisRepository()
     }
 
-    private fun located(s: String) = Located(s, dummyRange)
+    private fun <T> located(s: T) = Located(s, dummyRange)
 
     private fun buildFunction(
         name: String,
         returnType: Type? = null,
         parameters: List<Function.Parameter> = emptyList(),
         instructions: List<Instruction> = emptyList()
-    ): Function = Function(located(name), returnType, parameters, CodeBlock(instructions))
+    ): Function = Function(located(name), returnType?.let { located(it) }, parameters, Function.Body.Implementation(CodeBlock(instructions)))
 
     private fun param(name: String, type: Type): Function.Parameter =
         Function.Parameter(located(name), type, null)
@@ -105,7 +105,10 @@ class AnalysisRepositoryTest {
 
         val summary = repo.getFunctionSummary(fib)
         assertThat(summary).isNotNull()
-        assertThat(summary!!.callees).containsExactlyInAnyOrder("fib")
+        assertThat(summary!!.callees)
+            .singleElement()
+            .extracting { it.name?.value }
+            .isEqualTo("fib")
     }
 
     @Test
@@ -158,7 +161,7 @@ class AnalysisRepositoryTest {
 
         val varEntry = repo.getVariableSummary(decl)
         assertThat(varEntry).isNotNull()
-        assertThat(varEntry!!.isEffectivelyConstant).isTrue()
+        assertThat(varEntry!!.effectivelyConstant.value).isTrue()
     }
 
     @Test

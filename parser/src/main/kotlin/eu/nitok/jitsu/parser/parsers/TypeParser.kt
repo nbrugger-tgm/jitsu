@@ -3,43 +3,64 @@ package eu.nitok.jitsu.parser.parsers
 import com.niton.jainparse.token.DefaultToken
 import com.niton.jainparse.token.DefaultToken.PIPE
 import com.niton.jainparse.token.TokenStream
-import eu.nitok.jitsu.parser.ast.CompilerMessages
+import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.parser.ast.IdentifierNode
 import eu.nitok.jitsu.parser.ast.StatementNode
 import eu.nitok.jitsu.parser.ast.TypeNode
 import eu.nitok.jitsu.parser.ast.TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode
 import eu.nitok.jitsu.parser.ast.withMessages
 import eu.nitok.jitsu.common.CompilerMessage
+import eu.nitok.jitsu.common.CompilerMessage.Hint
 import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.parser.*
+import eu.nitok.jitsu.common.locatedAt
 import kotlin.jvm.optionals.getOrNull
 
 
 fun parseType(tokens: Tokens): TypeNode? {
-    val firstType = parseSingleType(tokens) ?: return null
-    val union = parseUnion(firstType, tokens)
-    return union ?: firstType
+    var type = parseSingleType(tokens) ?: return null
+    while(true) {
+        val uberType = parseUnion(type, tokens) ?: parseArrayType(type, tokens)
+        if(uberType == null) return type;
+        type = uberType
+    }
 }
 
-fun parseOptionalExplicitType(tokens: Tokens, messages: (CompilerMessage) -> Unit): TypeNode? {
-    val colon = tokens.attempt(DefaultToken.COLON) ?: return null
+fun parseArrayType(
+    firstType: TypeNode,
+    tokens: Tokens
+): TypeNode? {
+    val openBrace = tokens.attempt(DefaultToken.SQUARE_BRACKET_OPEN) ?: return null;
     tokens.skipWhitespace()
-    val type = parseType(tokens)
-    if (type == null) {
-        messages(
-            CompilerMessage(
-                "Expected type", tokens.location.toRange(), CompilerMessage.Hint("Colon starts type definition", colon.location)
-            )
+    val messages = CompilerMessages()
+    val fixedSize = parseExpression(tokens)
+
+    tokens.skipWhitespace()
+    val closeBrace = tokens.attempt(DefaultToken.SQUARE_BRACKET_CLOSED)
+    if (closeBrace == null) {
+        messages.error(
+            "Expected closing ']' for array type", tokens.location.toRange(),
+            Hint("Opening ']'", openBrace.location)
         )
     }
-    return type
+    return TypeNode.ArrayTypeNode(firstType, fixedSize, firstType.location.rangeTo((closeBrace ?: openBrace).location))
+        .withMessages(messages)
 }
 
+/**
+ * parses constructs such as
+ *
+ * type X = A | B
+ * type Y = { test: X }
+ *
+ * general syntax:
+ * type <identifier> = <any type>
+ */
 fun parseTypeDeclaration(tokens: Tokens): StatementNode.NamedTypeDeclarationNode? {
     return parseTypeAlias(tokens)
 }
 
-fun parseTypeParameters(tokens: Tokens, messages: CompilerMessages): List<IdentifierNode> {
+fun parseTypeParameterDefinition(tokens: Tokens, messages: CompilerMessages): List<IdentifierNode>? {
     return tokens.enclosedRepetition(
         DefaultToken.LEFT_ANGLE_BRACKET,
         DefaultToken.COMMA,
@@ -49,7 +70,7 @@ fun parseTypeParameters(tokens: Tokens, messages: CompilerMessages): List<Identi
         "type parameter"
     ) {
         parseIdentifier(it)
-    } ?: listOf()
+    }
 }
 
 private fun parseTypeAlias(tokens: Tokens): StatementNode.NamedTypeDeclarationNode.TypeAliasNode? {
@@ -60,7 +81,7 @@ private fun parseTypeAlias(tokens: Tokens): StatementNode.NamedTypeDeclarationNo
     if (name == null) {
         messages.error("Expected a name for the type alias", tokens.location.toRange())
     }
-    var typeParameters = parseTypeParameters(tokens, messages)
+    val typeParameters = parseTypeParameterDefinition(tokens, messages)
     tokens.skipWhitespace()
     tokens.attempt(DefaultToken.EQUAL) ?: messages.error(
         "Expected '=' after the type alias name",
@@ -73,7 +94,7 @@ private fun parseTypeAlias(tokens: Tokens): StatementNode.NamedTypeDeclarationNo
     }
     return StatementNode.NamedTypeDeclarationNode.TypeAliasNode(
         name,
-        typeParameters,
+        typeParameters ?: listOf(),
         type,
         alias.rangeTo(tokens.lastConsumedLocation),
         alias,
@@ -86,12 +107,15 @@ fun parseExplicitType(
     messages: CompilerMessages
 ): TypeNode? {
     if (tokens.attempt(DefaultToken.COLON) == null) {
-        messages.error("Expected a type definition starting with a ':'", tokens.location.toRange())
-        tokens.location
-    } else {
-        tokens.skipWhitespace()
+        val type = parseType(tokens) ?: return null
+        messages.error("Expected a type definition starting with a ':'", type.location)
+        return type
     }
+    tokens.skipWhitespace()
     val type = parseType(tokens)
+    if (type == null) {
+        messages.error("Expected a type definition after the ':'", tokens.location.toRange())
+    }
     return type
 }
 
@@ -110,7 +134,7 @@ private fun parseStructuralInterface(tokens: Tokens): TypeNode? {
             val mut = tokens.keyword("mut")
             tokens.skipWhitespace()
             val name = parseIdentifier(tokens);
-            if(name == null) {
+            if (name == null) {
                 tokens.rollback()
                 return@enclosedRepetition null
             } else tokens.commit()
@@ -118,13 +142,13 @@ private fun parseStructuralInterface(tokens: Tokens): TypeNode? {
             val messages = CompilerMessages()
             val type = parseExplicitType(tokens, messages)
             val element = StructuralFieldNode(name, type, mut, null)
-            messages.apply(element)
             tokens.skip(DefaultToken.WHITESPACE)
-            return@enclosedRepetition element
+            return@enclosedRepetition element.withMessages(messages)
         }
     }
-    fields.value?: return null;
-    return TypeNode.StructuralInterfaceTypeNode(fields.value, fields.location)
+    val fieldList = fields.value
+    fieldList ?: return null;
+    return TypeNode.StructuralInterfaceTypeNode(fieldList, fields.location)
         .withMessages(messages)
 }
 
@@ -137,6 +161,9 @@ private fun parseSingleType(tokens: Tokens): TypeNode? {
     }
     tokens.keyword("float")?.let {
         return TypeNode.FloatTypeNode(BitSize.BIT_32, it)
+    }
+    tokens.keyword("boolean")?.let {
+        return TypeNode.BooleanTypeNode(it)
     }
     parseBitsizedNumberType(tokens)?.let {
         return it
@@ -162,41 +189,31 @@ private fun parseSingleType(tokens: Tokens): TypeNode? {
     return namedType.withMessages(messages)
 }
 
-private fun parseBitsizedNumberType(tokens: TokenStream<DefaultToken>): TypeNode? {
-    tokens.elevate()
-    val letterToken = tokens.attempt(DefaultToken.LETTERS)
-    if (letterToken == null) {
-        tokens.rollback()
-        return null
-    }
-    val bitSize = {
-        tokens.attempt(DefaultToken.NUMBER)?.let { numberToken ->
-            BitSize.byBits(numberToken.value.value.toInt())?.let { it to numberToken.location }
+private fun parseBitsizedNumberType(tokens: Tokens): TypeNode? {
+    return tokens.attempt {
+        val letterToken = tokens.attempt(DefaultToken.LETTERS) ?: return@attempt null
+        val bitSize = {
+            attempt(DefaultToken.NUMBER)?.let { numberToken ->
+                BitSize.byBits(numberToken.value.value.toInt())?.locatedAt(numberToken.location)
+            }
         }
+        val type = when (letterToken.value.value) {
+            "i" -> bitSize()?.let { TypeNode.IntTypeNode(it.value, letterToken.location.rangeTo(it.location)) }
+            "u" -> bitSize()?.let { TypeNode.UIntTypeNode(it.value, letterToken.location.rangeTo(it.location)) }
+            "f" -> bitSize()?.let { TypeNode.FloatTypeNode(it.value, letterToken.location.rangeTo(it.location)) }
+            else -> null
+        }
+        type
     }
-    val type = when (letterToken.value.value) {
-        "i" -> bitSize()?.let { TypeNode.IntTypeNode(it.first, letterToken.location.rangeTo(it.second)) }
-        "u" -> bitSize()?.let { TypeNode.UIntTypeNode(it.first, letterToken.location.rangeTo(it.second)) }
-        "f" -> bitSize()?.let { TypeNode.FloatTypeNode(it.first, letterToken.location.rangeTo(it.second)) }
-        else -> null
-    }
-
-    if (type == null) {
-        tokens.rollback()
-        return null
-    }
-    tokens.commit()
-    return type
 }
 
 private fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode.UnionTypeNode? {
     if (!tokens.hasNext()) return null
-    tokens.elevate()
     tokens.skipWhitespace()
-    val pipe = tokens.nullableRange { this.attempt(PIPE) } ?: run {
-        tokens.rollback()
-        return@parseUnion null
-    }
+    val pipe = (tokens.attempt {
+        skipWhitespace()
+        range { next().type == PIPE }.takeIf { it.value }
+    }) ?: return null
     val types = mutableListOf(firstType)
     val messages = CompilerMessages()
     while (tokens.hasNext()) {
@@ -207,7 +224,7 @@ private fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): 
                 CompilerMessage(
                     "Expect type for union",
                     tokens.location.toRange(),
-                    CompilerMessage.Hint("Union starts here", pipe.location)
+                    Hint("Union starts here", pipe.location)
                 )
             )
         } else {
@@ -220,5 +237,5 @@ private fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): 
             break
         }
     }
-    return TypeNode.UnionTypeNode(types)
+    return TypeNode.UnionTypeNode(types).withMessages(messages)
 }

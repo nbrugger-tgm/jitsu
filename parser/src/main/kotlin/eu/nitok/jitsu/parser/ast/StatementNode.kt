@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.parser.ast
 
+import eu.nitok.jitsu.common.Located
 import eu.nitok.jitsu.parser.ast.TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode
 import eu.nitok.jitsu.common.Range
 import kotlinx.serialization.SerialName
@@ -124,7 +125,9 @@ sealed interface StatementNode : AstNode {
         }
 
         @Serializable
-        sealed interface CodeBlockNode : InstructionNode, ExpressionNode, SwitchNode.CaseNode.CaseBodyNode {
+        sealed interface CodeBlockNode : InstructionNode, ExpressionNode,
+            SwitchNode.CaseNode.CaseBodyNode,
+            Declaration.FunctionDeclarationNode.FunctionBodyNode {
             @Serializable
             class SingleExpressionCodeBlock(val expression: ExpressionNode, override val location: Range) :
                 AstNodeImpl(), CodeBlockNode {
@@ -209,7 +212,7 @@ sealed interface StatementNode : AstNode {
             val name: IdentifierNode?,
             val parameters: List<ParameterNode>,
             val returnType: TypeNode?,
-            val body: InstructionNode.CodeBlockNode?,
+            val body: FunctionBodyNode?,
             val keywordLocation: Range,
             override val attributes: List<AttributeNode>
         ) : AstNodeImpl(), Declaration, InstructionNode, ExpressionNode,
@@ -220,7 +223,13 @@ sealed interface StatementNode : AstNode {
                 body?.location ?: returnType?.location ?: parameters.lastOrNull()?.location ?: name?.location
                 ?: keywordLocation
             )
-
+            @Serializable
+            sealed interface FunctionBodyNode : AstNode {
+                @Serializable
+                data class NativeImplementation(override val location: Range): FunctionBodyNode, AstNodeImpl() {
+                    override val children: List<AstNode> get() = emptyList()
+                }
+            }
             @Serializable
             class ParameterNode(
                 val name: IdentifierNode,

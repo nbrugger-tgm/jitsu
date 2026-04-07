@@ -1,6 +1,8 @@
 package eu.nitok.jitsu.compiler.graph
 
 
+import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.common.Located
 import eu.nitok.jitsu.parser.ast.*
 import eu.nitok.jitsu.parser.ast.StatementNode.*
 import eu.nitok.jitsu.parser.ast.StatementNode.Declaration.FunctionDeclarationNode
@@ -9,6 +11,8 @@ import eu.nitok.jitsu.compiler.graph.TypeDefinition.TypeParameter
 import eu.nitok.jitsu.compiler.analysis.AnalysisRepository
 import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.common.walk
+import eu.nitok.jitsu.compiler.graph.Type.*
+import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Struct.Field
 
 private class GraphBuilder {
     val messages: CompilerMessages = CompilerMessages()
@@ -82,7 +86,7 @@ private fun GraphBuilder.processStatements(
 private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.ClassDeclarationNode): TypeDefinition.ParameterizedType.Class? {
     return classNode.name?.let { name ->
         val fields = classNode.fields.map { field ->
-            TypeDefinition.ParameterizedType.Struct.Field(
+            Field(
                 field.name.located,
                 field.mutableKw != null,
                 resolveType(field.type)
@@ -100,7 +104,7 @@ private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.Cla
                     listOf(
                         Function.Parameter(
                             Located("this", name.location),
-                            Type.TypeReference(name.located, listOf()),
+                            TypeReference(name.located, listOf()),
                             null
                         )
                     ) + base.parameters,
@@ -118,6 +122,7 @@ private fun GraphBuilder.buildInstructionGraph(statement: InstructionNode): Inst
         is CodeBlockNode,
         is YieldStatement,
         is SwitchNode -> TODO();
+
 
         is FunctionCallNode -> Instruction.FunctionCall(
             statement.function.located,
@@ -198,7 +203,7 @@ fun buildExpressionGraph(expression: ExpressionNode): Expression {
         is ExpressionNode.NumberLiteralNode.IntegerLiteralNode -> resolveIntConstant(expression)
         is ExpressionNode.OperationNode -> Expression.Operation(
             buildExpressionGraph(expression.left),
-            expression.operator.value,
+            expression.operator,
             expression.right?.let { buildExpressionGraph(it) } ?: Expression.Undefined(expression.operator.location)
         );
         is ExpressionNode.StringLiteralNode -> Constant.StringConstant(expression.toString(), expression.location)
@@ -240,8 +245,16 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
     }
     val functionBody = when (val body = functionNode.body) {
         is CodeBlockNode.SingleExpressionCodeBlock -> TODO()//buildExpressionGraph(body.expression, function.bodyScope)
-        is CodeBlockNode.StatementsCodeBlock -> buildCodeBlockGraph(body.statements)
-        null -> CodeBlock(listOf());
+        is CodeBlockNode.StatementsCodeBlock -> Function.Body.Implementation(buildCodeBlockGraph(body.statements))
+        is FunctionDeclarationNode.FunctionBodyNode.NativeImplementation -> Function.Body.Native(
+            //TODO: resolve attribute name, this is just a fallback if no name is given
+            "jitsu_native_${name}${
+                parameters.joinToString("_", prefix = "_") {
+                    it.type.toString().replace(Regex("[^0-9a-bA-B]"), "_")
+                }
+            }",
+        )
+        null -> Function.Body.Missing
     }
     return Function(
         name?.located,
@@ -410,25 +423,31 @@ val IdentifierNode.located: Located<String> get() = Located(value, location)
 fun resolveType(type: TypeNode?): Type {
     if (type == null) return Type.Undefined
     return when (type) {
-        is TypeNode.ArrayTypeNode -> Type.Array(
+        is TypeNode.ArrayTypeNode -> Array(
             resolveType(type.type),
             type.fixedSize?.let { buildExpressionGraph(it) })
 
-        is TypeNode.FloatTypeNode -> Type.Float(type.bitSize)
+        is TypeNode.FloatTypeNode -> Float(type.bitSize)
         is TypeNode.FunctionTypeSignatureNode -> TODO()
-        is TypeNode.IntTypeNode -> Type.Int(type.bitSize)
-        is TypeNode.NameTypeNode -> Type.TypeReference(type.name.located, type.genericTypes.map { Located(resolveType(it), it.location) })
-        is TypeNode.StructuralInterfaceTypeNode -> Type.StructuralInterface(type.fields.map {
-            TypeDefinition.ParameterizedType.Struct.Field(
+        is TypeNode.IntTypeNode -> Int(type.bitSize)
+        is TypeNode.NameTypeNode -> TypeReference(type.name.located, type.genericTypes.map {
+            Located(
+                resolveType(it),
+                it.location
+            )
+        })
+        is TypeNode.StructuralInterfaceTypeNode -> StructuralInterface(type.fields.map {
+            Field(
                 it.name.located,
                 false,
                 resolveType(it.type)
             )
         }.associateBy { it.name.value })
 
-        is TypeNode.UnionTypeNode -> Type.Union(type.types.map { resolveType(it) })
+        is TypeNode.UnionTypeNode -> Union(type.types.map { resolveType(it) })
         is TypeNode.ValueTypeNode -> TODO()
         is TypeNode.VoidTypeNode -> TODO()
-        is TypeNode.UIntTypeNode -> Type.UInt(type.bitSize)
+        is TypeNode.UIntTypeNode -> UInt(type.bitSize)
+        is TypeNode.BooleanTypeNode -> Type.Boolean
     }
 }

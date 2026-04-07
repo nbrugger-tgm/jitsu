@@ -7,9 +7,13 @@ fn main():u32 {
     return return1 + return2;
 }
 
+native fn plus(a: u32 | i64, b: u64 | i32): u32
+
 fn test(a: u32 | i64, b: u64 | i32): u32 {
     return a + b;
 }
+type String = boolean;
+native fn test(a: String, b: String): String
 
 type Or<A,B> = A | B;
 

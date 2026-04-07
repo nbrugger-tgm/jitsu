@@ -1,14 +1,18 @@
 package eu.nitok.jitsu.parser.ast
 
 import eu.nitok.jitsu.common.BitSize
+import eu.nitok.jitsu.common.Located
 import eu.nitok.jitsu.common.Range
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 sealed interface TypeNode : AstNode {
+    sealed interface PrimitiveTypeNode : TypeNode {
+        val bitSize: BitSize
+    }
     @Serializable
-    class IntTypeNode(val bitSize: BitSize, override val location: Range) : TypeNode, AstNodeImpl() {
+    class IntTypeNode(override val bitSize: BitSize, override val location: Range) : PrimitiveTypeNode, AstNodeImpl() {
 
         override fun toString(): String {
             return "i${bitSize.bits}"
@@ -18,7 +22,7 @@ sealed interface TypeNode : AstNode {
             get() = listOf()
     }
     @Serializable
-    class UIntTypeNode(val bitSize: BitSize, override val location: Range) : TypeNode, AstNodeImpl() {
+    class UIntTypeNode(override val bitSize: BitSize, override val location: Range) : PrimitiveTypeNode, AstNodeImpl() {
 
         override fun toString(): String {
             return "u${bitSize.bits}"
@@ -29,7 +33,7 @@ sealed interface TypeNode : AstNode {
     }
 
     @Serializable
-    class FloatTypeNode(val bitSize: BitSize, override val location: Range) : TypeNode, AstNodeImpl() {
+    class FloatTypeNode(override val bitSize: BitSize, override val location: Range) : PrimitiveTypeNode, AstNodeImpl() {
         override fun toString(): String {
             return "f${bitSize.bits}"
         }
@@ -140,5 +144,11 @@ sealed interface TypeNode : AstNode {
     class VoidTypeNode(override val location: Range) : TypeNode, AstNodeImpl() {
         override val children: List<AstNode>
             get() = listOf()
+    }
+
+    @Serializable
+    class BooleanTypeNode(override val location: Range): PrimitiveTypeNode, AstNodeImpl() {
+        override val bitSize: BitSize = BitSize.BIT_1
+        override val children = emptyList<AstNode>()
     }
 }

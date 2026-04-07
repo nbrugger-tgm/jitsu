@@ -10,14 +10,6 @@ interface SomeInterface {
 ```
 
 ```go
-interface SomeInterface {
-	dox(): String
-	run()
-	params(param1: String, param2: i64)
-}
-```
-
-```go
 type SomeInterface = interface {
 	fn dox(): String
 	fn run()

@@ -6,8 +6,8 @@ import eu.nitok.jitsu.common.Range
 import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
-import eu.nitok.jitsu.parser.ast.CompilerMessages
-import eu.nitok.jitsu.parser.ast.Located
+import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.common.Located
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -21,7 +21,7 @@ class CodeBlockAnalyzerTest {
     private val messages = CompilerMessages()
     private val noOracle: (Function) -> FunctionSummary? = { null }
 
-    private fun loc(s: String) = Located(s, dummyRange)
+    private fun <T> loc(s: T) = Located(s, dummyRange)
 
     private fun buildFunction(
         name: String? = "foo",
@@ -30,9 +30,9 @@ class CodeBlockAnalyzerTest {
         instructions: List<Instruction> = emptyList()
     ): Function = Function(
         name = name?.let { loc(it) },
-        returnType = returnType,
+        returnType = returnType?.let { loc(it) },
         parameters = parameters,
-        body = CodeBlock(instructions)
+        body = Function.Body.Implementation(CodeBlock(instructions))
     )
 
     private fun param(name: String, type: Type): Function.Parameter =
@@ -190,7 +190,7 @@ class CodeBlockAnalyzerTest {
             val result = analyze(fn)
             val xSummary = result.variableSummaries.entries
                 .first { it.key.name.value == "x" }.value
-            assertThat(xSummary.isEffectivelyConstant).isTrue()
+            assertThat(xSummary.effectivelyConstant.value).isTrue()
         }
 
         @Test
@@ -223,7 +223,7 @@ class CodeBlockAnalyzerTest {
             val result = analyze(fn)
             val xSummary = result.variableSummaries.entries
                 .first { it.key.name.value == "x" }.value
-            assertThat(xSummary.isEffectivelyConstant).isFalse()
+            assertThat(xSummary.effectivelyConstant.value).isFalse()
         }
     }
 
@@ -281,7 +281,10 @@ class CodeBlockAnalyzerTest {
 
             val fn = buildFunction(instructions = listOf(callInstr))
             val result = analyze(fn) { pureSummary }
-            assertThat(result.functionSummary.callees).contains("bar")
+            assertThat(result.functionSummary.callees)
+                .singleElement()
+                .extracting { it.name?.value }
+                .isEqualTo("bar")
         }
     }
 

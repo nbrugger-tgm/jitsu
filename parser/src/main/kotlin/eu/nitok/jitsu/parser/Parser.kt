@@ -9,6 +9,8 @@ import com.niton.jainparse.token.Tokenizer.AssignedToken
 import eu.nitok.jitsu.parser.ast.*
 import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.CompilerMessage.Hint
+import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.common.Located
 import eu.nitok.jitsu.common.Location
 import eu.nitok.jitsu.common.Range
 import eu.nitok.jitsu.parser.parsers.parseIdentifier
@@ -78,6 +80,10 @@ public fun <T> parseIdentifierBased(tokens: Tokens, parser: (tokens: Tokens, id:
     return res
 }
 
+sealed interface LastElementState {
+    object Delimitted : LastElementState
+    data class NotDelimitted(val location: Location) : LastElementState
+}
 
 fun <T> Tokens.enclosedRepetition(
     start: DefaultToken,
@@ -86,41 +92,59 @@ fun <T> Tokens.enclosedRepetition(
     messages: CompilerMessages,
     subject: String,
     elementName: String,
-    function: (Tokens) -> T?
+    invalidObjectPlaceholder: T? = null,
+    parseElement: (Tokens) -> T?
 ): List<T>? {
     val openKw = attempt(start)?.location ?: return null;
     val lst = mutableListOf<T>()
     skipWhitespace()
-    if (attempt(end) != null)
-        return lst
+    if (attempt(end) != null) return lst
+
+    var wasLastElementDelimitted: LastElementState = LastElementState.Delimitted
     while (hasNext()) {
-        when (val x = function(this)) {
+        when (val x = parseElement(this)) {
             null -> {
+                if(wasLastElementDelimitted is LastElementState.NotDelimitted) {
+                    //The last element was not followed by a delimitter, therefore an invalid element here means
+                    // Its more probable that the user forgot the "end" mark rather than that they forgot a delimitter
+                    break
+                }
                 skip(WHITESPACE)
                 val invalid = skipUntil(end, delimitter, NEW_LINE, SEMICOLON)
                 messages.error(CompilerMessage("Expected a $elementName", invalid))
-                if (peekOptional().getOrNull()?.type != delimitter) {
+                val next = peekOptional().getOrNull()?.type
+                if(invalidObjectPlaceholder != null && (next == end || next == delimitter))
+                    lst.add(invalidObjectPlaceholder)
+                if (next != delimitter) {
                     break;
                 }
-                skip(delimitter)
+                skip(1)
+                wasLastElementDelimitted = LastElementState.Delimitted
+                skipWhitespace()
             }
 
             else -> {
+                if(wasLastElementDelimitted is LastElementState.NotDelimitted) {
+                    messages.error(
+                        "Expected a '$delimitter' between $elementName elements",
+                        wasLastElementDelimitted.location.toRange()
+                    )
+                }
                 lst.add(x)
-                val postElemPos = location
+                val expectedDelimiterPos = location
                 skipWhitespace()
-                when (val delim = attempt(delimitter, end)?.value?.type) {
-                    null -> messages.error("Expected $delimitter or $end", postElemPos.toRange())
-                    end -> return lst
+                val next = peekOptional().getOrNull()?.type
+                wasLastElementDelimitted = when(next) {
                     delimitter -> {
+                        skip() //consume delimitter
                         skipWhitespace()
-                        continue
+                        LastElementState.Delimitted
                     }
-                    else -> throw IllegalStateException("$delim not a $end or $delimitter")
+                    end -> break
+                    else -> LastElementState.NotDelimitted(expectedDelimiterPos)
                 }
             }
         }
-        skipWhitespace()
     }
 
     skipWhitespace()
@@ -133,8 +157,9 @@ fun <T> Tokens.enclosedRepetition(
     return lst
 }
 
-fun Tokens.skipWhitespace() {
+fun Tokens.skipWhitespace():Tokens {
     skip(WHITESPACE, NEW_LINE)
+    return this
 }
 
 inline fun <T> Tokens.range(action: ParserFn<T>): Located<T> {

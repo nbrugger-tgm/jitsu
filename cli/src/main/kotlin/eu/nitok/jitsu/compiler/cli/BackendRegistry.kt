@@ -1,9 +1,12 @@
 package eu.nitok.jitsu.compiler.cli
 
+import eu.nitok.jitsu.backend.rust.eu.nitok.jitsu.backend.rust.CBackend
 import eu.nitok.jitsu.compiler.transpile.Backend
 
 object BackendRegistry {
-    private val backends: Map<String, Backend> = mapOf()
+    private val backends: Map<String, Backend> = mapOf(
+        "c" to CBackend()
+    )
 
     fun create(name: String): Backend {
         return backends[name] ?: throw IllegalArgumentException("No backend with name $name")

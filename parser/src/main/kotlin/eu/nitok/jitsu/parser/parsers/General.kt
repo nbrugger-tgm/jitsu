@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.parser.parsers
 
 import com.niton.jainparse.token.DefaultToken
-import eu.nitok.jitsu.parser.ast.CompilerMessages
+import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.parser.ast.StatementNode
 import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.CodeBlockNode.*
 import eu.nitok.jitsu.parser.ast.withMessages

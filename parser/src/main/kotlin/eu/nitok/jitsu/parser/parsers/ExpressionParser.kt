@@ -2,15 +2,15 @@ package eu.nitok.jitsu.parser.parsers
 
 import com.niton.jainparse.token.DefaultToken
 import com.niton.jainparse.token.DefaultToken.*
-import eu.nitok.jitsu.parser.ast.BiOperator
-import eu.nitok.jitsu.parser.ast.CompilerMessages
+import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.parser.ast.ExpressionNode
 import eu.nitok.jitsu.parser.ast.ExpressionNode.StringLiteralNode
-import eu.nitok.jitsu.parser.ast.Located
+import eu.nitok.jitsu.common.Located
 import eu.nitok.jitsu.parser.ast.withMessages
 import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.CompilerMessage.Hint
 import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.compiler.model.BiOperator
 import eu.nitok.jitsu.parser.*
 import kotlin.jvm.optionals.getOrNull
 

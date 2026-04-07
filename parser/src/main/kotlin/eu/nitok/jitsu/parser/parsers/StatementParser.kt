@@ -3,6 +3,7 @@ package eu.nitok.jitsu.parser.parsers
 import com.niton.jainparse.token.DefaultToken
 import eu.nitok.jitsu.parser.ast.*
 import eu.nitok.jitsu.common.CompilerMessage
+import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.parser.*
 
 
@@ -80,8 +81,8 @@ fun parseFunctionCall(tokens: Tokens, id: IdentifierNode): StatementNode.Instruc
             "parameter"
         ) { parseExpression(it) }
     }
-    if (params.value == null) return null
-    return StatementNode.InstructionNode.FunctionCallNode(id, params.value, id.location.rangeTo(params.location))
+    val paramList = params.value ?: return null
+    return StatementNode.InstructionNode.FunctionCallNode(id, paramList, id.location.rangeTo(params.location))
         .withMessages(messages)
 }
 
@@ -103,7 +104,7 @@ fun parseVariableDeclaration(tokens: Tokens): StatementNode.InstructionNode.Vari
     } else {
         tokens.skipWhitespace()
     }
-    val type = parseOptionalExplicitType(tokens, messages::error)
+    val type = parseExplicitType(tokens, messages)
     tokens.skipWhitespace()
     val eq = tokens.attempt(DefaultToken.EQUAL)
     if (eq == null) {

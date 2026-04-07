@@ -2,14 +2,14 @@ package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.common.ReasonedBoolean
 
-import eu.nitok.jitsu.parser.ast.CompilerMessages
-import eu.nitok.jitsu.parser.ast.Located
+import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.common.Located
 import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.BitSize
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlin.time.Duration.Companion.milliseconds
+import java.util.Collections.emptyList
 
 @Serializable
 sealed interface Type : Element {
@@ -19,16 +19,18 @@ sealed interface Type : Element {
         return if (type is Undefined) ReasonedBoolean.True("While UNDEFINED cannot be assigned to anything, the error lies in the definition of the type not its usage");
         else if (type is Union) {
             val optionAssignability = type.options.map { mapAssignabilityBoolean(accepts(it), it, this) }
-            if (optionAssignability.all { boolean -> boolean.value })
-                ReasonedBoolean.True(
-                    "Each type in the union is assignable to $this",
-                    *optionAssignability.toTypedArray()
-                )
-            else
+            if (optionAssignability.all { boolean -> boolean.value }) ReasonedBoolean.True(
+                "Each type in the union is assignable to $this",
+                *optionAssignability.toTypedArray()
+            )
+            else {
+                val assignWholeUnion = accepts(type)
+                if (assignWholeUnion.value) return assignWholeUnion;
                 ReasonedBoolean.False(
-                    "Not all types in the union ($type) are assignable to $this",
-                    *optionAssignability.filter { !it.value }.toTypedArray()
+                    "Not all types in the union ($type), nor the union itself are/is assignable to $this",
+                    *(optionAssignability.filter { !it.value } + assignWholeUnion).toTypedArray()
                 )
+            }
         } else {
             val reason = accepts(type)
             if(!reason.value) ReasonedBoolean.False("$type not assignable to $this",reason)
@@ -43,8 +45,12 @@ sealed interface Type : Element {
 
     fun accepts(type: Type): ReasonedBoolean
 
+    sealed interface Primitive : Type {
+        val size: BitSize
+    }
+
     @Serializable
-    data class Int(val size: BitSize) : Type {
+    data class Int(override val size: BitSize) : Primitive {
         override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type = this
         override fun toString(): String {
             return "i${size.bits}"
@@ -68,7 +74,7 @@ sealed interface Type : Element {
     }
 
     @Serializable
-    data class UInt(val size: BitSize) : Type {
+    data class UInt(override val size: BitSize) : Primitive {
         override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type = this
         override fun toString(): String {
             return "u${size.bits}"
@@ -78,7 +84,7 @@ sealed interface Type : Element {
             return if (type is UInt && type.size.bits <= this.size.bits) ReasonedBoolean.True(
                 "unsigned integers accept unsigned integers their size and smaller"
             )
-            else if(type is UInt) ReasonedBoolean.False("$type is too large to fit into a $this")
+            else if (type is UInt) ReasonedBoolean.False("$type is too large to fit into a $this")
             else if (type is Int || type is Float) ReasonedBoolean.False("Unsigned integers only accept unsigned integers. To assign non uint numbers convert them first")
             else ReasonedBoolean.False("$type cannot be assigned to $this")
         }
@@ -89,7 +95,7 @@ sealed interface Type : Element {
     }
 
     @Serializable
-    data class Float(val size: BitSize = BitSize.BIT_32) : Type {
+    data class Float(override val size: BitSize = BitSize.BIT_32) : Primitive {
         override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type = this
         override fun toString(): String {
             return "f${size.bits}"
@@ -157,38 +163,38 @@ sealed interface Type : Element {
 
     @Serializable
     data class Array(
-        val type: Type,
+        val elementType: Type,
         val size: Expression?,
         val dimensions: kotlin.Int = 1
     ) : Type {
 
         override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type {
-            return Array(type.resolve(messages, generics), size, dimensions)
+            return Array(elementType.resolve(messages, generics), size, dimensions)
         }
 
         override fun accepts(type: Type): ReasonedBoolean {
             if (type !is Array) return ReasonedBoolean.False("$type is not an array and can therefore not be assigned to an array")
-            val elementsAccept = this.type.acceptsInstanceOf(type.type)
+            val elementsAccept = this.elementType.acceptsInstanceOf(type.elementType)
             return if (elementsAccept.value) {
                 ReasonedBoolean.True("$type is an array with an assignable element type", elementsAccept)
             } else {
                 ReasonedBoolean.False(
-                    "Element type of $type (${type.type}) is not compatible with ${this.type}",
+                    "Element type of $type (${type.elementType}) is not compatible with ${this.elementType}",
                     elementsAccept
                 )
             }
         }
 
         @Transient
-        override val children: List<Element> = listOfNotNull(type, size)
+        override val children: List<Element> = listOfNotNull(elementType, size)
 
         override fun toString(): String {
-            return "$type[${size?.toString() ?: ""}]"
+            return "$elementType[${size?.toString() ?: ""}]"
         }
     }
 
     @Serializable
-    data object Boolean : Type {
+    data object Boolean : Primitive {
         override fun toString(): String {
             return "boolean"
         }
@@ -205,6 +211,8 @@ sealed interface Type : Element {
 
         @Transient
         override val children: List<Element> = emptyList()
+        override val size: BitSize
+            get() = BitSize.BIT_1
     }
 
     @Serializable
@@ -251,10 +259,11 @@ sealed interface Type : Element {
             return when (target) {
                 is TypeDefinition.DirectTypeDefinition -> target.resolve(messages, generics)
                 is TypeDefinition.TypeParameter -> generics[reference.value]
-                    ?: this//maybe a dedicated "GenericType" should be created
+                    ?: Type.Undefined
+
                 is TypeDefinition.ParameterizedType -> {
                     var resolvedGenerics =
-                        genericParameters.mapIndexedNotNull<Located<Type>, Pair<Type, String>> { index, type ->
+                        genericParameters.mapIndexedNotNull { index, type ->
                             val resolved = type.value.resolve(messages, generics)
                             var targetGenericName = target.generics.getOrNull(index)?.name?.value
                             if (targetGenericName == null) {
@@ -274,7 +283,7 @@ sealed interface Type : Element {
                                 )
                                 null
                             } else resolved to targetGenericName
-                        }.associateBy({it.second},{it.first})
+                        }.associateBy({ it.second }, { it.first })
                     target.toType(messages, resolvedGenerics)
                 }
             }

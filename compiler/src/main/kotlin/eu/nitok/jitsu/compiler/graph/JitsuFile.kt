@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.compiler.analysis.AnalysisRepository
-import eu.nitok.jitsu.parser.ast.CompilerMessages
+import eu.nitok.jitsu.common.CompilerMessages
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 

@@ -1,6 +1,8 @@
 package eu.nitok.jitsu.parser.ast
 
+import eu.nitok.jitsu.common.Located
 import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.compiler.model.BiOperator
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -123,6 +125,9 @@ sealed interface ExpressionNode : AstNode {
         override val children: List<AstNode>
             get() = listOfNotNull(left, right)
         override val location: Range = left.location.rangeTo(right?.location?: operator.location)
+        override fun toString(): String {
+            return "($left ${operator.value.rune} $right)"
+        }
     }
 
     @Serializable
