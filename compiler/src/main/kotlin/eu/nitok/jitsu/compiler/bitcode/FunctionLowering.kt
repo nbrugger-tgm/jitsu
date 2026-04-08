@@ -9,48 +9,23 @@ import eu.nitok.jitsu.compiler.graph.Type
 import eu.nitok.jitsu.compiler.graph.VariableDeclaration
 
 
-class FunctionLowering(val functionNameRegistry: FunctionNameRegistry, val function: Function) {
+class FunctionLowering(
+    val getUniqueName: (function: Function) -> String,
+    val isReferenceType: (type: Type) -> Boolean,
+) {
 
-    var tmpVarIdx = 0
-
-    fun nextTmpVarName(): String {
-        val name = "${functionNameRegistry.getUniqueName(function)}_tmp$tmpVarIdx"
-        tmpVarIdx++
-        return name
-    }
-
-    fun lower(): List<LowLevelInstruction> {
+    fun lower(function: Function): List<LowLevelInstruction> {
         return when (function.body) {
-            is Function.Body.Implementation -> lower(function.body.block)
-            is Function.Body.Native -> lowerNativeFunction(
-                function.returnType?.value,
-                function.parameters.map { it.name.value },
-                function.body
-            )
-            Function.Body.Missing -> listOf()
+            is Function.Body.Implementation -> lowerCodeBlock(function.body.block)
+            is Function.Body.Native, Function.Body.Missing -> listOf()
         }
     }
 
-    private fun lowerNativeFunction(returnType: Type?, params: List<String>, block: Function.Body.Native): List<LowLevelInstruction> {
-        val invoke = LowLevelInstruction.Invoke(
-            block.nativeTarget,
-            params.map { LowLevelInstruction.Invoke.Param(it, LowLevelExpression.ReadStack(it)) }
-        );
-        return if(returnType == null) {
-            listOf(invoke)
-        } else {
-            listOf(LowLevelInstruction.Return(LowLevelExpression.ReturnValue(invoke)))
-        }
-    }
-
-    private fun lower(block: CodeBlock): List<LowLevelInstruction> {
+    private fun lowerCodeBlock(block: CodeBlock): List<LowLevelInstruction> {
         return block.instructions.flatMap {
             when (it) {
-                is Function -> TODO()
-                is Instruction.FunctionCall -> it.lower().let { (expression, instructs) ->
-                    instructs + expression.functionCall
-                }
-
+                is Function -> TODO("Nested functions not yet supported!")
+                is Instruction.FunctionCall -> it.lowerToInstruction()
                 is Instruction.Return -> it.value?.lower().let {
                     if (it == null) listOf(LowLevelInstruction.Return(null))
                     else {
@@ -65,17 +40,15 @@ class FunctionLowering(val functionNameRegistry: FunctionNameRegistry, val funct
     }
 
     private fun VariableDeclaration.lower(): List<LowLevelInstruction> {
-        var layout = type.layout
         val instructions = mutableListOf<LowLevelInstruction>()
-        if (layout.size > STACK_ALLOC_LIMIT) {
-            val referencedLayout = layout
-            layout = MemoryFragment.Reference(layout)
-            instructions += LowLevelInstruction.Alloc(name.value, referencedLayout)
+        val isReference = isReferenceType(type)
+        if (isReference) {
+            instructions += LowLevelInstruction.Alloc(name.value, type)
         } else {
-            instructions += LowLevelInstruction.StackAlloc(name.value, layout)
+            instructions += LowLevelInstruction.StackAlloc(name.value, type)
         }
         if (this.initialValue == null) return instructions
-        instructions += if (layout is MemoryFragment.Reference) {
+        instructions += if (isReference) {
             LowLevelInstruction.WriteHeap(name.value, 0, this.initialValue.lower().first)
         } else {
             LowLevelInstruction.WriteStack(name.value, 0, this.initialValue.lower().first)
@@ -88,15 +61,15 @@ class FunctionLowering(val functionNameRegistry: FunctionNameRegistry, val funct
             is Constant.BooleanConstant -> LowLevelExpression.NumericalValue(1L) to emptyList()
             is Constant.IntConstant -> LowLevelExpression.NumericalValue(value) to emptyList()
             is Constant.UIntConstant -> LowLevelExpression.NumericalValue(value.toLong()) to emptyList()
-            is Instruction.FunctionCall -> lower()
+            is Instruction.FunctionCall -> lowerToExpression()
             is Expression.Operation -> lower()
             is Expression.VariableReference -> {
-                val layout = when (val variable = target) {
-                    is Function.Parameter -> variable.declaredType!!.layout
-                    is VariableDeclaration -> variable.type.layout
+                val type = when (val variable = target) {
+                    is Function.Parameter -> variable.declaredType!!
+                    is VariableDeclaration -> variable.type
                     else -> TODO()
                 }
-                if (layout is MemoryFragment.Reference) {
+                if (isReferenceType(type)) {
                     LowLevelExpression.ReadHeap(reference.value) to emptyList()
                 } else {
                     LowLevelExpression.ReadStack(reference.value) to emptyList()
@@ -117,30 +90,42 @@ class FunctionLowering(val functionNameRegistry: FunctionNameRegistry, val funct
         instructions += rightInstr
         return LowLevelExpression.ReturnValue(
             LowLevelInstruction.Invoke(
-                functionNameRegistry.getUniqueName(target), listOf(
-                    LowLevelInstruction.Invoke.Param(target.parameters[0].name.value, leftExpr),
-                    LowLevelInstruction.Invoke.Param(target.parameters[1].name.value, rightExpr)
+                getUniqueName(target), mapOf(
+                    target.parameters[0].name.value to leftExpr,
+                    target.parameters[1].name.value to rightExpr
                 )
             )
         ) to instructions
     }
 
-    private fun Instruction.FunctionCall.lower(): Pair<LowLevelExpression.ReturnValue, List<LowLevelInstruction>> {
-        val function = target ?: TODO()
+    private fun Instruction.FunctionCall.lowerToInstruction(): List<LowLevelInstruction> {
+        val function = target ?: TODO("function not found how to deal with that?")
         val instructions = mutableListOf<LowLevelInstruction>()
-        val argParams = parameters.map { (name, it) ->
+        val argParams = parameters.mapValues { (_, it) ->
             val (expr, instr) = it.lower()
             instructions += instr
-            LowLevelInstruction.Invoke.Param(name, expr)
+            expr
         }
-        return Pair(
-            LowLevelExpression.ReturnValue(
-                LowLevelInstruction.Invoke(
-                    functionNameRegistry.getUniqueName(function),
-                    argParams
-                )
-            ),
-            instructions
+        val invoke = LowLevelInstruction.Invoke(
+            getUniqueName(function),
+            argParams
         )
+        instructions += invoke
+        return instructions
+    }
+
+    private fun Instruction.FunctionCall.lowerToExpression(): Pair<LowLevelExpression, List<LowLevelInstruction>> {
+        val function = target ?: TODO("function not found how to deal with that?")
+        val instructions = mutableListOf<LowLevelInstruction>()
+        val argParams = parameters.mapValues { (_, it) ->
+            val (expr, instr) = it.lower()
+            instructions += instr
+            expr
+        }
+        val invoke = LowLevelInstruction.Invoke(
+            getUniqueName(function),
+            argParams
+        )
+        return LowLevelExpression.ReturnValue(invoke) to instructions
     }
 }

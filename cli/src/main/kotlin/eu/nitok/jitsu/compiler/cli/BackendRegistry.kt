@@ -1,6 +1,6 @@
 package eu.nitok.jitsu.compiler.cli
 
-import eu.nitok.jitsu.backend.rust.eu.nitok.jitsu.backend.rust.CBackend
+import eu.nitok.jitsu.backend.c.CBackend
 import eu.nitok.jitsu.compiler.transpile.Backend
 
 object BackendRegistry {

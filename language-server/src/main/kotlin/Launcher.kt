@@ -12,6 +12,9 @@ fun main(vararg args: String) {
     if (log2.exists()) log2.delete()
     log2.createNewFile()
 
+    if(args.isEmpty()) {
+        print("No run mode provided, falling back to 'stdio'. To change run mode use 'tcp' as programm argument")
+    }
     if (args.isEmpty() || args[0] == "stdio") {
         customLogger = PrintStream(log);
         startServer(System.`in`, System.out, log2);

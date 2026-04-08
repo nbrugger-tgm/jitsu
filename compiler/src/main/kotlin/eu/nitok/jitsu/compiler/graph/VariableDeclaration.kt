@@ -20,7 +20,8 @@ data class VariableDeclaration(
     override val children: List<Element> get() = listOfNotNull(declaredType, initialValue)
 }
 
-interface Variable : Accessible<Variable>, Element{
+@Serializable
+sealed interface Variable : Accessible<Variable>, Element{
     override val name: Located<String>
     val reassignable: Boolean
     val declaredType: Type?

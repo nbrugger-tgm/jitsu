@@ -74,6 +74,17 @@ sealed interface Expression : Element {
             //see FunctionCall#resolveAccessTarget for more information
             return target;
         }
+
+        fun asFunctionCall(): Instruction.FunctionCall {
+            val call = Instruction.FunctionCall(
+                reference = operator.map { it.functionName },
+                callParameters = listOf(left, right),
+                location = reference.location
+            )
+            call.scope = scope
+            call.target = target
+            return call
+        }
     }
 
     @Serializable

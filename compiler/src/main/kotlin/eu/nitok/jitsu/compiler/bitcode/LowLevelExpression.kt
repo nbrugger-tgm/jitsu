@@ -1,5 +1,7 @@
 package eu.nitok.jitsu.compiler.bitcode
 
+import eu.nitok.jitsu.compiler.graph.Type
+
 sealed interface LowLevelExpression {
     /**
      * A reference to a variable, in C this is equivalent to &name where name is the name of the variable.
@@ -17,6 +19,5 @@ sealed interface LowLevelExpression {
      */
     data class ReadHeap(val name: String): LowLevelExpression
     data class NumericalValue(val value: Long): LowLevelExpression
-    data class Alloc(val layout: MemoryLayout): LowLevelExpression
     data class ReturnValue(val functionCall: LowLevelInstruction.Invoke): LowLevelExpression
 }

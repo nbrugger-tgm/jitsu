@@ -18,6 +18,15 @@ repositories {
 kotlin {
     jvmToolchain(21)
 }
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+}
+
+tasks.withType<JavaExec>().configureEach {
+    javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
+}
 
 tasks.test {
     useJUnitPlatform()

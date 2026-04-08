@@ -145,7 +145,7 @@ class CodeBlockAnalyzer(
 
     private fun processVariableDeclaration(decl: VariableDeclaration) {
         val expression: ExpressionResult? = decl.initialValue?.let { analyzeExpression(it) }
-
+        decl.implicitType = expression?.type
         var narrowedType: Type? = when {
             expression != null -> expression.type
             decl.declaredType != null -> decl.declaredType
@@ -250,21 +250,10 @@ class CodeBlockAnalyzer(
     }
 
     private fun analyzeOperation(op: Expression.Operation): ExpressionResult {
-        val left = analyzeExpression(op.left)
-        val right = analyzeExpression(op.right)
-
-        val deterministic = left.deterministic.and(right.deterministic)
-        val type = op.calculateType(typeContext, messages) ?: Type.Undefined
-
-        val constValue: AbstractValue =
-            AbstractValue.Unknown //If both are constant this can be constant as well in the future
-
-        return ExpressionResult(
-            type = type,
-            deterministic = deterministic,
-            constValue = constValue,
-            paramDeps = left.paramDeps + right.paramDeps
-        )
+        val call = op.asFunctionCall()
+        val analyzedFunction = analyzeFunctionCall(call)
+        op.target = call.target
+        return analyzedFunction
     }
 
     private fun analyzeVariableReference(ref: Expression.VariableReference): ExpressionResult {

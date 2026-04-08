@@ -45,7 +45,7 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     tokens.skipWhitespace()
     val parameters = parseParameters(tokens, messages, kw)
     tokens.skipWhitespace()
-    val returnType = parseExplicitType(tokens, messages)
+    val returnType = parseExplicitType(tokens, messages, lenient = false)
     tokens.skipWhitespace()
     val body = parseCodeBlock(tokens)
     if (body == null && native == null) {

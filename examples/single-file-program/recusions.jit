@@ -1,0 +1,27 @@
+fn a(a: f32): f32 {
+    return b(a);
+}
+fn a(a: u32): u32{
+    return b(a);
+}
+fn a(a: i32): i32{
+    return b(a);
+}
+fn b(a: f32): f32 {
+    return c(a);
+}
+fn b(a: u32): u32{
+    return c(a);
+}
+fn b(a: i32): i32{
+    return c(a);
+}
+fn c(a: f32) : f32{
+    return a(a) + b(a);
+}
+fn c(a: u32): u32{
+    return a(a) + b(a);
+}
+fn c(a: i32): i32{
+    return a(a) + b(a);
+}

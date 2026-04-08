@@ -1,11 +1,6 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.common.ReasonedBoolean
-
-import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
-import eu.nitok.jitsu.common.CompilerMessage
-import eu.nitok.jitsu.common.BitSize
+import eu.nitok.jitsu.common.*
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -33,7 +28,7 @@ sealed interface Type : Element {
             }
         } else {
             val reason = accepts(type)
-            if(!reason.value) ReasonedBoolean.False("$type not assignable to $this",reason)
+            if (!reason.value) ReasonedBoolean.False("$type not assignable to $this", reason)
             else reason
         }
     }
@@ -256,37 +251,37 @@ sealed interface Type : Element {
                 target = resolved
                 this.target = resolved
             }
-            return when (target) {
+            val resolvedType = when (target) {
                 is TypeDefinition.DirectTypeDefinition -> target.resolve(messages, generics)
-                is TypeDefinition.TypeParameter -> generics[reference.value]
-                    ?: Type.Undefined
+                is TypeDefinition.TypeParameter -> generics[reference.value] ?: Undefined
 
                 is TypeDefinition.ParameterizedType -> {
-                    var resolvedGenerics =
-                        genericParameters.mapIndexedNotNull { index, type ->
-                            val resolved = type.value.resolve(messages, generics)
-                            var targetGenericName = target.generics.getOrNull(index)?.name?.value
-                            if (targetGenericName == null) {
-                                messages.error(
-                                    "Generic parameter $resolved ($index) does not exist in the definition of $target",
-                                    type.location,
-                                    if (!target.generics.isEmpty())
-                                        CompilerMessage.Hint(
-                                            "Generics of target type are defined here",
-                                            target.generics.first().name.location.rangeTo(target.generics.last().name.location)
-                                        )
-                                    else
-                                        CompilerMessage.Hint(
-                                            "Target type has no generics defined",
-                                            target.name.location
-                                        )
-                                )
-                                null
-                            } else resolved to targetGenericName
-                        }.associateBy({ it.second }, { it.first })
+                    val resolvedGenerics = genericParameters.mapIndexedNotNull { index, type ->
+                        val resolved = type.value.resolve(messages, generics)
+                        val targetGenericName = target.generics.getOrNull(index)?.name?.value
+                        if (targetGenericName == null) {
+                            messages.error(
+                                "Generic parameter $resolved ($index) does not exist in the definition of $target",
+                                type.location,
+                                if (!target.generics.isEmpty())
+                                    CompilerMessage.Hint(
+                                        "Generics of target type are defined here",
+                                        target.generics.first().name.location.rangeTo(target.generics.last().name.location)
+                                    )
+                                else
+                                    CompilerMessage.Hint(
+                                        "Target type has no generics defined",
+                                        target.name.location
+                                    )
+                            )
+                            null
+                        } else resolved to targetGenericName
+                    }.associateBy({ it.second }, { it.first })
                     target.toType(messages, resolvedGenerics)
                 }
             }
+            resolvedCache = resolvedType
+            return resolvedType
         }
 
         public lateinit var resolvedCache: Type

@@ -102,11 +102,19 @@ private fun parseTypeAlias(tokens: Tokens): StatementNode.NamedTypeDeclarationNo
     ).withMessages(messages)
 }
 
+/**
+ * parses explicit type definitions such as ': i64' or ': A | B'
+ *
+ * @param lenient if `true` the ':' (COLON) is semi-optional => type parsing is still attempted but an error for the missing colon is emitted.
+ *                When lenient is `false` parsing is not attempted if no colon is present
+ */
 fun parseExplicitType(
     tokens: Tokens,
-    messages: CompilerMessages
+    messages: CompilerMessages,
+    lenient: Boolean = true
 ): TypeNode? {
     if (tokens.attempt(DefaultToken.COLON) == null) {
+        if(!lenient) return null;
         val type = parseType(tokens) ?: return null
         messages.error("Expected a type definition starting with a ':'", type.location)
         return type
