@@ -157,7 +157,6 @@ class CodeBlockAnalyzer(
             if (!initialTypeValid.value) {
                 messages.error(initialTypeValid, decl.initialValue.location)
             }
-            narrowedType = decl.declaredType
         }
 
         val isConstant = !decl.reassignable && expression?.constValue is AbstractValue.Const
@@ -308,9 +307,11 @@ class CodeBlockAnalyzer(
         val target = call.target
         if (target != null) callees.add(target)
 
-        val outputInfluencingParams = call.target?.summary?.parameterInfluence
-            ?.map { paramName -> call.target?.parameters?.indexOfFirst { it.name.value == paramName } }
-            ?.filterNotNull() ?: listOf()
+        val outputInfluencingParams = call.target?.summary?.let {
+            it.parameterInfluence
+                .map { paramName -> call.target?.parameters?.indexOfFirst { it.name.value == paramName } }
+                .filterNotNull()
+        } ?: argResults.withIndex().map { it.index } //if target doesn't exist assume all parameters to be return value infliuencing
 
         val areOutputInfluencingArgsDeterministic = argResults.asSequence()
             .filterIndexed { index, _ -> outputInfluencingParams.contains(index) }

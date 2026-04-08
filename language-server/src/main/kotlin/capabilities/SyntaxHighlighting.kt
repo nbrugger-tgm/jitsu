@@ -2,16 +2,17 @@ package capabilities
 
 import capabilities.SemanticTokenTypes.*
 import customLogger
-import eu.nitok.jitsu.parser.ast.*
-import eu.nitok.jitsu.parser.ast.ExpressionNode.*
-import eu.nitok.jitsu.parser.ast.StatementNode.*
-import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.*
-import eu.nitok.jitsu.parser.ast.StatementNode.Declaration.*
-import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.SwitchNode.CaseNode
-import eu.nitok.jitsu.parser.ast.StatementNode.NamedTypeDeclarationNode.EnumDeclarationNode
-import eu.nitok.jitsu.common.flatMap
 import eu.nitok.jitsu.common.Range
-
+import eu.nitok.jitsu.common.flatMap
+import eu.nitok.jitsu.parser.ast.AstNode
+import eu.nitok.jitsu.parser.ast.ExpressionNode.*
+import eu.nitok.jitsu.parser.ast.SourceFileNode
+import eu.nitok.jitsu.parser.ast.StatementNode.Declaration.FunctionDeclarationNode
+import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.*
+import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.SwitchNode.CaseNode
+import eu.nitok.jitsu.parser.ast.StatementNode.NamedTypeDeclarationNode
+import eu.nitok.jitsu.parser.ast.StatementNode.NamedTypeDeclarationNode.EnumDeclarationNode
+import eu.nitok.jitsu.parser.ast.TypeNode
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -209,11 +210,10 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
             token(symbolismType, keywordLocation),
             literal?.location?.let { token(VARIABLE, it) }
         )
-
-        is StringLiteralNode.StringPart.Expression ->
-            listOf(token(symbolismType, startKeywordLocation)) +
-                    token(symbolismType, endKeywordLocation)
-
+        is StringLiteralNode.StringPart.Expression -> listOfNotNull(
+            token(symbolismType, startKeywordLocation),
+            endKeywordLocation?.let { token(symbolismType, it) }
+        )
         is StringLiteralNode.StringPart.CharSequence -> listOf(token(STRING, location))
         is StringLiteralNode.StringPart.EscapeSequence -> listOf(token(symbolismType, location))
         is TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode -> listOfNotNull(

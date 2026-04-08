@@ -38,7 +38,7 @@ class CodeBlockAnalyzerTest {
     private fun param(name: String, type: Type): Function.Parameter =
         Function.Parameter(loc(name), type, null)
 
-    private fun constI32(value: Long): Constant.IntConstant =
+    private fun constInt(value: Long): Constant.IntConstant =
         Constant.IntConstant(value, dummyRange)
 
     private fun varRef(name: String): Expression.VariableReference =
@@ -104,7 +104,7 @@ class CodeBlockAnalyzerTest {
         fun `returning constant 5 yields deterministic summary`() {
             val fn = buildFunction(
                 returnType = i32,
-                instructions = listOf(ret(constI32(5)))
+                instructions = listOf(ret(constInt(5)))
             )
             val result = analyze(fn)
             assertThat(result.functionSummary.deterministic.value).isTrue()
@@ -114,7 +114,7 @@ class CodeBlockAnalyzerTest {
         fun `returning constant 5 yields Const abstract value`() {
             val fn = buildFunction(
                 returnType = i32,
-                instructions = listOf(ret(constI32(5)))
+                instructions = listOf(ret(constInt(5)))
             )
             val result = analyze(fn)
             val returnSummary = result.functionSummary.returnSummary
@@ -126,7 +126,7 @@ class CodeBlockAnalyzerTest {
         fun `returning constant 5 includes i32 in possible types`() {
             val fn = buildFunction(
                 returnType = i32,
-                instructions = listOf(ret(constI32(5)))
+                instructions = listOf(ret(constInt(5)))
             )
             val result = analyze(fn)
             assertThat(result.functionSummary.returnSummary!!.possibleTypes).contains(i8)
@@ -185,7 +185,7 @@ class CodeBlockAnalyzerTest {
 
         @Test
         fun `let x = 5 makes variable effectively constant`() {
-            val decl = varDecl("x", i32, constI32(5), reassignable = false)
+            val decl = varDecl("x", i32, constInt(5), reassignable = false)
             val fn = buildFunction(instructions = listOf(decl))
             val result = analyze(fn)
             val xSummary = result.variableSummaries.entries
@@ -195,7 +195,7 @@ class CodeBlockAnalyzerTest {
 
         @Test
         fun `let x = 5 captures compile time value`() {
-            val decl = varDecl("x", i32, constI32(5), reassignable = false)
+            val decl = varDecl("x", i32, constInt(5), reassignable = false)
             val fn = buildFunction(instructions = listOf(decl))
             val result = analyze(fn)
             val xSummary = result.variableSummaries.entries
@@ -205,7 +205,7 @@ class CodeBlockAnalyzerTest {
 
         @Test
         fun `returning constant variable yields deterministic function`() {
-            val decl = varDecl("x", i32, constI32(5), reassignable = false)
+            val decl = varDecl("x", i32, constInt(5), reassignable = false)
             val ref = varRef("x")
             ref.target = decl
             val fn = buildFunction(
@@ -218,7 +218,7 @@ class CodeBlockAnalyzerTest {
 
         @Test
         fun `var x is not effectively constant`() {
-            val decl = varDecl("x", i32, constI32(5), reassignable = true)
+            val decl = varDecl("x", i32, constInt(5), reassignable = true)
             val fn = buildFunction(instructions = listOf(decl))
             val result = analyze(fn)
             val xSummary = result.variableSummaries.entries
@@ -324,7 +324,7 @@ class CodeBlockAnalyzerTest {
 
         @Test
         fun `void function has null return summary`() {
-            val decl = varDecl("x", i32, constI32(42))
+            val decl = varDecl("x", i32, constInt(42))
             val fn = buildFunction(instructions = listOf(decl))
             val result = analyze(fn)
             assertThat(result.functionSummary.returnSummary).isNull()
@@ -336,7 +336,7 @@ class CodeBlockAnalyzerTest {
 
         @Test
         fun `use site info recorded for variable reference`() {
-            val decl = varDecl("x", i32, constI32(7), reassignable = false)
+            val decl = varDecl("x", i32, constInt(7), reassignable = false)
             val ref = varRef("x")
             ref.target = decl
             val fn = buildFunction(

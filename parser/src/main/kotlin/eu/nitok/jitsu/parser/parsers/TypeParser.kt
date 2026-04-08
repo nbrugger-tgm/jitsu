@@ -17,6 +17,14 @@ import eu.nitok.jitsu.common.locatedAt
 import kotlin.jvm.optionals.getOrNull
 
 
+/**
+ * Parses any type expression from the token stream.
+ * Handles primitives, named types, arrays, unions, and structural interfaces.
+ *
+ * Examples: `i32`, `Array<i64>`, `MyType`, `i32 | i64`, `MyType[]`
+ *
+ * @return The parsed type node, or null if no valid type starts at the current position.
+ */
 fun parseType(tokens: Tokens): TypeNode? {
     var type = parseSingleType(tokens) ?: return null
     while(true) {
@@ -26,6 +34,14 @@ fun parseType(tokens: Tokens): TypeNode? {
     }
 }
 
+/**
+ * Parses an array type suffix after a base type has been parsed.
+ *
+ * Examples: `[]`, `[10]`, `[size * 2]`
+ *
+ * @param firstType The already-parsed element type.
+ * @return An ArrayTypeNode wrapping the element type, or null if no `[` follows.
+ */
 fun parseArrayType(
     firstType: TypeNode,
     tokens: Tokens
@@ -60,6 +76,13 @@ fun parseTypeDeclaration(tokens: Tokens): StatementNode.NamedTypeDeclarationNode
     return parseTypeAlias(tokens)
 }
 
+/**
+ * Parses generic type parameter definitions in angle brackets.
+ *
+ * Examples: `<T>`, `<K, V>`, `<A, B, C>`
+ *
+ * @return List of type parameter identifiers, or null if no `<` is present.
+ */
 fun parseTypeParameterDefinition(tokens: Tokens, messages: CompilerMessages): List<IdentifierNode>? {
     return tokens.enclosedRepetition(
         DefaultToken.LEFT_ANGLE_BRACKET,

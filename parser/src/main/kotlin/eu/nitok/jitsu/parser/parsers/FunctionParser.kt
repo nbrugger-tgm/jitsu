@@ -13,10 +13,27 @@ import eu.nitok.jitsu.common.CompilerMessage.Hint
 import eu.nitok.jitsu.parser.*
 import kotlin.jvm.optionals.getOrNull
 
+/** The canonical keyword for function declarations. */
 val fnKeyword = "fn"
+/** The keyword for native (external) functions. */
 val nativeKeyword = "native"
 private val fnKeywords = listOf(fnKeyword, "fun", "func", "function")
 
+/**
+ * Parses a function declaration starting with `fn` (or similar keywords).
+ *
+ * Syntax: `[native] fn <name>([params])[: returnType] [{ body }]`
+ *
+ * Examples:
+ * - `fn foo() {}`
+ * - `fn bar(x: i32): i64 {}`
+ * - `native fn external()`
+ *
+ * Note: Alternative keywords (`fun`, `func`, `function`) are accepted but produce an error
+ * recommending the use of `fn`.
+ *
+ * @return A FunctionDeclarationNode, or null if no function keyword is present.
+ */
 fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     tokens.elevate()
     val native = tokens.keyword(nativeKeyword)

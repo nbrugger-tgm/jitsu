@@ -67,13 +67,12 @@ private fun tokenize(txt: String): Tokens {
     return tokenStream
 }
 
-public fun <T> parseIdentifierBased(tokens: Tokens, parser: (tokens: Tokens, id: IdentifierNode) -> T?): T? {
+fun <T> parseIdentifierBased(tokens: Tokens, parser: (tokens: Tokens, id: IdentifierNode) -> T?): T? {
     tokens.elevate()
     val id = parseIdentifier(tokens) ?: run {
         tokens.rollback()
         return null
     }
-    tokens.skipWhitespace()
     val res = parser(tokens, id)
     if (res == null) tokens.rollback()
     else tokens.commit()

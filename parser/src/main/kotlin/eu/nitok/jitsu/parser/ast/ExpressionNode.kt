@@ -59,11 +59,11 @@ sealed interface ExpressionNode : AstNode {
             data class Expression(
                 val expression: ExpressionNode?,
                 val startKeywordLocation: Range,
-                val endKeywordLocation: Range
+                val endKeywordLocation: Range?
             ) : AstNodeImpl(), StringPart {
                 override val children: List<AstNode>
                     get() = listOfNotNull(expression)
-                override val location: Range get() = startKeywordLocation.rangeTo(endKeywordLocation)
+                override val location: Range get() = startKeywordLocation.rangeTo(endKeywordLocation?:expression?.location?:startKeywordLocation)
 
                 override fun toString(): String {
                     return "\${ $expression }"

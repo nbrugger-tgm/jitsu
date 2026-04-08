@@ -8,6 +8,15 @@ import eu.nitok.jitsu.parser.ast.withMessages
 import eu.nitok.jitsu.common.CompilerMessage.Hint
 import eu.nitok.jitsu.parser.*
 
+/**
+ * Parses a code block enclosed in curly braces.
+ *
+ * Syntax: `{ <statements> }`
+ *
+ * Examples: `{}`, `{ var x = 5; }`, `{ return 42; }`
+ *
+ * @return A StatementsCodeBlock containing the parsed statements, or null if no `{` is present.
+ */
 fun parseCodeBlock(tokens: Tokens): StatementsCodeBlock? {
     val openKw = tokens.attempt(DefaultToken.ROUND_BRACKET_OPEN)?.location ?: return null
     val lst = mutableListOf<StatementNode>()

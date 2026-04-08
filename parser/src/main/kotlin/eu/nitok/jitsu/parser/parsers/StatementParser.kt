@@ -7,6 +7,13 @@ import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.parser.*
 
 
+/**
+ * Parses any statement from the token stream.
+ * Handles function declarations, class declarations, variable declarations, return statements,
+ * type declarations, assignments, and function calls.
+ *
+ * @return The parsed statement node, or null if no valid statement starts at the current position.
+ */
 fun parseStatement(tokens: Tokens): StatementNode? {
     return parseFunction(tokens) ?: parseClass(tokens)?: parseExecutableStatement(tokens) {
         parseVariableDeclaration(it) ?: parseReturnStatement(it) ?: parseTypeDeclaration(tokens)
@@ -16,6 +23,14 @@ fun parseStatement(tokens: Tokens): StatementNode? {
     }
 }
 
+/**
+ * Parses an assignment statement after an identifier has been parsed.
+ *
+ * Example: `= 5` after identifier `x` produces `x = 5`
+ *
+ * @param kw The already-parsed target identifier.
+ * @return An AssignmentNode, or null if no `=` follows the identifier.
+ */
 fun parseAssignment(tokens: Tokens, kw: IdentifierNode): StatementNode.InstructionNode.AssignmentNode? {
     tokens.skipWhitespace()
     tokens.attempt(DefaultToken.EQUAL) ?: return null
@@ -28,6 +43,12 @@ fun parseAssignment(tokens: Tokens, kw: IdentifierNode): StatementNode.Instructi
     }
 }
 
+/**
+ * Parses multiple statements from the token stream until exhausted or an unrecoverable error.
+ *
+ * @param statements Accumulator list for parsed statements.
+ * @param containerNode Error callback for invalid input between statements.
+ */
 fun parseStatements(
     tokens: Tokens,
     statements: MutableList<StatementNode>,
@@ -69,6 +90,14 @@ private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> Sta
     return res
 }
 
+/**
+ * Parses a function call after an identifier has been parsed.
+ *
+ * Example: `(1, 2)` after identifier `foo` produces `foo(1, 2)`
+ *
+ * @param id The already-parsed function name identifier.
+ * @return A FunctionCallNode, or null if no `(` follows the identifier.
+ */
 fun parseFunctionCall(tokens: Tokens, id: IdentifierNode): StatementNode.InstructionNode.FunctionCallNode? {
     val messages = CompilerMessages()
     val params = tokens.range {
@@ -86,6 +115,13 @@ fun parseFunctionCall(tokens: Tokens, id: IdentifierNode): StatementNode.Instruc
         .withMessages(messages)
 }
 
+/**
+ * Parses a return statement starting with the `return` keyword.
+ *
+ * Examples: `return`, `return 42`, `return someVar`
+ *
+ * @return A ReturnNode, or null if no `return` keyword is present.
+ */
 fun parseReturnStatement(tokens: Tokens): StatementNode? {
     val kw = tokens.keyword("return") ?: return null
     tokens.skipWhitespace()
@@ -93,6 +129,15 @@ fun parseReturnStatement(tokens: Tokens): StatementNode? {
     return StatementNode.InstructionNode.ReturnNode(value, kw.rangeTo(value?.location ?: kw), kw)
 }
 
+/**
+ * Parses a variable declaration starting with the `var` keyword.
+ *
+ * Syntax: `var <name>[: <type>] = <expression>`
+ *
+ * Examples: `var x = 5`, `var x: i32 = 5`, `var items: Array<i64> = arr`
+ *
+ * @return A VariableDeclarationNode, or null if no `var` keyword is present.
+ */
 fun parseVariableDeclaration(tokens: Tokens): StatementNode.InstructionNode.VariableDeclarationNode? {
     val kw = tokens.keyword("var") ?: return null
     val messages = CompilerMessages()
