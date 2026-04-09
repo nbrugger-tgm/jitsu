@@ -84,6 +84,8 @@ sealed interface LastElementState {
     data class NotDelimitted(val location: Location) : LastElementState
 }
 
+data class EnclosedRepetition<T>(val openKw: Range, val elements: List<T>, val closeKw: Range?)
+
 fun <T> Tokens.enclosedRepetition(
     start: DefaultToken,
     delimitter: DefaultToken,
@@ -93,12 +95,14 @@ fun <T> Tokens.enclosedRepetition(
     elementName: String,
     invalidObjectPlaceholder: T? = null,
     parseElement: (Tokens) -> T?
-): List<T>? {
+): EnclosedRepetition<T>? {
     val openKw = attempt(start)?.location ?: return null;
-    val lst = mutableListOf<T>()
-    skipWhitespace()
-    if (attempt(end) != null) return lst
 
+    skipWhitespace()
+    var endKw = attempt(end)?.location
+    if (endKw != null) return EnclosedRepetition(openKw, listOf(), endKw)
+
+    val lst = mutableListOf<T>()
     var wasLastElementDelimitted: LastElementState = LastElementState.Delimitted
     while (hasNext()) {
         when (val x = parseElement(this)) {
@@ -148,12 +152,13 @@ fun <T> Tokens.enclosedRepetition(
 
     skipWhitespace()
 
-    this@enclosedRepetition.attempt(end) ?: messages.error(
+    endKw = this@enclosedRepetition.attempt(end)?.location;
+    endKw ?: messages.error(
         "Unclosed $subject, expected $end", location.toRange(), Hint(
             "$subject started here", openKw
         )
     )
-    return lst
+    return EnclosedRepetition(openKw,lst,endKw)
 }
 
 fun Tokens.skipWhitespace():Tokens {

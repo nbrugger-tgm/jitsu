@@ -110,7 +110,7 @@ fun parseFunctionCall(tokens: Tokens, id: IdentifierNode): StatementNode.Instruc
             "parameter"
         ) { parseExpression(it) }
     }
-    val paramList = params.value ?: return null
+    val paramList = params.value?.elements ?: return null
     return StatementNode.InstructionNode.FunctionCallNode(id, paramList, id.location.rangeTo(params.location))
         .withMessages(messages)
 }

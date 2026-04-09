@@ -114,7 +114,7 @@ class AnalysisRepository {
             val analyzer = CodeBlockAnalyzer(fn, this::getFunctionSummary, messages)
             val result = analyzer.analyze()
             functionSummaries[fn] = result.functionSummary
-            variableSummaries.putAll(result.variableSummaries)
+            variableSummaries.putAll(result.functionSummary.variableSummary)
             useSiteInfos.putAll(result.useSiteInfos)
         } else {
             for (fn in scc) {
@@ -146,7 +146,7 @@ class AnalysisRepository {
                     }
                 }
 
-                variableSummaries.putAll(result.variableSummaries)
+                variableSummaries.putAll(result.functionSummary.variableSummary)
                 useSiteInfos.putAll(result.useSiteInfos)
             }
 
@@ -154,7 +154,7 @@ class AnalysisRepository {
                 val analyzer = CodeBlockAnalyzer(fn, { getFunctionSummary(it) }, messages)
                 val result = analyzer.analyze()
                 functionSummaries[fn] = result.functionSummary
-                variableSummaries.putAll(result.variableSummaries)
+                variableSummaries.putAll(result.functionSummary.variableSummary)
                 useSiteInfos.putAll(result.useSiteInfos)
             }
         }

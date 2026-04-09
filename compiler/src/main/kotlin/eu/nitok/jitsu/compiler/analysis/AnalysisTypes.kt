@@ -4,8 +4,10 @@ import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.compiler.graph.Access
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.compiler.graph.Type
+import eu.nitok.jitsu.compiler.graph.Variable
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlin.collections.mutableMapOf
 
 /**
  * Summary of a function's analyzed traits.
@@ -29,7 +31,8 @@ data class FunctionSummary(
     val returnSummary: ReturnSummary? = null,
 
     /** Names of functions called by this function (for serialization/display). */
-    val callees: List<Function> = emptyList()
+    val callees: List<Function> = emptyList(),
+    val variableSummary: Map<Variable, VariableSummary>
 ) {
     /** A function is pure if it is deterministic and has no side effects. */
     val pure: Boolean get() = deterministic.value && noSideEffects.value
@@ -48,7 +51,8 @@ data class FunctionSummary(
                 parameterModes = parameterNames.associateWith { ParameterMode.BORROW },
                 parameterInfluence = emptySet(),
                 returnSummary = null,
-                callees = emptyList()
+                callees = emptyList(),
+                variableSummary = mapOf()
             )
         }
     }
@@ -66,7 +70,8 @@ data class FunctionSummary(
             parameterModes = mergeParameterModes(this.parameterModes, other.parameterModes),
             parameterInfluence = this.parameterInfluence + other.parameterInfluence,
             returnSummary = mergeReturnSummaries(this.returnSummary, other.returnSummary),
-            callees = (this.callees + other.callees).distinct()
+            callees = (this.callees + other.callees).distinct(),
+            variableSummary = mergeVariableSummaries(variableSummary, other.variableSummary)
         )
     }
 
@@ -128,8 +133,19 @@ data class VariableSummary(
     /** Whether the variable is never reassigned and its initializer is constant. */
     val effectivelyConstant: ReasonedBoolean = ReasonedBoolean.False("default"),
     /** Compile-time known value, if any. */
-    val compileTimeValue: AbstractValue = AbstractValue.Unknown
-)
+    val compileTimeValue: AbstractValue = AbstractValue.Unknown,
+    val ownershipState: OwnershipState
+) {
+    fun refineWith(modeB: VariableSummary): VariableSummary {
+        return VariableSummary(
+            declaredType?: modeB.declaredType,
+            narrowedType,
+            effectivelyConstant.and(modeB.effectivelyConstant),
+            compileTimeValue.join(modeB.compileTimeValue),
+            ownershipState.join(modeB.ownershipState)
+        )
+    }
+}
 
 /**
  * Per-use-site analysis information.
@@ -150,7 +166,15 @@ enum class OwnershipState {
     /** This scope only borrows (reads) the data. */
     BORROWS,
     /** The variable has been moved and is no longer available. */
-    MOVED
+    MOVED;
+
+    fun join(other: OwnershipState ): OwnershipState {
+        return when {
+            this == MOVED || other == MOVED -> MOVED
+            this == OWNS || other == OWNS -> OWNS
+            else -> BORROWS
+        }
+    }
 }
 
 /**
@@ -193,6 +217,19 @@ sealed interface AbstractValue {
 
 // --- Internal helpers ---
 
+private fun mergeVariableSummaries(
+    a: Map<Variable, VariableSummary>,
+    b: Map<Variable, VariableSummary>
+): Map<Variable, VariableSummary> {
+    val allKeys = a.keys + b.keys
+    return allKeys.associateWith { key ->
+        val modeA = a[key] ?: null
+        val modeB = b[key] ?: null
+        if(modeA == null) modeB!!
+        else if(modeB == null) modeA!!
+        else modeA.refineWith(modeB)
+    }
+}
 private fun mergeParameterModes(
     a: Map<String, ParameterMode>,
     b: Map<String, ParameterMode>

@@ -1,9 +1,6 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
-import eu.nitok.jitsu.common.Range
-import eu.nitok.jitsu.common.ReasonedBoolean
+import eu.nitok.jitsu.common.*
 import eu.nitok.jitsu.compiler.model.BiOperator
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -62,7 +59,7 @@ sealed interface Expression : Element {
         }
 
         override lateinit var type: Type
-            private set;
+            internal set;
 
         override val location: Range
             get() = Range(left.location.start, right.location.end)
@@ -130,5 +127,46 @@ sealed interface Expression : Element {
         }
 
         override lateinit var accessKind: Access.VariableAccess.AccessKind
+    }
+
+    @Serializable
+    data class ArrayLiteral(val elements: List<Expression>, override val location: Range) : Expression {
+        override val isConstant: ReasonedBoolean
+            get() = elements.map { it.isConstant }.reduce { acc, boolean -> acc.and(boolean) }
+
+        override fun calculateType(
+            context: Map<String, Type>,
+            messages: CompilerMessages
+        ): Type? {
+            if (elements.size == 0) TODO("STDLIB: Any type or generic fitting")
+            if (elements.size == 1) return elements.single().calculateType(context, messages)
+            val type = elements.map {
+                (it to (it.calculateType(context, messages) ?: Type.Undefined)) as Pair<Expression, Type>?
+            }.reduce { acc, type ->
+                if (acc == null) return@reduce acc;
+                if (type == null) return@reduce acc;
+                val aToB = acc.second.acceptsInstanceOf(type.second)
+                if (aToB.value) acc
+                else {
+                    val bToA = type.second.acceptsInstanceOf(acc.second)
+                    if (bToA.value) type
+                    else {
+                        messages.error(
+                            "No common type found between ${acc.second} and ${type.second}. Array literal elements must share a common type",
+                            acc.first.location.rangeTo(type.first.location),
+                            CompilerMessage.Hint(aToB.fullMessageChain().first, acc.first.location),
+                            CompilerMessage.Hint(bToA.fullMessageChain().first, type.first.location)
+                        )
+                        null
+                    }
+                }
+            }?.let { Type.Array(it.second, null, 1) }
+            type?.let { this.type = it }
+            return type
+        }
+
+        override lateinit var type: Type.Array
+        override val children: List<Element> get() = elements
+
     }
 }

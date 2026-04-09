@@ -48,7 +48,8 @@ class CBackend : Backend {
     ): String {
         val lowering = FunctionLowering(
             getUniqueName = functionRegistry::getUniqueName,
-            isReferenceType = { typeRegistry.getTypeInfo(it).heapAlloc }
+            isReferenceType = { typeRegistry.getTypeInfo(it).heapAlloc },
+            function
         )
         val returnType = function.returnType?.value?.let { typeRegistry.getTypeInfo(it) }
         return """
@@ -58,9 +59,8 @@ ${returnType?.name ?: "void"} ${functionRegistry.getUniqueName(function)}(${
                 "${type.name} ${param.name.value}"
             }
         }) {
-${indent(1, lowering.lower(function).joinToString("\n") { instruct -> instruct.toCCode(typeRegistry) })}
+${indent(1, lowering.lower().joinToString("\n") { instruct -> instruct.toCCode(typeRegistry) })}
 }
-
 
         """.trimIndent()
     }
@@ -81,14 +81,22 @@ ${indent(1, lowering.lower(function).joinToString("\n") { instruct -> instruct.t
                 "${name}($params)"
             }
 
-            is LowLevelInstruction.Free -> "free($name);"
-            is LowLevelInstruction.Alloc -> if (heap) "void* $name = malloc(sizeof(${typeRegistry.getTypeInfo(layout).name}));"
-            else "${typeRegistry.getTypeInfo(layout).name} $name;"
+            is LowLevelInstruction.Free -> "free(${name.toCCode(typeRegistry)});"
+            is LowLevelInstruction.Increase -> "$variable++;"
+            is LowLevelInstruction.While -> """
+    while(${conditional.toCCode(typeRegistry)}) {
+    ${indent(1, this.instructions.joinToString("\n") { it.toCCode(typeRegistry) })}
+    }
+                """.trimIndent()
 
-            is LowLevelInstruction.Write -> if (heap) "*($name${field?.let { ".$it" } ?: ""}) = ${value.toCCode(typeRegistry)};"
-            else "$name${field?.let { ".$it" } ?: ""} = ${value.toCCode(typeRegistry)};"
-
+            is LowLevelInstruction.Write -> "${this.name.toCCode(typeRegistry)} = ${value.toCCode(typeRegistry)};"
             is LowLevelInstruction.Conditional -> conditional(this, typeRegistry)
+            is LowLevelInstruction.AllocStack -> "${typeRegistry.getTypeInfo(layout).name} $name;"
+            is LowLevelInstruction.WriteAtIndex -> "${array.toCCode(typeRegistry)}[${index.toCCode(typeRegistry)}] = ${
+                value.toCCode(
+                    typeRegistry
+                )
+            };"
         }
     }
 
@@ -97,23 +105,29 @@ ${indent(1, lowering.lower(function).joinToString("\n") { instruct -> instruct.t
         typeRegistry: TypeRegistry
     ): String {
         val ifBlock = "if(${conditional.condition.toCCode(typeRegistry)}) {\n" +
-        indent(1, conditional.instructions.joinToString("\n") { it.toCCode(typeRegistry) })+"\n"+
-        "}"
-        val elseBlock = conditional.elseInstructions?.let {
-                " else {\n"+
-                indent(1, it.joinToString("\n") { it.toCCode(typeRegistry) })+"\n"+
+                indent(1, conditional.instructions.joinToString("\n") { it.toCCode(typeRegistry) }) + "\n" +
                 "}"
+        val elseBlock = conditional.elseInstructions?.let {
+            " else {\n" +
+                    indent(1, it.joinToString("\n") { it.toCCode(typeRegistry) }) + "\n" +
+                    "}"
         }
-       return ifBlock + (elseBlock?:"")
+        return ifBlock + (elseBlock ?: "")
     }
 
     private fun LowLevelExpression.toCCode(typeRegistry: TypeRegistry): String {
         return when (this) {
             is LowLevelExpression.NumericalValue -> value.toString()
-            is LowLevelExpression.Read -> "${if (heap) "*" else ""}$name"
-            is LowLevelExpression.Ref -> "&$name"
+            is LowLevelExpression.Read -> "${this.struct.toCCode(typeRegistry)}.${this.name}"
+            is LowLevelExpression.Ref -> "&${name.toCCode(typeRegistry)}"
             is LowLevelExpression.ReturnValue -> functionCall.toCCode(typeRegistry)
             is LowLevelExpression.Compare -> "${left.toCCode(typeRegistry)} == ${right.toCCode(typeRegistry)}"
+            is LowLevelExpression.AllocHeap -> "malloc(sizeof(${typeRegistry.getTypeInfo(type).name}))"
+            is LowLevelExpression.AllocHeapArray -> "malloc(sizeof(${typeRegistry.getTypeInfo(type).name}) * ${this.arraySize})"
+            is LowLevelExpression.CompareGreater -> "${left.toCCode(typeRegistry)} > left.toCode(righthhhh"
+            is LowLevelExpression.ArraySlot -> "${this.array.toCCode(typeRegistry)}[${this.index}]"
+            is LowLevelExpression.Deref -> "*${this.name.toCCode(typeRegistry)}"
+            is LowLevelExpression.Variable -> this.name
         }
     }
 

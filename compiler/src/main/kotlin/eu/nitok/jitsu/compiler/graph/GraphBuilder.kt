@@ -11,8 +11,11 @@ import eu.nitok.jitsu.compiler.graph.TypeDefinition.TypeParameter
 import eu.nitok.jitsu.compiler.analysis.AnalysisRepository
 import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.common.walk
+import eu.nitok.jitsu.compiler.graph.Constant.*
+import eu.nitok.jitsu.compiler.graph.Expression.*
 import eu.nitok.jitsu.compiler.graph.Type.*
 import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Struct.Field
+import kotlin.math.exp
 
 private class GraphBuilder {
     val messages: CompilerMessages = CompilerMessages()
@@ -198,15 +201,15 @@ private fun buildGraph(
 
 fun buildExpressionGraph(expression: ExpressionNode): Expression {
     return when (expression) {
-        is ExpressionNode.BooleanLiteralNode -> Constant.BooleanConstant(expression.value, expression.location)
+        is ExpressionNode.BooleanLiteralNode -> BooleanConstant(expression.value, expression.location)
         is ExpressionNode.NumberLiteralNode.FloatLiteralNode -> TODO()
         is ExpressionNode.NumberLiteralNode.IntegerLiteralNode -> resolveIntConstant(expression)
-        is ExpressionNode.OperationNode -> Expression.Operation(
+        is ExpressionNode.OperationNode -> Operation(
             buildExpressionGraph(expression.left),
             expression.operator,
             expression.right?.let { buildExpressionGraph(it) } ?: Expression.Undefined(expression.operator.location)
         );
-        is ExpressionNode.StringLiteralNode -> Constant.StringConstant(expression.toString(), expression.location)
+        is ExpressionNode.StringLiteralNode -> StringConstant(expression.toString(), expression.location)
         is ExpressionNode.VariableReferenceNode -> resolveVariableReference(expression)
         is ExpressionNode.FieldAccessNode -> TODO()
         is ExpressionNode.IndexAccessNode -> TODO()
@@ -217,6 +220,7 @@ fun buildExpressionGraph(expression: ExpressionNode): Expression {
         is IfNode -> TODO()
         is MethodInvocationNode -> TODO()
         is SwitchNode -> TODO()
+        is ExpressionNode.ArrayLiteralNode -> ArrayLiteral(expression.elements.map { buildExpressionGraph(it) }, expression.location)
     }
 }
 

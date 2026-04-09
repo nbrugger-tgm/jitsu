@@ -14,7 +14,7 @@ class TypeRegistry {
             return typeInfo[layout]!!
         }
         val info = when (layout) {
-            is Type.Array -> TODO()
+            is Type.Array -> mapArray(layout)
             is Type.FunctionTypeSignature -> TODO()
             Type.Null -> TODO()
             Type.Boolean -> TypeEntry("bool", false)
@@ -30,6 +30,23 @@ class TypeRegistry {
         }
         typeInfo[layout] = info
         return info
+    }
+
+    private fun mapArray(layout: Type.Array): TypeEntry {
+        val name = uniqueName("${layout.elementType}_array")
+        val elementType = getTypeInfo(layout.elementType)
+        val elementsHeaped = elementType.heapAlloc
+        val arrayHeaped = layout.size == null //TODO: size>x => also heap
+        return TypeEntry(
+            name,
+            false,
+            typeDef = """
+struct $name {
+    size_t length;
+    ${getTypeInfo(layout.elementType).name}${if (elementsHeaped) "*" else ""}${if(arrayHeaped) "*" else ""} data${if(!arrayHeaped) "[${layout.size}]" else ""};
+}
+            """.trimIndent()
+        )
     }
 
     private fun mapEnum(layout: TypeDefinition.DirectTypeDefinition.Enum): TypeEntry {

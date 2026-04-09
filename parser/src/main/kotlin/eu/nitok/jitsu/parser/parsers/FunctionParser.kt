@@ -110,7 +110,7 @@ private fun parseParameters(
         val parameterMessages = CompilerMessages()
         val type = parseExplicitType(tokens, parameterMessages)
         ParameterNode(argName, type, null).withMessages(parameterMessages)
-    } ?: run {
+    }?.elements ?: run {
         messages.error(
             "Expected '(' after function name",
             tokens.location.toRange(),

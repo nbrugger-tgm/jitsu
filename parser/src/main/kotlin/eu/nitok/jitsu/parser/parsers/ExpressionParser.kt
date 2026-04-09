@@ -37,7 +37,7 @@ private fun parseCompositExpression(
 ) = parseOperation(tokens, expressionNode)
 
 private fun parseSingleExpression(tokens: Tokens) =
-    parseIntLiteral(tokens) ?: parseStringLiteral(tokens) ?: parseIdentifierBased(tokens) { tokens, identifier ->
+    parseIntLiteral(tokens) ?: parseStringLiteral(tokens) ?: parseArrayLiteral(tokens)?: parseIdentifierBased(tokens) { tokens, identifier ->
         parseFunctionCall(tokens, identifier) ?: ExpressionNode.VariableReferenceNode(identifier)
     }
 
@@ -56,8 +56,6 @@ private fun parseStringLiteral(stream: Tokens): ExpressionNode? {
                     stream.location.toRange(),
                     Hint("String opened", openingQuote.location)
                 )
-            } else {
-                stream.skip()
             }
             break;
         }
@@ -219,4 +217,21 @@ fun parseIntLiteral(tokens: Tokens): ExpressionNode? {
         }
     } ?: return null;
     return ExpressionNode.NumberLiteralNode.IntegerLiteralNode(literal.value, literal.location)
+}
+
+/**
+ *
+ */
+fun parseArrayLiteral(tokens: Tokens): ExpressionNode? {
+    val messages = CompilerMessages()
+    val literal = tokens.enclosedRepetition(
+        SQUARE_BRACKET_OPEN,
+        COMMA,
+        SQUARE_BRACKET_CLOSED,
+        messages,
+        "array literal",
+        "array element",
+        parseElement = ::parseExpression
+    )
+    return literal?.let { ExpressionNode.ArrayLiteralNode(it.openKw, it.elements, it.closeKw).withMessages(messages) }
 }

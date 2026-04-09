@@ -93,7 +93,7 @@ fun parseTypeParameterDefinition(tokens: Tokens, messages: CompilerMessages): Li
         "type parameter"
     ) {
         parseIdentifier(it)
-    }
+    }?.elements
 }
 
 private fun parseTypeAlias(tokens: Tokens): StatementNode.NamedTypeDeclarationNode.TypeAliasNode? {
@@ -177,7 +177,7 @@ private fun parseStructuralInterface(tokens: Tokens): TypeNode? {
             return@enclosedRepetition element.withMessages(messages)
         }
     }
-    val fieldList = fields.value
+    val fieldList = fields.value?.elements
     fieldList ?: return null;
     return TypeNode.StructuralInterfaceTypeNode(fieldList, fields.location)
         .withMessages(messages)
@@ -215,7 +215,7 @@ private fun parseSingleType(tokens: Tokens): TypeNode? {
         "type parameter"
     ) {
         parseType(it)
-    } ?: listOf()
+    }?.elements ?: listOf()
     val namedType = TypeNode.NameTypeNode(typeReference, generics, typeReference.location)
     return namedType.withMessages(messages)
 }

@@ -6,6 +6,7 @@ import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.Located
+import eu.nitok.jitsu.common.ReasonedBoolean.*
 
 class CodeBlockAnalyzer(
     private val function: Function,
@@ -14,7 +15,6 @@ class CodeBlockAnalyzer(
 ) {
     data class AnalysisResult(
         val functionSummary: FunctionSummary,
-        val variableSummaries: Map<Variable, VariableSummary>,
         val useSiteInfos: Map<Expression.VariableReference, UseSiteInfo>
     )
 
@@ -27,8 +27,7 @@ class CodeBlockAnalyzer(
         var paramDeps: Set<String>,
         val variable: Variable,
         val deterministic: ReasonedBoolean
-    ) {
-    }
+    )
 
     private data class ExpressionResult(
         val type: Type,
@@ -103,15 +102,6 @@ class CodeBlockAnalyzer(
             }
         }
 
-        val functionSummary = FunctionSummary(
-            deterministic = isDeterministic,
-            noSideEffects = hasSideEffects,
-            parameterModes = parameterModes,
-            parameterInfluence = parameterInfluence,//Why do we have parameterInfluence and returnSummary.dependsOnParameters seems redundant
-            returnSummary = returnSummary,
-            callees = callees.distinct()//string does not suffice here? How would that deal with overloads
-        )
-
         val variableSummaries = mutableMapOf<Variable, VariableSummary>()
 
         for (param in function.parameters) {
@@ -126,10 +116,19 @@ class CodeBlockAnalyzer(
                 variableSummaries[state.variable] = buildVariableSummary(state)
             }
         }
+        val functionSummary = FunctionSummary(
+            deterministic = isDeterministic,
+            noSideEffects = hasSideEffects,
+            parameterModes = parameterModes,
+            parameterInfluence = parameterInfluence,//Why do we have parameterInfluence and returnSummary.dependsOnParameters seems redundant
+            returnSummary = returnSummary,
+            callees = callees.distinct(),//string does not suffice here? How would that deal with overloads
+            variableSummary = variableSummaries
+        )
+
 
         return AnalysisResult(
             functionSummary = functionSummary,
-            variableSummaries = variableSummaries,
             useSiteInfos = useSiteInfos
         )
     }
@@ -231,9 +230,17 @@ class CodeBlockAnalyzer(
             is Instruction.FunctionCall -> analyzeFunctionCall(expr)
             is Expression.Undefined -> ExpressionResult(
                 type = Type.Undefined,
-                deterministic = ReasonedBoolean.False("Undefined expression"),
+                deterministic = False("Undefined expression"),
                 constValue = AbstractValue.Unknown,
                 paramDeps = emptySet()
+            )
+            is Expression.ArrayLiteral -> ExpressionResult(
+                type = expr.calculateType(typeContext, messages)?:Type.Array(Type.Undefined, null),
+                deterministic = expr.elements.asSequence().map { analyzeExpression(it).deterministic }.fold(
+                    ReasonedBoolean.True("Empty array is deterministic") as ReasonedBoolean
+                ) { acc, d -> acc.and(d) },
+                constValue = AbstractValue.Unknown,
+                paramDeps = expr.elements.asSequence().flatMap { analyzeExpression(it).paramDeps }.toSet()
             )
         }
     }
@@ -252,6 +259,7 @@ class CodeBlockAnalyzer(
         val call = op.asFunctionCall()
         val analyzedFunction = analyzeFunctionCall(call)
         op.target = call.target
+        op.type = call.type
         return analyzedFunction
     }
 
@@ -330,7 +338,7 @@ class CodeBlockAnalyzer(
 
                 if (!targetSummary.noSideEffects.value) {
                     hasSideEffects = hasSideEffects.and(
-                        ReasonedBoolean.False(
+                        False(
                             "'${call.reference.value}' has side effects",
                             listOf(CompilerMessage.Hint("${call.reference.value} is called here", call.location)),
                             listOf(null to targetSummary.noSideEffects)
@@ -340,7 +348,7 @@ class CodeBlockAnalyzer(
                 if (!targetSummary.deterministic.value) {
                     //TODO: Methods inside a deterministic method can be non-deterministic as long as the return value is not influenced by the call result
                     isDeterministic = isDeterministic.and(
-                        ReasonedBoolean.False(
+                        False(
                             "'${call.reference.value}' is non-deterministic",
                             listOf(CompilerMessage.Hint("${call.reference.value} is called here", call.location)),
                             listOf(null to targetSummary.deterministic)
@@ -403,7 +411,8 @@ class CodeBlockAnalyzer(
             declaredType = state.declaredType,
             narrowedType = state.narrowedType,
             effectivelyConstant = effectivelyConstant,
-            compileTimeValue = state.compileTimeValue
+            compileTimeValue = state.compileTimeValue,
+            ownershipState = state.ownershipState
         )
     }
 }

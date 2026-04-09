@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.parser.ast
 
+import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.Located
 import eu.nitok.jitsu.common.Range
 import eu.nitok.jitsu.compiler.model.BiOperator
@@ -28,6 +29,16 @@ sealed interface ExpressionNode : AstNode {
                 return value.toString() + "f"
             }
         }
+    }
+
+    @Serializable
+    data class ArrayLiteralNode(
+        val openKw: Range,
+        val elements: List<ExpressionNode>,
+        val closeKw: Range?
+    ): AstNodeImpl(), ExpressionNode {
+        override val location: Range = openKw.rangeTo(closeKw?:elements.lastOrNull()?.location?:openKw)
+        override val children: List<AstNode> get() = elements
     }
 
     @Serializable
