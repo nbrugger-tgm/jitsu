@@ -1,23 +1,20 @@
 package eu.nitok.jitsu.compiler.bitcode
 
-import eu.nitok.jitsu.compiler.graph.Type
-
 sealed interface LowLevelExpression {
     /**
      * A reference to a variable, in C this is equivalent to &name where name is the name of the variable.
      */
-    data class Ref(val name: String): LowLevelExpression
+    data class Ref(val name: String) : LowLevelExpression
 
     /**
-     * A reference to a stack variable, in C this is equivalent to `name` where name is the name of the variable.
+     * when heap false: A reference to a stack variable, in C this is equivalent to `name` where name is the name of the variable.
+     *
+     * when heap true: A "dereference" of a variable, in C this is equivalent to *name where name is the name of the variable.
+     *    This is used to read if "name" is a reference to a heap allocated variable.
      */
-    data class ReadStack(val name: String): LowLevelExpression
+    data class Read(val name: String, val heap: Boolean) : LowLevelExpression
 
-    /**
-     * A "dereference" of a variable, in C this is equivalent to *name where name is the name of the variable.
-     * This is used to read if "name" is a reference to a heap allocated variable.
-     */
-    data class ReadHeap(val name: String): LowLevelExpression
-    data class NumericalValue(val value: Long): LowLevelExpression
-    data class ReturnValue(val functionCall: LowLevelInstruction.Invoke): LowLevelExpression
+    data class NumericalValue(val value: Long) : LowLevelExpression
+    data class ReturnValue(val functionCall: LowLevelInstruction.Invoke) : LowLevelExpression
+    data class Compare(val right: LowLevelExpression, val left: LowLevelExpression) : LowLevelExpression
 }

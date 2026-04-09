@@ -26,6 +26,10 @@ sealed interface Type : Element {
                     *(optionAssignability.filter { !it.value } + assignWholeUnion).toTypedArray()
                 )
             }
+        } else if(type is TypeReference) {
+            val reason = accepts(type.resolvedCache)
+            if (!reason.value) ReasonedBoolean.False("$type not assignable to $this", reason)
+            else reason
         } else {
             val reason = accepts(type)
             if (!reason.value) ReasonedBoolean.False("$type not assignable to $this", reason)
@@ -350,10 +354,11 @@ sealed interface Type : Element {
     @Serializable
     class Union(var options: List<Type>) : Type {
         override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type {
-            return Union(options.map { it.resolve(messages, generics) }
+            val resolvedOptions = options.map { it.resolve(messages, generics) }
                 .flatMap { type -> if (type is Union) type.options else listOf(type) }
                 .distinct()
-            )
+            return if(resolvedOptions.size>1) Union(resolvedOptions)
+            else resolvedOptions.single()
         }
 
         override fun accepts(type: Type): ReasonedBoolean {

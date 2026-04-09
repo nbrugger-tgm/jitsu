@@ -258,7 +258,6 @@ class CodeBlockAnalyzer(
     private fun analyzeVariableReference(ref: Expression.VariableReference): ExpressionResult {
         val varName = ref.reference.value
         val varState = localVariables[varName]
-
         if (varState == null) {
             //Todo: global variable access
             messages.error("Variable '$varName' not found", ref.location)
@@ -277,14 +276,15 @@ class CodeBlockAnalyzer(
         ref.target = varState.variable
         ref.accessKind = Access.VariableAccess.AccessKind.BORROW
         varState.variable.accessToSelf.add(ref)
+        val type = ref.calculateType(typeContext, messages)?: Type.Undefined
 
         useSiteInfos[ref] = UseSiteInfo(
-            narrowedType = varState.narrowedType,
+            narrowedType = type,
             ownershipState = varState.ownershipState
         )
 
         return ExpressionResult(
-            type = varState.narrowedType,
+            type = type,
             deterministic = varState.deterministic,
             constValue = varState.compileTimeValue,
             paramDeps = varState.paramDeps

@@ -55,8 +55,12 @@ sealed interface Instruction : Element {
                     messages
                 )
             }
-            return target?.returnType?.value
+            val type = target?.returnType?.value
+            if(type != null) this.type = type
+            return type
         }
+        override lateinit var type: Type
+            private set;
 
         override val children: List<Element> get() = callParameters.toList()
 

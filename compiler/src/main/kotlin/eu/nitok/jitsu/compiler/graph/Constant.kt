@@ -15,7 +15,7 @@ import kotlinx.serialization.Transient
 @Serializable
 sealed class Constant<out T> : Expression, Element {
     @SerialName("resolved_type")
-    abstract val type: Type
+    abstract override val type: Type
     abstract val literal: String
     @Transient override val isConstant: ReasonedBoolean = ReasonedBoolean.True("$value is a constant")
 

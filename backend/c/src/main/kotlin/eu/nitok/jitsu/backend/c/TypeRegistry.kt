@@ -48,10 +48,10 @@ ${indent(1, layout.constants.joinToString(", ") { it.name.value })}
         val optionTypes = layout.options.map { getTypeInfo(it) }
         val name =
             userDefinedName?.let { uniqueName(it) } ?:
-            uniqueName("union_${optionTypes.joinToString("_") { it.name.replace(" ","_") }}")
+            uniqueName("union_${optionTypes.joinToString("_") { it.name.replace(Regex("[ ()]"),"_") }}")
         return TypeEntry(
-            name = name,
-            heapAlloc = optionTypes.any { it.heapAlloc },
+            name = "struct $name",
+            heapAlloc = false,
             typeDef = """
 struct $name {
     int option;
@@ -80,7 +80,8 @@ ${indent(2, optionTypes.withIndex().joinToString("\n") { "${it.value.name} o${it
             BitSize.BIT_16 -> "signed int"
             BitSize.BIT_32 -> "signed long"
             BitSize.BIT_64 -> "signed long long"
-            else -> "signed _BitInt(${int.size.bits})"
+            BitSize.BIT_128 -> "signed __int128"
+            BitSize.BIT_256 -> error("256 bit not supported by C")
         }, false);
     }
 
@@ -92,7 +93,8 @@ ${indent(2, optionTypes.withIndex().joinToString("\n") { "${it.value.name} o${it
             BitSize.BIT_16 -> "unsigned int"
             BitSize.BIT_32 -> "unsigned long"
             BitSize.BIT_64 -> "unsigned long long"
-            else -> "unsigned _BitInt(${int.size.bits})"
+            BitSize.BIT_128 -> "unsigned __int128"
+            BitSize.BIT_256 -> error("256 bit not supported by C")
         }, false);
     }
 
@@ -106,6 +108,6 @@ ${indent(2, optionTypes.withIndex().joinToString("\n") { "${it.value.name} o${it
     }
 
     fun getTypedefs(): List<String> {
-        return typeInfo.values.mapNotNull { it.typeDef }
+        return typeInfo.values.distinctBy { it.name }.mapNotNull { it.typeDef }
     }
 }

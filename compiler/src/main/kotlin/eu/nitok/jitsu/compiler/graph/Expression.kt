@@ -1,10 +1,10 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.common.Located
 import eu.nitok.jitsu.common.Range
 import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.compiler.model.BiOperator
-import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -13,14 +13,17 @@ sealed interface Expression : Element {
     val isConstant: ReasonedBoolean;
     fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type?
     val location: Range
+    val type: Type
 
     @Serializable
     data class Undefined(override val location: Range) : Expression {
         @Transient
         override val isConstant: ReasonedBoolean = ReasonedBoolean.False("No value is defined")
         override fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type {
-            return Type.Undefined
+            return type
         }
+
+        override val type = Type.Undefined
 
         @Transient
         override val children: List<Element> = listOf()
@@ -30,7 +33,7 @@ sealed interface Expression : Element {
     data class Operation(val left: Expression, val operator: Located<BiOperator>, val right: Expression) :
         Expression,
         ScopeAware,
-    Access.FunctionAccess{
+        Access.FunctionAccess {
         private lateinit var scope: Scope
         override val isConstant: ReasonedBoolean
             get() = if (!left.isConstant.value) ReasonedBoolean.False(
@@ -44,17 +47,22 @@ sealed interface Expression : Element {
             else ReasonedBoolean.True("Left and right expressions are constant", right.isConstant, left.isConstant)
 
         override fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type? {
-            if(target == null) {
-                val leftType = Located(left.calculateType(context,messages)?:Type.Undefined, left.location)
-                val rightType = Located(right.calculateType(context,messages)?: Type.Undefined, right.location)
+            if (target == null) {
+                val leftType = Located(left.calculateType(context, messages) ?: Type.Undefined, left.location)
+                val rightType = Located(right.calculateType(context, messages) ?: Type.Undefined, right.location)
                 target = scope.resolveFunction(
                     operator.map { it.functionName },
                     arrayOf(leftType, rightType),
                     messages
                 )
             }
-            return target?.returnType?.value
+            val type = target?.returnType?.value
+            if (type != null) this.type = type
+            return type
         }
+
+        override lateinit var type: Type
+            private set;
 
         override val location: Range
             get() = Range(left.location.start, right.location.end)
@@ -66,6 +74,7 @@ sealed interface Expression : Element {
         }
 
         override var target: Function? = null
+
         @Transient
         override lateinit var accessor: Accessor
         override val reference: Located<String> = operator.map { it.rune }
@@ -93,9 +102,15 @@ sealed interface Expression : Element {
         private lateinit var scope: Scope
         override val isConstant: ReasonedBoolean get() = ReasonedBoolean.False("Cuz not implemented yet")
         override fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type? {
-            return context[reference.value] ?: target?.declaredType?:target?.initialValue?.calculateType(context, messages)
+            val type = context[reference.value]
+                ?: target?.declaredType
+                ?: target?.initialValue?.calculateType(context, messages)
+            if (type != null) this.type = type
+            return type
         }
 
+        override lateinit var type: Type
+            private set;
         override val location: Range get() = reference.location
 
         override val children: List<Element> get() = listOf()

@@ -27,9 +27,9 @@ class Process : Callable<List<Pair<JitsuFile, Path>>> {
         val graphCache = cli.cacheDirectory.resolve("graph").ensureExistingDir()
         scopes.forEach {
             val cacheFile = graphCache.resolve("${it.second.nameWithoutExtension}.graph.json").ensureExistingFile()
-            cacheFile.writeText(
-                cli.json.encodeToString(it.first)
-            )
+//            cacheFile.writeText(
+//                cli.json.encodeToString(it.first)
+//            )
             spec.commandLine().out.println("Write graph to $cacheFile")
 
             val errors = it.first.messages.errors
