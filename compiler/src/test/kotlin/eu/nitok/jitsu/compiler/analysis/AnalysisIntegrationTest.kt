@@ -87,7 +87,7 @@ class AnalysisIntegrationTest {
             .filterIsInstance<VariableDeclaration>()
             .first()
 
-        val varSummary = repo.getVariableSummary(varDecl)
+        val varSummary = repo.getFunctionSummary(fn)?.variableSummary?.get(varDecl.name.value)
         assertThat(varSummary).isNotNull()
         assertThat(varSummary!!.effectivelyConstant.value).isTrue()
     }

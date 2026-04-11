@@ -1,6 +1,9 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.common.*
+import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.common.Located
+import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.compiler.model.BiOperator
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -138,29 +141,20 @@ sealed interface Expression : Element {
             context: Map<String, Type>,
             messages: CompilerMessages
         ): Type? {
-            if (elements.size == 0) TODO("STDLIB: Any type or generic fitting")
-            if (elements.size == 1) return elements.single().calculateType(context, messages)
-            val type = elements.map {
-                (it to (it.calculateType(context, messages) ?: Type.Undefined)) as Pair<Expression, Type>?
-            }.reduce { acc, type ->
-                if (acc == null) return@reduce acc;
-                if (type == null) return@reduce acc;
-                val aToB = acc.second.acceptsInstanceOf(type.second)
+
+            val type = (if (elements.isEmpty()) TODO("STDLIB: Any type or generic fitting")
+            else if (elements.size == 1) elements.single().calculateType(context, messages)
+            else elements.map {
+                it.calculateType(context, messages)
+            }.filterNotNull().reduce { acc, type ->
+                val aToB = acc.acceptsInstanceOf(type)
                 if (aToB.value) acc
                 else {
-                    val bToA = type.second.acceptsInstanceOf(acc.second)
+                    val bToA = type.acceptsInstanceOf(acc)
                     if (bToA.value) type
-                    else {
-                        messages.error(
-                            "No common type found between ${acc.second} and ${type.second}. Array literal elements must share a common type",
-                            acc.first.location.rangeTo(type.first.location),
-                            CompilerMessage.Hint(aToB.fullMessageChain().first, acc.first.location),
-                            CompilerMessage.Hint(bToA.fullMessageChain().first, type.first.location)
-                        )
-                        null
-                    }
+                    else Type.Union(listOf(acc, type))
                 }
-            }?.let { Type.Array(it.second, null, 1) }
+            })?.let { Type.Array(it, elements.size, 1) }
             type?.let { this.type = it }
             return type
         }

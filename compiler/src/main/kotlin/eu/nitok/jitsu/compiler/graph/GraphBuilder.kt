@@ -196,7 +196,7 @@ private fun buildGraph(
     array: TypeNode.ArrayTypeNode
 ) = Type.Array(
     resolveType(array.type),
-    array.fixedSize?.run { buildExpressionGraph(this) }
+    array.fixedSize?.value?.toInt()
 )
 
 fun buildExpressionGraph(expression: ExpressionNode): Expression {
@@ -427,9 +427,10 @@ val IdentifierNode.located: Located<String> get() = Located(value, location)
 fun resolveType(type: TypeNode?): Type {
     if (type == null) return Type.Undefined
     return when (type) {
-        is TypeNode.ArrayTypeNode -> Array(
+        is TypeNode.ArrayTypeNode -> Type.Array(
             resolveType(type.type),
-            type.fixedSize?.let { buildExpressionGraph(it) })
+            type.fixedSize?.value?.toInt()
+        )
 
         is TypeNode.FloatTypeNode -> Float(type.bitSize)
         is TypeNode.FunctionTypeSignatureNode -> TODO()

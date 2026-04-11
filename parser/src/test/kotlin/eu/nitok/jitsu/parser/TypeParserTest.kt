@@ -519,9 +519,13 @@ class TypeParserTest : ParsingTest() {
                 "SomeType[10]",
                 "List<i64[]>[]",
                 "Array<Array<u8>[256]>[128]",
-                "Matrix<f32>[10*10]",
-                "Matrix<f32>[10*10][][]",
-                "Matrix<f32>[10*10][][abc+10]",
+                "Matrix<f32>[10]",
+                "Matrix<f32>[10][][]",
+                "Matrix<f32>[10][][10]",
+//Requires comptime constant resolution
+//                "Matrix<f32>[10*10]",
+//                "Matrix<f32>[10*10][][]",
+//                "Matrix<f32>[10*10][][abc+10]",
             )
 
             override fun invalidInputs() = listOf<String>()
@@ -530,25 +534,27 @@ class TypeParserTest : ParsingTest() {
                 Input("A[", 1),
                 Input("A[10", 1),
                 Input("A[10,", 1),
-                Input("A[Variabl", 1),
-                Input("A[Variabl*10+10", 1),
+//Requires comptime constant resolution
+//                Input("A[Variabl", 1),
+//                Input("A[Variabl*10+10", 1),
                 Input("A<B>[", 1),
                 Input("A<B>[10", 1),
                 Input("A<B>[10,", 1),
-                Input("A<B>[Variabl", 1),
-                Input("Muli[][[]", 1)
+//Requires comptime constant resolution
+//                Input("A<B>[Variabl", 1),
+//                Input("Muli[][[]", 1)
             )
 
             @Test
             fun returnsMutliDimensionalArrayTypeCorrectly() {
-                val res = parseType(tokenize("Matrix<f32>[][10*10][]"))
+                val res = parseType(tokenize("Matrix<f32>[][10][]"))
                 assertThat(res)
                     .isNotNull()
                     .asInstanceOf(type(TypeNode.ArrayTypeNode::class.java))
                     .extracting { it.type }
                     .asInstanceOf(type(TypeNode.ArrayTypeNode::class.java))
                     .also {
-                        it.extracting { it.fixedSize.toString() }.isEqualTo("(10 * 10)")
+                        it.extracting { it.fixedSize.toString() }.isEqualTo("10")
                         it.extracting { it.type }
                             .asInstanceOf(type(TypeNode.ArrayTypeNode::class.java))
                             .extracting { it.type }
@@ -568,28 +574,29 @@ class TypeParserTest : ParsingTest() {
                     .isNull()
             }
 
-            @Test
-            fun returnsArrayWithExpressionSizeCorrectly() {
-                val res = parseType(tokenize("Matrix<f32>[10*12]"))
-                assertThat(res)
-                    .isNotNull()
-                    .asInstanceOf(type(TypeNode.ArrayTypeNode::class.java))
-                    .extracting { it.fixedSize }
-                    .isNotNull()
-                    .extracting { it.toString() }
-                    .isEqualTo("(10 * 12)")
-            }
+//Requires comptime constant resolution
+//            @Test
+//            fun returnsArrayWithExpressionSizeCorrectly() {
+//                val res = parseType(tokenize("Matrix<f32>[10*12]"))
+//                assertThat(res)
+//                    .isNotNull()
+//                    .asInstanceOf(type(TypeNode.ArrayTypeNode::class.java))
+//                    .extracting { it.fixedSize }
+//                    .isNotNull()
+//                    .extracting { it.toString() }
+//                    .isEqualTo("(10 * 12)")
+//            }
 
             @Test
             fun returnsArrayWithErrorWhenClosingBracketMissing() {
-                val res = parseType(tokenize("Matrix<f32>[10*12"))
+                val res = parseType(tokenize("Matrix<f32>[10"))
                 assertThat(res)
                     .isNotNull()
                     .asInstanceOf(type(TypeNode.ArrayTypeNode::class.java))
                     .extracting { it.fixedSize }
                     .isNotNull()
                     .extracting { it.toString() }
-                    .isEqualTo("(10 * 12)")
+                    .isEqualTo("10")
                 assertThat(res?.errors)
                     .isNotEmpty()
                     .first()

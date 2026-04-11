@@ -2,25 +2,70 @@ package eu.nitok.jitsu.compiler.bitcode
 
 import eu.nitok.jitsu.compiler.analysis.OwnershipState
 import eu.nitok.jitsu.compiler.graph.Function
-import eu.nitok.jitsu.compiler.graph.Type
 import eu.nitok.jitsu.compiler.graph.VariableDeclaration
 
-public class VariableRegistry(val function: Function) {
-    data class Entry(val requiresFree: Boolean, val name: String, val type: Type)
-    private val entries = mutableMapOf<VariableDeclaration, Entry>()
-
-    fun getEntry(variable: VariableDeclaration): Entry {
-        if (variable in entries) {
-            return entries[variable]!!
-        }
-        val entry = Entry(
-            requiresFree = function.summary?.variableSummary?.get(variable)?.ownershipState == OwnershipState.OWNS,
-            name = variable.name.value,
-            type = variable.type
-        )
-        entries[variable] = entry
-        return entry
+/**
+ * Registry for variables during function lowering.
+ * Maps variable declarations to their low-level types and manages
+ * ownership information for memory cleanup.
+ */
+class VariableRegistry(val function: Function) {
+    /**
+     * Entry for a registered variable.
+     */
+    data class Entry(
+        val name: String,
+        val lowLevelType: LowLevelType,
+        val requiresFree: Boolean
+    ) {
+        /**
+         * Get the variable expression for this entry.
+         */
+        fun asVariable(): LowLevelExpression.Variable = LowLevelExpression.Variable(name)
     }
 
-    val variablesToFree: Set<Entry> = entries.values.filter { it.requiresFree }.toSet()
+    private val entries = mutableMapOf<VariableDeclaration, Entry>()
+
+    /**
+     * Get or create an entry for a variable declaration.
+     */
+    fun
+            getEntry(variable: VariableDeclaration): Entry {
+        return entries.getOrPut(variable) {
+            val lowLevelType = TypeLowering.lower(variable.type)
+            val requiresFree = function.summary?.variableSummary?.get(variable.name.value)?.ownershipState == OwnershipState.OWNS
+            Entry(
+                name = variable.name.value,
+                lowLevelType = lowLevelType,
+                requiresFree = requiresFree
+            )
+        }
+    }
+
+    /**
+     * Get the low-level type for a variable declaration.
+     */
+    fun getLowLevelType(variable: VariableDeclaration): LowLevelType {
+        return getEntry(variable).lowLevelType
+    }
+
+    /**
+     * All variables that require freeing when going out of scope.
+     */
+    val variablesToFree: Collection<Entry>
+        get() = entries.values.filter { it.requiresFree }
+
+    /**
+     * Register a parameter and return its entry.
+     */
+    fun registerParameter(param: Function.Parameter): Entry {
+        val lowLevelType = TypeLowering.lower(param.declaredType!!)
+        val entry = Entry(
+            name = param.name.value,
+            lowLevelType = lowLevelType,
+            requiresFree = false // parameters are not owned by the function
+        )
+        // Store in a parameter-specific way if needed, for now just return
+        return entry
+    }
 }

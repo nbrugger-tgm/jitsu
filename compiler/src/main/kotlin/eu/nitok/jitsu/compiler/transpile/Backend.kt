@@ -1,10 +1,9 @@
 package eu.nitok.jitsu.compiler.transpile
 
-import eu.nitok.jitsu.compiler.graph.JitsuFile
-import eu.nitok.jitsu.compiler.graph.Scope
+import eu.nitok.jitsu.compiler.bitcode.LoweredModule
 import java.nio.file.Path
 
 interface Backend {
-    fun transpile(graphs: Collection<Pair<JitsuFile, Path>>, dir: Path): List<Path>
+    fun transpile(modules: Collection<LoweredModule>, dir: Path): List<Path>
     fun compile(files: Collection<Path>, dir: Path): Path
 }

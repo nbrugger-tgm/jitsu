@@ -188,8 +188,8 @@ class CodeBlockAnalyzerTest {
             val decl = varDecl("x", i32, constInt(5), reassignable = false)
             val fn = buildFunction(instructions = listOf(decl))
             val result = analyze(fn)
-            val xSummary = result.variableSummaries.entries
-                .first { it.key.name.value == "x" }.value
+            val xSummary = result.functionSummary.variableSummary.entries
+                .first { it.key == "x" }.value
             assertThat(xSummary.effectivelyConstant.value).isTrue()
         }
 
@@ -198,8 +198,8 @@ class CodeBlockAnalyzerTest {
             val decl = varDecl("x", i32, constInt(5), reassignable = false)
             val fn = buildFunction(instructions = listOf(decl))
             val result = analyze(fn)
-            val xSummary = result.variableSummaries.entries
-                .first { it.key.name.value == "x" }.value
+            val xSummary = result.functionSummary.variableSummary.entries
+                .first { it.key == "x" }.value
             assertThat(xSummary.compileTimeValue).isEqualTo(AbstractValue.Const("5", i8))
         }
 
@@ -221,8 +221,8 @@ class CodeBlockAnalyzerTest {
             val decl = varDecl("x", i32, constInt(5), reassignable = true)
             val fn = buildFunction(instructions = listOf(decl))
             val result = analyze(fn)
-            val xSummary = result.variableSummaries.entries
-                .first { it.key.name.value == "x" }.value
+            val xSummary = result.functionSummary.variableSummary.entries
+                .first { it.key == "x" }.value
             assertThat(xSummary.effectivelyConstant.value).isFalse()
         }
     }
@@ -233,6 +233,7 @@ class CodeBlockAnalyzerTest {
         private val pureSummary = FunctionSummary(
             deterministic = ReasonedBoolean.True("pure"),
             noSideEffects = ReasonedBoolean.True("pure"),
+            variableSummary = mapOf()
         )
 
         @Test
@@ -294,6 +295,7 @@ class CodeBlockAnalyzerTest {
         private val impureSummary = FunctionSummary(
             deterministic = ReasonedBoolean.True("det"),
             noSideEffects = ReasonedBoolean.False("side effects"),
+            variableSummary = mapOf()
         )
 
         @Test

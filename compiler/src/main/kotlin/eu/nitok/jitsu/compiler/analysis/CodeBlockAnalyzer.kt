@@ -102,18 +102,18 @@ class CodeBlockAnalyzer(
             }
         }
 
-        val variableSummaries = mutableMapOf<Variable, VariableSummary>()
+        val variableSummaries = mutableMapOf<String, VariableSummary>()
 
         for (param in function.parameters) {
             val state = localVariables[param.name.value]
             if (state != null) {
-                variableSummaries[param] = buildVariableSummary(state)
+                variableSummaries[param.name.value] = buildVariableSummary(state)
             }
         }
 
         for ((_, state) in localVariables) {
             if (fnParams.none { p -> p.name.value == state.variable.name.value }) {
-                variableSummaries[state.variable] = buildVariableSummary(state)
+                variableSummaries[state.variable.name.value] = buildVariableSummary(state)
             }
         }
         val functionSummary = FunctionSummary(
@@ -259,7 +259,7 @@ class CodeBlockAnalyzer(
         val call = op.asFunctionCall()
         val analyzedFunction = analyzeFunctionCall(call)
         op.target = call.target
-        op.type = call.type
+        if(call.target != null) op.type = call.type
         return analyzedFunction
     }
 
@@ -398,7 +398,7 @@ class CodeBlockAnalyzer(
         }
     }
 
-    private val typeContext: Map<String, Type> = localVariables.mapValues { it.value.narrowedType }
+    private val typeContext: Map<String, Type> get() = localVariables.mapValues { it.value.narrowedType }
 
     private fun buildVariableSummary(state: VariableState): VariableSummary {
         val effectivelyConstant: ReasonedBoolean =

@@ -1,97 +1,54 @@
 package eu.nitok.jitsu.backend.c
 
 import eu.nitok.jitsu.common.BitSize
-import eu.nitok.jitsu.common.indent
-import eu.nitok.jitsu.compiler.graph.Type
-import eu.nitok.jitsu.compiler.graph.TypeDefinition
+import eu.nitok.jitsu.compiler.bitcode.LowLevelType
 
 class TypeRegistry {
-    data class TypeEntry(val name: String, val heapAlloc: Boolean, val typeDef: String? = null)
-    private val typeInfo = mutableMapOf<Type, TypeEntry>()
+    private val typeInfo = mutableMapOf<LowLevelType, String>()
+    private val typedefs = mutableListOf<String>()
     private var synthNameIdx = 0
-    fun getTypeInfo(layout: Type, userDefinedName: String? = null): TypeEntry {
-        if(layout in typeInfo) {
-            return typeInfo[layout]!!
+
+    fun getUniqueName(type: LowLevelType): String {
+        return typeInfo[type]?:run {
+            val name = "type${synthNameIdx++}"
+            typedefs.add(toCTypedef(type, name))
+            typeInfo[type] = name
+            name
         }
-        val info = when (layout) {
-            is Type.Array -> mapArray(layout)
-            is Type.FunctionTypeSignature -> TODO()
-            Type.Null -> TODO()
-            Type.Boolean -> TypeEntry("bool", false)
-            is Type.Float -> mapFloat(layout)
-            is Type.Int -> mapInt(layout)
-            is Type.UInt -> mapUInt(layout)
-            is Type.StructuralInterface -> TODO()
-            is Type.TypeReference -> mapReferenceType(layout)
-            Type.Undefined -> TypeEntry("UNDEFINED", false)//TODO("Undefined types cannot be transpiled")
-            is Type.Union -> mapUnion(layout, userDefinedName)
-            is Type.Value -> getTypeInfo(layout.value.type)
-            is TypeDefinition.DirectTypeDefinition.Enum -> mapEnum(layout)
+    }
+
+    val typeDefs: String get() = typedefs.joinToString ("\n")
+
+    fun toCTypedef(type: LowLevelType, name: String): String {
+        return when(type) {
+            is LowLevelType.LLStruct -> "struct $name {\n ${type.fields.entries.joinToString("\n") {
+                "    ${formatType(it.key,it.value)};"
+            }} };"
+            is LowLevelType.LLUnion -> "union $name {\n ${type.members.entries.joinToString("\n") {
+                "    ${formatType(it.key,it.value)};"
+            }} };"
+            is LowLevelType.Custom -> toCTypedef(type.lowLevelType,name)
+            else -> "typedef ${formatType(name, type)};"
         }
-        typeInfo[layout] = info
-        return info
     }
 
-    private fun mapArray(layout: Type.Array): TypeEntry {
-        val name = uniqueName("${layout.elementType}_array")
-        val elementType = getTypeInfo(layout.elementType)
-        val elementsHeaped = elementType.heapAlloc
-        val arrayHeaped = layout.size == null //TODO: size>x => also heap
-        return TypeEntry(
-            name,
-            false,
-            typeDef = """
-struct $name {
-    size_t length;
-    ${getTypeInfo(layout.elementType).name}${if (elementsHeaped) "*" else ""}${if(arrayHeaped) "*" else ""} data${if(!arrayHeaped) "[${layout.size}]" else ""};
-}
-            """.trimIndent()
-        )
+    fun formatType(variable: String, type: LowLevelType): String {
+        return when(type) {
+            is LowLevelType.LLFixedArray -> formatType("($variable[])", type.elementType)
+            is LowLevelType.LLPointer<*> -> formatType("(*$variable)", type.pointeeType)
+            is LowLevelType.LLStruct -> "struct ${getUniqueName(type)} $variable"
+            LowLevelType.LLBool -> "bool $variable"
+            is LowLevelType.LLFloat -> "${formatFloat(type.size)} $variable"
+            is LowLevelType.LLInt -> "${formatInt(type.size)} $variable"
+            is LowLevelType.LLUInt -> "${formatUInt(type.size)} $variable"
+            is LowLevelType.LLUnion -> "union ${getUniqueName(type)} $variable"
+            is LowLevelType.Custom -> formatType(variable, type.lowLevelType)
+        }
     }
 
-    private fun mapEnum(layout: TypeDefinition.DirectTypeDefinition.Enum): TypeEntry {
-        return TypeEntry(
-            name = layout.name.value,
-            heapAlloc = false,
-            typeDef = """
-enum ${layout.name} {
-${indent(1, layout.constants.joinToString(", ") { it.name.value })}
-};
-            """.trimIndent()
-        )
-    }
 
-    private fun mapUnion(layout: Type.Union, userDefinedName: String?): TypeEntry {
-        val optionTypes = layout.options.map { getTypeInfo(it) }
-        val name =
-            userDefinedName?.let { uniqueName(it) } ?:
-            uniqueName("union_${optionTypes.joinToString("_") { it.name.replace(Regex("[ ()]"),"_") }}")
-        return TypeEntry(
-            name = "struct $name",
-            heapAlloc = false,
-            typeDef = """
-struct $name {
-    int option;
-    union {
-${indent(2, optionTypes.withIndex().joinToString("\n") { "${it.value.name} o${it.index};" })}
-    } value;
-};
-            """.trimIndent()
-        )
-    }
-
-    private fun uniqueName(string: String): String {
-        val exisitingNames = typeInfo.values.map { it.name }.toSet()
-        return if(!exisitingNames.contains(string)) string
-        else string + synthNameIdx++
-    }
-
-    private fun mapReferenceType(layout: Type.TypeReference): TypeEntry {
-        return getTypeInfo(layout.resolvedCache, layout.reference.value)
-    }
-
-    private fun mapInt(int: Type.Int): TypeEntry {
-        return TypeEntry(when(int.size) {
+    private fun formatInt(int: BitSize): String {
+        return when(int) {
             BitSize.BIT_1 -> "bool"
             BitSize.BIT_8 -> "signed char"
             BitSize.BIT_16 -> "signed int"
@@ -99,12 +56,12 @@ ${indent(2, optionTypes.withIndex().joinToString("\n") { "${it.value.name} o${it
             BitSize.BIT_64 -> "signed long long"
             BitSize.BIT_128 -> "signed __int128"
             BitSize.BIT_256 -> error("256 bit not supported by C")
-        }, false);
+        }
     }
 
 
-    private fun mapUInt(int: Type.UInt): TypeEntry {
-        return TypeEntry(when(int.size) {
+    private fun formatUInt(int: BitSize): String {
+        return when(int) {
             BitSize.BIT_1 -> "bool"
             BitSize.BIT_8 -> "unsigned char"
             BitSize.BIT_16 -> "unsigned int"
@@ -112,19 +69,18 @@ ${indent(2, optionTypes.withIndex().joinToString("\n") { "${it.value.name} o${it
             BitSize.BIT_64 -> "unsigned long long"
             BitSize.BIT_128 -> "unsigned __int128"
             BitSize.BIT_256 -> error("256 bit not supported by C")
-        }, false);
+        }
     }
 
-    private fun mapFloat(int: Type.Float): TypeEntry {
-        return TypeEntry(when(int.size) {
-            BitSize.BIT_1, BitSize.BIT_8, BitSize.BIT_16 -> TODO("C does not support ${int.size.bits} bit floats")
+    private fun formatFloat(int: BitSize): String {
+        return when(int) {
+            BitSize.BIT_1, BitSize.BIT_8, BitSize.BIT_16 -> TODO("C does not support ${int.bits} bit floats")
             BitSize.BIT_32 -> "float"
             BitSize.BIT_64 -> "double"
-            else -> "_Decimal${int.size.bits}"
-        }, false);
+            else -> "_Decimal${int.bits}"
+        }
     }
 
-    fun getTypedefs(): List<String> {
-        return typeInfo.values.distinctBy { it.name }.mapNotNull { it.typeDef }
-    }
 }
+
+private fun String.structify(): String = replace(Regex("[ ()]"), "_")

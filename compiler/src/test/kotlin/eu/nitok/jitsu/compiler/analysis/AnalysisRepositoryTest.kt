@@ -159,7 +159,7 @@ class AnalysisRepositoryTest {
         val foo = buildFunction("foo", instructions = listOf(decl))
         repo.analyzeAll(listOf(foo), messages)
 
-        val varEntry = repo.getVariableSummary(decl)
+        val varEntry = repo.getFunctionSummary(foo)?.variableSummary?.get(decl.name.value)
         assertThat(varEntry).isNotNull()
         assertThat(varEntry!!.effectivelyConstant.value).isTrue()
     }

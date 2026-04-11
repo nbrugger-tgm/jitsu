@@ -412,7 +412,7 @@ class ExpressionParserTest : ParsingTest() {
 
         @Test
         fun returnsNullForPunctuationOnly() {
-            val result = parseExpression(tokenize("[]"))
+            val result = parseExpression(tokenize("-"))
             assertThat(result).isNull()
         }
 

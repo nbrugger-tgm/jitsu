@@ -32,7 +32,7 @@ data class FunctionSummary(
 
     /** Names of functions called by this function (for serialization/display). */
     val callees: List<Function> = emptyList(),
-    val variableSummary: Map<Variable, VariableSummary>
+    val variableSummary: Map<String, VariableSummary>
 ) {
     /** A function is pure if it is deterministic and has no side effects. */
     val pure: Boolean get() = deterministic.value && noSideEffects.value
@@ -218,9 +218,9 @@ sealed interface AbstractValue {
 // --- Internal helpers ---
 
 private fun mergeVariableSummaries(
-    a: Map<Variable, VariableSummary>,
-    b: Map<Variable, VariableSummary>
-): Map<Variable, VariableSummary> {
+    a: Map<String, VariableSummary>,
+    b: Map<String, VariableSummary>
+): Map<String, VariableSummary> {
     val allKeys = a.keys + b.keys
     return allKeys.associateWith { key ->
         val modeA = a[key] ?: null

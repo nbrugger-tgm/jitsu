@@ -24,7 +24,7 @@ class ParserExtensionsTest : ParsingTest() {
             invalidObjectPlaceholder = placeholder
         ) {
             it.attempt(DefaultToken.LETTERS)?.value?.value
-        }
+        }?.elements
 
         @TestFactory
         fun shouldHandleInvalidInputs() = listOf(

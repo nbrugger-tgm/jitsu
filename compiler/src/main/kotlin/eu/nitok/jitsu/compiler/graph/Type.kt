@@ -163,7 +163,7 @@ sealed interface Type : Element {
     @Serializable
     data class Array(
         val elementType: Type,
-        val size: Expression?,
+        val size: kotlin.Int?,
         val dimensions: kotlin.Int = 1
     ) : Type {
 
@@ -175,7 +175,9 @@ sealed interface Type : Element {
             if (type !is Array) return ReasonedBoolean.False("$type is not an array and can therefore not be assigned to an array")
             val elementsAccept = this.elementType.acceptsInstanceOf(type.elementType)
             return if (elementsAccept.value) {
-                ReasonedBoolean.True("$type is an array with an assignable element type", elementsAccept)
+                if(this.size != null && type.size != this.size) {
+                    ReasonedBoolean.False("$this and $type have differing fixed sizes")
+                } else ReasonedBoolean.True("$type is an array with an assignable element type", elementsAccept)
             } else {
                 ReasonedBoolean.False(
                     "Element type of $type (${type.elementType}) is not compatible with ${this.elementType}",
@@ -185,7 +187,7 @@ sealed interface Type : Element {
         }
 
         @Transient
-        override val children: List<Element> = listOfNotNull(elementType, size)
+        override val children: List<Element> = listOfNotNull(elementType)
 
         override fun toString(): String {
             return "$elementType[${size?.toString() ?: ""}]"

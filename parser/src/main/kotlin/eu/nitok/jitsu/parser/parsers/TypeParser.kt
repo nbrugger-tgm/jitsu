@@ -14,6 +14,8 @@ import eu.nitok.jitsu.common.CompilerMessage.Hint
 import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.parser.*
 import eu.nitok.jitsu.common.locatedAt
+import eu.nitok.jitsu.parser.ast.ExpressionNode
+import javax.lang.model.element.TypeElement
 import kotlin.jvm.optionals.getOrNull
 
 
@@ -49,7 +51,10 @@ fun parseArrayType(
     val openBrace = tokens.attempt(DefaultToken.SQUARE_BRACKET_OPEN) ?: return null;
     tokens.skipWhitespace()
     val messages = CompilerMessages()
-    val fixedSize = parseExpression(tokens)
+    val fixedSize = parseExpression(tokens)?.let{ if(it is ExpressionNode.NumberLiteralNode.IntegerLiteralNode) it else {
+        messages.error("Currently only number literals are valid compile-time array sizes", it.location)//Use compile time constant resolution when available
+        null
+    } }
 
     tokens.skipWhitespace()
     val closeBrace = tokens.attempt(DefaultToken.SQUARE_BRACKET_CLOSED)
@@ -196,6 +201,13 @@ private fun parseSingleType(tokens: Tokens): TypeNode? {
     tokens.keyword("boolean")?.let {
         return TypeNode.BooleanTypeNode(it)
     }
+
+
+    val messages = CompilerMessages()
+    parseEnclosedType(tokens, messages)?.let {
+        return it
+    }
+
     parseBitsizedNumberType(tokens)?.let {
         return it
     }
@@ -205,7 +217,6 @@ private fun parseSingleType(tokens: Tokens): TypeNode? {
         return structuralInterface
     }
     val typeReference = parseIdentifier(tokens) ?: return null
-    val messages = CompilerMessages()
     var generics = tokens.enclosedRepetition(
         DefaultToken.LEFT_ANGLE_BRACKET,
         DefaultToken.COMMA,
@@ -219,6 +230,20 @@ private fun parseSingleType(tokens: Tokens): TypeNode? {
     val namedType = TypeNode.NameTypeNode(typeReference, generics, typeReference.location)
     return namedType.withMessages(messages)
 }
+
+private fun parseEnclosedType(tokens: Tokens, messages: CompilerMessages): TypeNode? {
+    val type = tokens.attempt {
+        val openKw = tokens.attempt(DefaultToken.BRACKET_OPEN)?: return@attempt null
+        tokens.skipWhitespace()
+        parseType(tokens)?.let { it to openKw }
+    }?: return null
+    tokens.skipWhitespace()
+    tokens.attempt(DefaultToken.BRACKET_CLOSED) ?: run {
+        messages.error("Expected closing ')'", tokens.location.toRange(), Hint("Type grouping started here",type.second.location))
+    }
+    return type.first.withMessages(messages)
+}
+
 
 private fun parseBitsizedNumberType(tokens: Tokens): TypeNode? {
     return tokens.attempt {

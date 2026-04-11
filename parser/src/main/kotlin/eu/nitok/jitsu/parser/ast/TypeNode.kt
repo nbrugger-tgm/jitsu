@@ -3,6 +3,7 @@ package eu.nitok.jitsu.parser.ast
 import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.common.Located
 import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.parser.ast.ExpressionNode.NumberLiteralNode.IntegerLiteralNode
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -60,7 +61,7 @@ sealed interface TypeNode : AstNode {
     @Serializable
     class ArrayTypeNode(
         @SerialName("type_definition") val type: TypeNode,
-        val fixedSize: ExpressionNode?,
+        val fixedSize: IntegerLiteralNode?,
         override val location: Range
     ) : TypeNode, AstNodeImpl() {
         override val children: List<AstNode>

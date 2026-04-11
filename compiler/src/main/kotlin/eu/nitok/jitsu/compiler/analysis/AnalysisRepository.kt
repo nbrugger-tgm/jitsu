@@ -7,7 +7,6 @@ import eu.nitok.jitsu.common.CompilerMessages
 
 class AnalysisRepository {
     private val functionSummaries: MutableMap<Function, FunctionSummary> = mutableMapOf()
-    private val variableSummaries: MutableMap<Variable, VariableSummary> = mutableMapOf()
     private val useSiteInfos: MutableMap<Expression.VariableReference, UseSiteInfo> = mutableMapOf()
 
     fun analyzeAll(functions: Collection<Function>, messages: CompilerMessages) {
@@ -20,7 +19,6 @@ class AnalysisRepository {
     }
 
     fun getFunctionSummary(function: Function): FunctionSummary? = functionSummaries[function]
-    fun getVariableSummary(variable: Variable): VariableSummary? = variableSummaries[variable]
     fun getUseSiteInfo(ref: Expression.VariableReference): UseSiteInfo? = useSiteInfos[ref]
 
     /**
@@ -114,7 +112,6 @@ class AnalysisRepository {
             val analyzer = CodeBlockAnalyzer(fn, this::getFunctionSummary, messages)
             val result = analyzer.analyze()
             functionSummaries[fn] = result.functionSummary
-            variableSummaries.putAll(result.functionSummary.variableSummary)
             useSiteInfos.putAll(result.useSiteInfos)
         } else {
             for (fn in scc) {
@@ -146,7 +143,6 @@ class AnalysisRepository {
                     }
                 }
 
-                variableSummaries.putAll(result.functionSummary.variableSummary)
                 useSiteInfos.putAll(result.useSiteInfos)
             }
 
@@ -154,7 +150,6 @@ class AnalysisRepository {
                 val analyzer = CodeBlockAnalyzer(fn, { getFunctionSummary(it) }, messages)
                 val result = analyzer.analyze()
                 functionSummaries[fn] = result.functionSummary
-                variableSummaries.putAll(result.functionSummary.variableSummary)
                 useSiteInfos.putAll(result.useSiteInfos)
             }
         }

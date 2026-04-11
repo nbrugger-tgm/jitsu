@@ -282,7 +282,8 @@ class AnalysisTypesTest {
                 declaredType = i32,
                 narrowedType = i32,
                 effectivelyConstant = ReasonedBoolean.True("it is how it is"),
-                compileTimeValue = AbstractValue.Const("42", valueType = i32)
+                compileTimeValue = AbstractValue.Const("42", valueType = i32),
+                ownershipState = OwnershipState.OWNS
             )
             val serialized = json.encodeToString(VariableSummary.serializer(), summary)
             val deserialized = json.decodeFromString(VariableSummary.serializer(), serialized)
