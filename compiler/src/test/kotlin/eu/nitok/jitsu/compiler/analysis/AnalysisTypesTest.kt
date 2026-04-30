@@ -68,7 +68,7 @@ class AnalysisTypesTest {
         @Test
         fun `optimistic seed is deterministic`() {
             val summary = FunctionSummary.optimistic(listOf("x", "y"))
-            assertThat(summary.deterministic.value).isTrue()
+            assertThat(summary.returnSummary!!.deterministic.value).isTrue()
         }
 
         @Test
@@ -94,7 +94,7 @@ class AnalysisTypesTest {
         @Test
         fun `optimistic seed has empty parameter influence`() {
             val summary = FunctionSummary.optimistic(listOf("x"))
-            assertThat(summary.parameterInfluence).isEmpty()
+            assertThat(summary.returnSummary!!.dependsOnParameters).isEmpty()
         }
 
         @Test
@@ -116,10 +116,12 @@ class AnalysisTypesTest {
         fun `refining deterministic with non-deterministic produces non-deterministic`() {
             val optimistic = FunctionSummary.optimistic(listOf("x"))
             val nonDet = optimistic.copy(
-                deterministic = ReasonedBoolean.False("callee is non-deterministic")
+                returnSummary = ReturnSummary(
+                    deterministic = ReasonedBoolean.False("callee is non-deterministic")
+                )
             )
             val refined = optimistic.refineWith(nonDet)
-            assertThat(refined.deterministic.value).isFalse()
+            assertThat(refined.returnSummary!!.deterministic.value).isFalse()
         }
 
         @Test
@@ -132,10 +134,20 @@ class AnalysisTypesTest {
 
         @Test
         fun `refining with parameter influence grows the set`() {
-            val a = FunctionSummary.optimistic(listOf("x", "y")).copy(parameterInfluence = setOf("x"))
-            val b = FunctionSummary.optimistic(listOf("x", "y")).copy(parameterInfluence = setOf("y"))
+            val a = FunctionSummary.optimistic(listOf("x", "y")).copy(
+                returnSummary = ReturnSummary(
+                    dependsOnParameters = setOf("x"),
+                    deterministic = ReasonedBoolean.True("Optimistic")
+                )
+            )
+            val b = FunctionSummary.optimistic(listOf("x", "y")).copy(
+                returnSummary = ReturnSummary(
+                    dependsOnParameters = setOf("y"),
+                    deterministic = ReasonedBoolean.True("Optimistic")
+                )
+            )
             val refined = a.refineWith(b)
-            assertThat(refined.parameterInfluence).containsExactlyInAnyOrder("x", "y")
+            assertThat(refined.returnSummary!!.dependsOnParameters).containsExactlyInAnyOrder("x", "y")
         }
 
         @Test
@@ -152,7 +164,10 @@ class AnalysisTypesTest {
         @Test
         fun `double refinement is idempotent`() {
             val a = FunctionSummary.optimistic(listOf("x")).copy(
-                parameterInfluence = setOf("x"),
+                returnSummary = ReturnSummary(
+                    dependsOnParameters = setOf("x"),
+                    deterministic = ReasonedBoolean.True("Optimistic")
+                ),
                 parameterModes = mapOf("x" to ParameterMode.MOVE)
             )
             val once = a.refineWith(a)
@@ -167,14 +182,16 @@ class AnalysisTypesTest {
                 returnSummary = ReturnSummary(
                     possibleTypes = listOf(i32),
                     compileTimeValue = AbstractValue.Const("5", valueType = i32),
-                    dependsOnParameters = emptySet()
+                    dependsOnParameters = emptySet(),
+                    deterministic = ReasonedBoolean.True("optimistic")
                 )
             )
             val b = FunctionSummary.optimistic(listOf()).copy(
                 returnSummary = ReturnSummary(
                     possibleTypes = listOf(Type.Boolean),
                     compileTimeValue = AbstractValue.Const("true", valueType = Type.Boolean),
-                    dependsOnParameters = emptySet()
+                    dependsOnParameters = emptySet(),
+                    deterministic = ReasonedBoolean.True("optimistic")
                 )
             )
             val refined = a.refineWith(b)
@@ -196,7 +213,9 @@ class AnalysisTypesTest {
         @Test
         fun `different determinism is not structurally equal`() {
             val a = FunctionSummary.optimistic(listOf("x"))
-            val b = a.copy(deterministic = ReasonedBoolean.False(""))
+            val b = a.copy(returnSummary = ReturnSummary(
+                deterministic = ReasonedBoolean.False("")
+            ))
             assertThat(a.structurallyEquals(b)).isFalse()
         }
     }
@@ -228,8 +247,8 @@ class AnalysisTypesTest {
     inner class ReturnSummaryMergeTest {
         @Test
         fun `merging with same type keeps single entry`() {
-            val a = ReturnSummary(listOf(i32), AbstractValue.Const("5", valueType = i32), setOf("x"))
-            val b = ReturnSummary(listOf(i32), AbstractValue.Const("5", valueType = i32), setOf("y"))
+            val a = ReturnSummary(listOf(i32), AbstractValue.Const("5", valueType = i32), setOf("x"), ReasonedBoolean.True(""))
+            val b = ReturnSummary(listOf(i32), AbstractValue.Const("5", valueType = i32), setOf("y"), ReasonedBoolean.True(""))
             val merged = a.mergeWith(b)
             // distinct() means duplicate i32 is removed
             assertThat(merged.possibleTypes).containsExactly(i32)
@@ -239,8 +258,8 @@ class AnalysisTypesTest {
 
         @Test
         fun `merging with different const values produces Unknown`() {
-            val a = ReturnSummary(listOf(i32), AbstractValue.Const("5", valueType = i32), emptySet())
-            val b = ReturnSummary(listOf(i32), AbstractValue.Const("3", valueType = i32), emptySet())
+            val a = ReturnSummary(listOf(i32), AbstractValue.Const("5", valueType = i32), emptySet(), ReasonedBoolean.True(""))
+            val b = ReturnSummary(listOf(i32), AbstractValue.Const("3", valueType = i32), emptySet(), ReasonedBoolean.True(""))
             val merged = a.mergeWith(b)
             assertThat(merged.compileTimeValue).isEqualTo(AbstractValue.Unknown)
         }
@@ -269,7 +288,8 @@ class AnalysisTypesTest {
             val summary = ReturnSummary(
                 possibleTypes = listOf(i32, Type.Boolean),
                 compileTimeValue = AbstractValue.Const("5", valueType = i32),
-                dependsOnParameters = setOf("x", "y")
+                dependsOnParameters = setOf("x", "y"),
+                deterministic =  ReasonedBoolean.True("abc")
             )
             val serialized = json.encodeToString(ReturnSummary.serializer(), summary)
             val deserialized = json.decodeFromString(ReturnSummary.serializer(), serialized)
@@ -299,7 +319,7 @@ class AnalysisTypesTest {
             val serialized = json.encodeToString(FunctionSummary.serializer(), summary)
             val deserialized = json.decodeFromString(FunctionSummary.serializer(), serialized)
             // Transient fields (ReasonedBoolean) reset to defaults
-            assertThat(deserialized.deterministic.value).isTrue()
+            assertThat(deserialized.returnSummary!!.deterministic.value).isTrue()
             assertThat(deserialized.noSideEffects.value).isTrue()
             assertThat(deserialized.parameterModes).containsExactlyInAnyOrderEntriesOf(mapOf("x" to ParameterMode.BORROW))
         }

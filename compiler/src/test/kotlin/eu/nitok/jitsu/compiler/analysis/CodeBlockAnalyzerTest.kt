@@ -72,7 +72,7 @@ class CodeBlockAnalyzerTest {
         fun `empty function is deterministic`() {
             val fn = buildFunction()
             val result = analyze(fn)
-            assertThat(result.functionSummary.deterministic.value).isTrue()
+            assertThat(result.functionSummary.returnSummary!!.deterministic.value).isTrue()
         }
 
         @Test
@@ -107,7 +107,7 @@ class CodeBlockAnalyzerTest {
                 instructions = listOf(ret(constInt(5)))
             )
             val result = analyze(fn)
-            assertThat(result.functionSummary.deterministic.value).isTrue()
+            assertThat(result.functionSummary.returnSummary!!.deterministic.value).isTrue()
         }
 
         @Test
@@ -147,7 +147,7 @@ class CodeBlockAnalyzerTest {
                 instructions = listOf(ret(ref))
             )
             val result = analyze(fn)
-            assertThat(result.functionSummary.deterministic.value).isTrue()
+            assertThat(result.functionSummary.returnSummary!!.deterministic.value).isTrue()
         }
 
         @Test
@@ -213,7 +213,7 @@ class CodeBlockAnalyzerTest {
                 instructions = listOf(decl, ret(ref))
             )
             val result = analyze(fn)
-            assertThat(result.functionSummary.deterministic.value).isTrue()
+            assertThat(result.functionSummary.returnSummary!!.deterministic.value).isTrue()
         }
 
         @Test
@@ -231,7 +231,7 @@ class CodeBlockAnalyzerTest {
     inner class PureCallee {
 
         private val pureSummary = FunctionSummary(
-            deterministic = ReasonedBoolean.True("pure"),
+            returnSummary = ReturnSummary(deterministic = ReasonedBoolean.True("pure")),
             noSideEffects = ReasonedBoolean.True("pure"),
             variableSummary = mapOf()
         )
@@ -252,7 +252,7 @@ class CodeBlockAnalyzerTest {
                 instructions = listOf(Instruction.Return(callInstr, dummyRange))
             )
             val result = analyze(fn) { if (it == calleeFunc) pureSummary else null }
-            assertThat(result.functionSummary.deterministic.value).isTrue()
+            assertThat(result.functionSummary.returnSummary!!.deterministic.value).isTrue()
         }
 
         @Test
@@ -293,7 +293,7 @@ class CodeBlockAnalyzerTest {
     inner class ImpureCallee {
 
         private val impureSummary = FunctionSummary(
-            deterministic = ReasonedBoolean.True("det"),
+            returnSummary = ReturnSummary(deterministic = ReasonedBoolean.True("det")),
             noSideEffects = ReasonedBoolean.False("side effects"),
             variableSummary = mapOf()
         )

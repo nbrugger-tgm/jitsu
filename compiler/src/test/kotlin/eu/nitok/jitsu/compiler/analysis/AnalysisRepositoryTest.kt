@@ -53,7 +53,7 @@ class AnalysisRepositoryTest {
         repo.analyzeAll(listOf(foo), messages)
         val summary = repo.getFunctionSummary(foo)
         assertThat(summary).isNotNull()
-        assertThat(summary!!.deterministic.value).isTrue()
+        assertThat(summary!!.returnSummary!!.deterministic.value).isTrue()
         assertThat(summary.noSideEffects.value).isTrue()
     }
 
@@ -64,8 +64,8 @@ class AnalysisRepositoryTest {
         repo.analyzeAll(listOf(foo, bar), messages)
         assertThat(repo.getFunctionSummary(foo)).isNotNull()
         assertThat(repo.getFunctionSummary(bar)).isNotNull()
-        assertThat(repo.getFunctionSummary(foo)!!.deterministic.value).isTrue()
-        assertThat(repo.getFunctionSummary(bar)!!.deterministic.value).isTrue()
+        assertThat(repo.getFunctionSummary(foo)!!.returnSummary!!.deterministic.value).isTrue()
+        assertThat(repo.getFunctionSummary(bar)!!.returnSummary!!.deterministic.value).isTrue()
     }
 
     @Test
@@ -80,8 +80,8 @@ class AnalysisRepositoryTest {
 
         assertThat(repo.getFunctionSummary(foo)).isNotNull()
         assertThat(repo.getFunctionSummary(bar)).isNotNull()
-        assertThat(repo.getFunctionSummary(foo)!!.deterministic.value).isTrue()
-        assertThat(repo.getFunctionSummary(bar)!!.deterministic.value).isTrue()
+        assertThat(repo.getFunctionSummary(foo)!!.returnSummary!!.deterministic.value).isTrue()
+        assertThat(repo.getFunctionSummary(bar)!!.returnSummary!!.deterministic.value).isTrue()
     }
 
     @Test
@@ -138,8 +138,8 @@ class AnalysisRepositoryTest {
 
         repo.analyzeAll(listOf(foo, bar), messages)
 
-        assertThat(repo.getFunctionSummary(foo)!!.deterministic.value).isTrue()
-        assertThat(repo.getFunctionSummary(bar)!!.deterministic.value).isTrue()
+        assertThat(repo.getFunctionSummary(foo)!!.returnSummary!!.deterministic.value).isTrue()
+        assertThat(repo.getFunctionSummary(bar)!!.returnSummary!!.deterministic.value).isTrue()
     }
 
     @Test

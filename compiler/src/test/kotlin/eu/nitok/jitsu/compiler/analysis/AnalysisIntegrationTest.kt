@@ -10,7 +10,15 @@ import java.net.URI
 
 class AnalysisIntegrationTest {
 
-    private fun buildFile(source: String) = buildGraph(parseFile(source, URI("test://integration")))
+    private fun buildFile(source: String): JitsuFile {
+        val ast = parseFile(source, URI("test://sourcefile.jit"))
+        ast.sequence().forEach {
+            if(it.errors.isNotEmpty()) throw IllegalArgumentException("Syntax error(s)! ${it.errors.joinToString("\n")}")
+        }
+        val graph = buildGraph(ast)
+        if(graph.messages.errors.isNotEmpty()) throw IllegalArgumentException("Compilation error(s)! ${graph.messages.errors.joinToString("\n")}")
+        return graph
+    }
 
     @Test
     fun `pure function returning constant gets deterministic summary`() {
@@ -19,7 +27,7 @@ class AnalysisIntegrationTest {
 
         val fn = file.sequence().filterIsInstance<Function>().first()
         assertThat(fn.summary).isNotNull()
-        assertThat(fn.summary!!.deterministic.value).isTrue()
+        assertThat(fn.summary!!.returnSummary!!.deterministic.value).isTrue()
         assertThat(fn.summary!!.noSideEffects.value).isTrue()
         assertThat(fn.summary!!.pure).isTrue()
     }
@@ -29,36 +37,36 @@ class AnalysisIntegrationTest {
         val file = buildFile("fn identity(x: i32): i32 { return x; }")
         val fn = file.sequence().filterIsInstance<Function>().first()
         assertThat(fn.summary).isNotNull()
-        assertThat(fn.summary!!.deterministic.value).isTrue()
-        assertThat(fn.summary!!.parameterInfluence).contains("x")
+        assertThat(fn.summary!!.returnSummary!!.deterministic.value).isTrue()
+        assertThat(fn.summary!!.returnSummary!!.dependsOnParameters).contains("x")
     }
 
     @Test
     fun `function with parameter returns parameter-dependent value`() {
-        val file = buildFile("fn identity(x: i32): i32 { return x + 20; }")
+        val file = buildFile("fn identity(x: i32): i32 { return x + 20; } native fn plus(x: i32,y: i32): i32")
         val fn = file.sequence().filterIsInstance<Function>().first()
         assertThat(fn.summary).isNotNull()
-        assertThat(fn.summary!!.deterministic.value).isTrue()
-        assertThat(fn.summary!!.parameterInfluence).containsExactlyInAnyOrder("x")
+        assertThat(fn.summary!!.returnSummary!!.deterministic.value).isTrue()
+        assertThat(fn.summary!!.returnSummary!!.dependsOnParameters).containsExactlyInAnyOrder("x")
     }
 
 
     @Test
     fun `function with multiple parameters returns parameter-dependent value`() {
-        val file = buildFile("fn identity(x: i32,y: i32): i32 { return x + y; }")
+        val file = buildFile("fn identity(x: i32,y: i32): i32 { return x + y; } native fn plus(x: i32,y: i32): i32")
         val fn = file.sequence().filterIsInstance<Function>().first()
         assertThat(fn.summary).isNotNull()
-        assertThat(fn.summary!!.deterministic.value).isTrue()
-        assertThat(fn.summary!!.parameterInfluence).containsExactlyInAnyOrder("x","y")
+        assertThat(fn.summary!!.returnSummary!!.deterministic.value).isTrue()
+        assertThat(fn.summary!!.returnSummary!!.dependsOnParameters).containsExactlyInAnyOrder("x","y")
     }
 
     @Test
     fun `function with multiple parameters returns only parameter-dependent value`() {
-        val file = buildFile("fn identity(x: i32,y: i32): i32 { return x + 30; }")
+        val file = buildFile("fn identity(x: i32,y: i32): i32 { return x + 30; } native fn plus(x: i32,y: i32): i32")
         val fn = file.sequence().filterIsInstance<Function>().first()
         assertThat(fn.summary).isNotNull()
-        assertThat(fn.summary!!.deterministic.value).isTrue()
-        assertThat(fn.summary!!.parameterInfluence).containsExactlyInAnyOrder("x")
+        assertThat(fn.summary!!.returnSummary!!.deterministic.value).isTrue()
+        assertThat(fn.summary!!.returnSummary!!.dependsOnParameters).containsExactlyInAnyOrder("x")
     }
 
     @Test
@@ -74,7 +82,7 @@ class AnalysisIntegrationTest {
         assertThat(foo.summary).isNotNull()
         assertThat(bar.summary).isNotNull()
         assertThat(foo.summary!!.callees).containsExactlyInAnyOrder(bar)
-        assertThat(bar.summary!!.deterministic.value).isTrue()
+        assertThat(bar.summary!!.returnSummary!!.deterministic.value).isTrue()
     }
 
     @Test
@@ -118,11 +126,12 @@ class AnalysisIntegrationTest {
                 var sum: i32 = a + b;
                 return sum;
             }
+            native fn plus(a: i32, b: i32): i32
         """.trimIndent())
         val fn = file.sequence().filterIsInstance<Function>().first()
         assertThat(fn.summary).isNotNull()
-        assertThat(fn.summary!!.deterministic.value).isTrue()
-        assertThat(fn.summary!!.parameterInfluence).containsExactlyInAnyOrder("a", "b")
+        assertThat(fn.summary!!.returnSummary!!.deterministic.value).isTrue()
+        assertThat(fn.summary!!.returnSummary!!.dependsOnParameters).containsExactlyInAnyOrder("a", "b")
     }
 
     // === Access resolution regression tests ===
@@ -177,18 +186,20 @@ class AnalysisIntegrationTest {
     fun `simple_syntax_jit variable and function accesses resolve`() {
         val source = """
             fn main():u32 {
-                var input = 23470000;
+                var input = 10;
                 var number : u32 | i32 = input;
                 var return1 = test(number, number);
                 var return2 = testGeneric(number, number);
                 return return1 + return2;
             }
-            fn test(a: u32 | i64, b: u64 | i32): u32 {
+            fn test(a: u32 | i64, b: u32 | i32): u32 {
                 return a + b;
             }
-            fn testGeneric(a: u32 | i64, b: u64 | i32): u32 {
+            type Or<A,B> = A | B;
+            fn testGeneric(a: Or<u32, i64>, b: Or<u32, i32>): u32 {
                 return a + b;
             }
+            native fn plus(x: i64,y: i64): u32
         """.trimIndent()
         val file = buildFile(source)
         val mainFn = file.sequence().filterIsInstance<Function>().first { it.name?.value == "main" }

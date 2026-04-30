@@ -41,12 +41,12 @@ class CodeBlockAnalyzer(
     private val returnPaths: MutableList<ReturnPathInfo> = mutableListOf()
     private val callees: MutableList<Function> = mutableListOf()
     private var hasSideEffects: ReasonedBoolean = ReasonedBoolean.True("No side effects observed yet")
-    private var isDeterministic: ReasonedBoolean = ReasonedBoolean.True("No non-determinism observed yet")
 
     private data class ReturnPathInfo(
         val type: Type,
         val compileTimeValue: AbstractValue,
-        val paramDeps: Set<String>
+        val paramDeps: Set<String>,
+        val deterministic: ReasonedBoolean
     )
 
     fun analyze(): AnalysisResult {
@@ -76,11 +76,6 @@ class CodeBlockAnalyzer(
         }
 
         val fnParams = function.parameters
-        val parameterInfluence: Set<String> = returnPaths
-            .asSequence()
-            .flatMap { path -> path.paramDeps }
-            .filter { dep -> fnParams.any { p -> p.name.value == dep } }//Why is this needed? what else besides parameters is in this stream
-            .toSet()
 
         val returnSummary: ReturnSummary? = if (returnPaths.isEmpty()) {
             null
@@ -89,7 +84,8 @@ class CodeBlockAnalyzer(
                 ReturnPathInfo(
                     type = path.type,//What is this needed for an if it is needed why aren't the types merged?
                     compileTimeValue = acc.compileTimeValue.join(path.compileTimeValue),
-                    paramDeps = acc.paramDeps + path.paramDeps
+                    paramDeps = acc.paramDeps + path.paramDeps,
+                    deterministic = acc.deterministic.and(path.deterministic)
                 )
             }.let { merged ->
                 ReturnSummary(
@@ -97,7 +93,8 @@ class CodeBlockAnalyzer(
                     compileTimeValue = merged.compileTimeValue,
                     dependsOnParameters = merged.paramDeps
                         .filter { dep -> fnParams.any { p -> p.name.value == dep } }
-                        .toSet()
+                        .toSet(),//Why is this needed? what else besides parameters is in this stream
+                    deterministic = merged.deterministic
                 )
             }
         }
@@ -117,12 +114,10 @@ class CodeBlockAnalyzer(
             }
         }
         val functionSummary = FunctionSummary(
-            deterministic = isDeterministic,
             noSideEffects = hasSideEffects,
             parameterModes = parameterModes,
-            parameterInfluence = parameterInfluence,//Why do we have parameterInfluence and returnSummary.dependsOnParameters seems redundant
             returnSummary = returnSummary,
-            callees = callees.distinct(),//string does not suffice here? How would that deal with overloads
+            callees = callees.distinct(),
             variableSummary = variableSummaries
         )
 
@@ -217,7 +212,8 @@ class CodeBlockAnalyzer(
             ReturnPathInfo(
                 type = exprResult.type,
                 compileTimeValue = exprResult.constValue,
-                paramDeps = exprResult.paramDeps
+                paramDeps = exprResult.paramDeps,
+                deterministic = exprResult.deterministic
             )
         )
     }
@@ -300,42 +296,33 @@ class CodeBlockAnalyzer(
     }
 
     private fun analyzeFunctionCall(call: Instruction.FunctionCall): ExpressionResult {
-        val argResults = call.callParameters.map { analyzeExpression(it) }
+        val argumentExpressions = call.callParameters.map { analyzeExpression(it) }
 
-        if (call.target == null) {
-            val parameterTypes = argResults.mapIndexed { i, result ->
-                Located(result.type, call.callParameters[i].location)
-            }.toTypedArray()
-            val resolvedTarget = call.scope.resolveFunction(call.reference, parameterTypes, messages)
-            if (resolvedTarget != null) {
-                call.target = resolvedTarget
-                resolvedTarget.accessToSelf.add(call)
-            }
-        }
-        val target = call.target
-        if (target != null) callees.add(target)
+        val target = resolveFunctionCall(call, argumentExpressions)
 
-        val outputInfluencingParams = call.target?.summary?.let {
-            it.parameterInfluence
-                .map { paramName -> call.target?.parameters?.indexOfFirst { it.name.value == paramName } }
-                .filterNotNull()
-        } ?: argResults.withIndex().map { it.index } //if target doesn't exist assume all parameters to be return value infliuencing
+        val outputInfluencingParams = target?.summary?.let { targetSummary ->
+            targetSummary.returnSummary?.dependsOnParameters
+                ?.map { paramName -> target.parameters.indexOfFirst { it.name.value == paramName } }
+        } ?: argumentExpressions.withIndex().map { it.index } //if target doesn't exist assume all parameters to be return value influencing
 
-        val areOutputInfluencingArgsDeterministic = argResults.asSequence()
+        val areOutputInfluencingArgsDeterministic = argumentExpressions.asSequence()
             .filterIndexed { index, _ -> outputInfluencingParams.contains(index) }
             .fold(ReasonedBoolean.True("No arguments") as ReasonedBoolean) { acc, arg ->
                 acc.and(arg.deterministic)
             }
-        val allParamDeps = argResults.asSequence()
+        val allParamDeps = argumentExpressions.asSequence()
             .filterIndexed { index, _ -> outputInfluencingParams.contains(index) }
             .flatMap { it.paramDeps }
             .toSet()
+        val returnType = call.calculateType(typeContext, messages) ?: run {
+            messages.error("Expected value but $call calls void function", call.location)
+            Type.Undefined
+        }
+        val targetSummary = target?.let{ calleeOracle(it) }
+        val deterministic = targetSummary?.returnSummary?.deterministic?.and(areOutputInfluencingArgsDeterministic)?:areOutputInfluencingArgsDeterministic
 
         return if (target != null) {
-            val targetSummary = calleeOracle(target)
             if (targetSummary != null) {
-                val deterministic = targetSummary.deterministic.and(areOutputInfluencingArgsDeterministic)
-
                 if (!targetSummary.noSideEffects.value) {
                     hasSideEffects = hasSideEffects.and(
                         False(
@@ -345,50 +332,21 @@ class CodeBlockAnalyzer(
                         )
                     )
                 }
-                if (!targetSummary.deterministic.value) {
-                    //TODO: Methods inside a deterministic method can be non-deterministic as long as the return value is not influenced by the call result
-                    isDeterministic = isDeterministic.and(
-                        False(
-                            "'${call.reference.value}' is non-deterministic",
-                            listOf(CompilerMessage.Hint("${call.reference.value} is called here", call.location)),
-                            listOf(null to targetSummary.deterministic)
-                        )
-                    )
-                }
-
-                val returnType = target.returnType?.value ?: Type.Null
-
-                ExpressionResult(
-                    type = returnType,
-                    deterministic = deterministic,
-                    constValue = AbstractValue.Unknown,
-                    paramDeps = allParamDeps
-                )
             } else {
                 hasSideEffects = hasSideEffects.and(
                     ReasonedBoolean.False("Target '${call.reference.value}' has no known summary")
                 )
-                isDeterministic = isDeterministic.and(
-                    ReasonedBoolean.True("Target '${call.reference.value}' has no known summary")
-                )
-
-                val returnType = call.calculateType(typeContext, messages) ?: Type.Undefined
-                ExpressionResult(
-                    type = returnType,
-                    deterministic = ReasonedBoolean.True("Unknown target '${call.reference.value}'"),
-                    constValue = AbstractValue.Unknown,
-                    paramDeps = allParamDeps
-                )
             }
+            ExpressionResult(
+                type = returnType,
+                deterministic = deterministic,
+                constValue = targetSummary?.returnSummary?.compileTimeValue?:AbstractValue.Unknown,
+                paramDeps = allParamDeps
+            )
         } else {
             hasSideEffects = hasSideEffects.and(
                 ReasonedBoolean.False("Unresolved target '${call.reference.value}'")
             )
-            isDeterministic = isDeterministic.and(
-                ReasonedBoolean.True("Unresolved target '${call.reference.value}'")
-            )
-
-            val returnType = call.calculateType(typeContext, messages) ?: Type.Undefined
             ExpressionResult(
                 type = returnType,
                 deterministic = ReasonedBoolean.True("Unresolved target '${call.reference.value}'"),
@@ -396,6 +354,24 @@ class CodeBlockAnalyzer(
                 paramDeps = allParamDeps
             )
         }
+    }
+
+    private fun resolveFunctionCall(
+        call: Instruction.FunctionCall,
+        argResults: List<ExpressionResult>
+    ): Function? {
+        if (call.target != null) {
+            return call.target
+        }
+        val argumentTypes = argResults.mapIndexed { i, result ->
+            Located(result.type, call.callParameters[i].location)
+        }.toTypedArray()
+        val resolvedTarget = call.scope.resolveFunction(call.reference, argumentTypes, messages)
+        if (resolvedTarget != null) {
+            call.target = resolvedTarget
+            resolvedTarget.accessToSelf.add(call)
+        }
+        return resolvedTarget;
     }
 
     private val typeContext: Map<String, Type> get() = localVariables.mapValues { it.value.narrowedType }

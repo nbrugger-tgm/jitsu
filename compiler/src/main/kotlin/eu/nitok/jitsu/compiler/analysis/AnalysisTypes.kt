@@ -15,17 +15,11 @@ import kotlin.collections.mutableMapOf
  */
 @Serializable
 data class FunctionSummary(
-    /** Whether same inputs always produce the same output. */
-    val deterministic: ReasonedBoolean,
-
     /** Whether the function has no observable effects beyond its return value. */
     val noSideEffects: ReasonedBoolean,
 
     /** BORROW/MOVE mode for each parameter by name. */
     val parameterModes: Map<String, ParameterMode> = emptyMap(),
-
-    /** Which parameters influence the return value. */
-    val parameterInfluence: Set<String> = emptySet(),
 
     /** Return value characteristics. Null for void functions. */
     val returnSummary: ReturnSummary? = null,
@@ -35,7 +29,7 @@ data class FunctionSummary(
     val variableSummary: Map<String, VariableSummary>
 ) {
     /** A function is pure if it is deterministic and has no side effects. */
-    val pure: Boolean get() = deterministic.value && noSideEffects.value
+    val pure: Boolean get() = (returnSummary?.deterministic?.value?:true) && noSideEffects.value
 
     companion object {
         /**
@@ -43,13 +37,10 @@ data class FunctionSummary(
          * Must-properties start at their best value; may-properties start empty.
          */
         fun optimistic(parameterNames: List<String>): FunctionSummary {
-            val optimisticDeterministic = ReasonedBoolean.True("Optimistic seed: assumed deterministic until proven otherwise")
             val optimisticNoSideEffects = ReasonedBoolean.True("Optimistic seed: assumed no side effects until proven otherwise")
             return FunctionSummary(
-                deterministic = optimisticDeterministic,
                 noSideEffects = optimisticNoSideEffects,
                 parameterModes = parameterNames.associateWith { ParameterMode.BORROW },
-                parameterInfluence = emptySet(),
                 returnSummary = null,
                 callees = emptyList(),
                 variableSummary = mapOf()
@@ -62,13 +53,10 @@ data class FunctionSummary(
      * Must-properties weaken (&&), may-properties grow (union).
      */
     fun refineWith(other: FunctionSummary): FunctionSummary {
-        val refinedDeterministic = this.deterministic.and(other.deterministic)
         val refinedNoSideEffects = this.noSideEffects.and(other.noSideEffects)
         return FunctionSummary(
-            deterministic = refinedDeterministic,
             noSideEffects = refinedNoSideEffects,
             parameterModes = mergeParameterModes(this.parameterModes, other.parameterModes),
-            parameterInfluence = this.parameterInfluence + other.parameterInfluence,
             returnSummary = mergeReturnSummaries(this.returnSummary, other.returnSummary),
             callees = (this.callees + other.callees).distinct(),
             variableSummary = mergeVariableSummaries(variableSummary, other.variableSummary)
@@ -79,10 +67,8 @@ data class FunctionSummary(
      * Checks equality for fixed-point convergence (ignores reason text, only checks trait values).
      */
     fun structurallyEquals(other: FunctionSummary): Boolean {
-        return deterministic == other.deterministic
-                && noSideEffects == other.noSideEffects
+        return noSideEffects == other.noSideEffects
                 && parameterModes == other.parameterModes
-                && parameterInfluence == other.parameterInfluence
                 && returnSummary == other.returnSummary
                 && callees.toSet() == other.callees.toSet()
     }
@@ -109,13 +95,15 @@ data class ReturnSummary(
     /** Whether the return value is compile-time known. */
     val compileTimeValue: AbstractValue = AbstractValue.NoValue,
     /** Which parameters influence the return value. */
-    val dependsOnParameters: Set<String> = emptySet()
+    val dependsOnParameters: Set<String> = emptySet(),
+    val deterministic: ReasonedBoolean
 ) {
     fun mergeWith(other: ReturnSummary): ReturnSummary {
         return ReturnSummary(
             possibleTypes = (this.possibleTypes + other.possibleTypes).distinct(),
             compileTimeValue = this.compileTimeValue.join(other.compileTimeValue),
-            dependsOnParameters = this.dependsOnParameters + other.dependsOnParameters
+            dependsOnParameters = this.dependsOnParameters + other.dependsOnParameters,
+            deterministic = this.deterministic.and(other.deterministic),
         )
     }
 }
