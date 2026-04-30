@@ -10,7 +10,15 @@ import java.net.URI
 @DisplayName("Graph Builder")
 class GraphBuilderTest {
 
-    private fun buildFile(source: String) = buildGraph(parseFile(source, URI("test://graphbuilder")))
+    private fun buildFile(source: String): JitsuFile {
+        val ast = parseFile(source, URI("test://sourcefile.jit"))
+        ast.sequence().forEach {
+            if(it.errors.isNotEmpty()) throw IllegalArgumentException("Syntax error(s)! ${it.errors.joinToString("\n")}")
+        }
+        val graph = buildGraph(ast)
+        if(graph.messages.errors.isNotEmpty()) throw IllegalArgumentException("Compilation error(s)! ${graph.messages.errors.joinToString("\n")}")
+        return graph
+    }
 
     @Nested
     @DisplayName("buildGraph()")
@@ -131,13 +139,13 @@ class GraphBuilderTest {
 
         @Test
         fun `resolves binary operation with operator`() {
-            val expr = firstReturnExpression("fn f(a: i32, b: i32): i32 { return a + b; }")
+            val expr = firstReturnExpression("fn plus(a: i32, b: i32): i32 { return a + b; }")
             assertThat(expr).isInstanceOf(Expression.Operation::class.java)
         }
 
         @Test
         fun `resolves binary operation left and right operands`() {
-            val expr = firstReturnExpression("fn f(a: i32, b: i32): i32 { return a + b; }") as Expression.Operation
+            val expr = firstReturnExpression("fn plus(a: i32, b: i32): i32 { return a + b; }") as Expression.Operation
             assertThat(expr.left).isInstanceOf(Expression.VariableReference::class.java)
             assertThat(expr.right).isInstanceOf(Expression.VariableReference::class.java)
             assertThat((expr.left as Expression.VariableReference).reference.value).isEqualTo("a")
@@ -163,6 +171,7 @@ class GraphBuilderTest {
         fun `resolves function call with arguments`() {
             val file = buildFile("""
                 fn add(a: i32, b: i32): i32 { return a + b; }
+                native fn plus(a: i32, b: i32): i32
                 fn main(): i32 {
                     var result = add(1, 2);
                     return result;
@@ -187,7 +196,7 @@ class GraphBuilderTest {
 
         @Test
         fun `resolves i8 to Int type with 8 bits`() {
-            val type = returnType("fn f(): i8 { return 0; }")
+            val type = returnType("native fn f(): i8")
             assertThat(type).isInstanceOf(Type.Int::class.java)
             assertThat((type as Type.Int).size.bits).isEqualTo(8)
         }
@@ -222,27 +231,27 @@ class GraphBuilderTest {
 
         @Test
         fun `resolves f32 to Float type with 32 bits`() {
-            val type = returnType("fn f(): f32 { return 0; }")
+            val type = returnType("native fn f(): f32")
             assertThat(type).isInstanceOf(Type.Float::class.java)
             assertThat((type as Type.Float).size.bits).isEqualTo(32)
         }
 
         @Test
         fun `resolves f64 to Float type with 64 bits`() {
-            val type = returnType("fn f(): f64 { return 0; }")
+            val type = returnType("native fn f(): f64")
             assertThat(type).isInstanceOf(Type.Float::class.java)
             assertThat((type as Type.Float).size.bits).isEqualTo(64)
         }
 
         @Test
         fun `resolves boolean to Boolean type`() {
-            val type = returnType("fn f(): boolean { return true; }")
+            val type = returnType("native fn f(): boolean")
             assertThat(type).isEqualTo(Type.Boolean)
         }
 
         @Test
         fun `resolves array type with element type`() {
-            val type = returnType("fn f(): i32[] { return 0; }")
+            val type = returnType("native fn f(): i32[]")
             assertThat(type).isInstanceOf(Type.Array::class.java)
             assertThat((type as Type.Array).elementType).isInstanceOf(Type.Int::class.java)
         }
@@ -318,7 +327,7 @@ class GraphBuilderTest {
 
         @Test
         fun `creates Function with multiple parameters`() {
-            val file = buildFile("fn add(a: i32, b: i32): i32 { return a + b; }")
+            val file = buildFile("fn plus(a: i32, b: i32): i32 { return a + b; }")
             val fn = file.sequence().filterIsInstance<Function>().first()
             assertThat(fn.parameters).hasSize(2)
             val paramNames = fn.parameters.map { it.name.value }
@@ -446,7 +455,7 @@ class GraphBuilderTest {
 
         @Test
         fun `return value with arithmetic expression`() {
-            val file = buildFile("fn f(a: i32, b: i32): i32 { return a + b; }")
+            val file = buildFile("fn f(a: i32, b: i32): i32 { return a + b; } native fn plus(a:i32,b:i32):i32")
             val fn = file.sequence().filterIsInstance<Function>().first()
             val body = fn.body as Function.Body.Implementation
             val ret = body.block.instructions.filterIsInstance<Instruction.Return>().first()

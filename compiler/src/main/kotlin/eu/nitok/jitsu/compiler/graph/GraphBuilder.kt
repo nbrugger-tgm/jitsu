@@ -427,7 +427,7 @@ val IdentifierNode.located: Located<String> get() = Located(value, location)
 fun resolveType(type: TypeNode?): Type {
     if (type == null) return Type.Undefined
     return when (type) {
-        is TypeNode.ArrayTypeNode -> Type.Array(
+        is TypeNode.ArrayTypeNode -> Array(
             resolveType(type.type),
             type.fixedSize?.value?.toInt()
         )
