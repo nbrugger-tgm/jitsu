@@ -24,34 +24,36 @@ class CBackend : Backend {
 
             val functions = module.functions
                 .filter { it.body is LoweredBody.Implementation }
-                .joinToString("\n") { fn ->
+                .map { fn ->
                     transpileFunction(typeRegistry, fn)
                 }
 
-            writer.write(typeRegistry.typeDefs)
-            writer.write(functions)
+            writer.write(typeRegistry.typeDefs+"\n\n")
+            writer.write(functions.joinToString("\n"){it.def}+"\n\n")
+            writer.write(functions.joinToString("\n"){it.impl})
             writer.flush()
         }
         return file
     }
-
+    private data class CFunc(val def: String, val impl: String)
     private fun transpileFunction(
         typeRegistry: TypeRegistry,
         function: LoweredFunction
-    ): String {
+    ): CFunc {
         val returnType = function.returnType?.let { typeRegistry.getUniqueName(it) }
         val body = function.body as LoweredBody.Implementation
 
-        return """
-${returnType ?: "void"} ${function.name}(${
+        val def = "${returnType ?: "void"} ${function.name}(${
             function.parameters.joinToString(", ") { param ->
                 typeRegistry.formatType(param.name, param.type)
             }
-        }) {
+        })"
+        return CFunc("$def;", """
+$def {
 ${indent(1, body.instructions.joinToString("\n") { instruct -> instruct.toCCode(typeRegistry) })}
 }
 
-        """.trimIndent()
+""".trimIndent());
     }
 
     private fun LowLevelInstruction.toCCode(typeRegistry: TypeRegistry): String {
@@ -67,7 +69,7 @@ ${indent(1, body.instructions.joinToString("\n") { instruct -> instruct.toCCode(
 
             is LowLevelInstruction.Invoke -> {
                 val params = args.values.joinToString(", ") { it.toCCode(typeRegistry) }
-                "${functionName}($params)"
+                "${functionName}($params);"
             }
 
             is LowLevelInstruction.Free -> "free(${target.toCCode(typeRegistry)});"

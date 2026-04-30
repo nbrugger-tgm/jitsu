@@ -17,16 +17,16 @@ class TypeRegistry {
         }
     }
 
-    val typeDefs: String get() = typedefs.joinToString ("\n")
+    val typeDefs: String get() = typedefs.joinToString ("\n\n")
 
     fun toCTypedef(type: LowLevelType, name: String): String {
         return when(type) {
-            is LowLevelType.LLStruct -> "struct $name {\n ${type.fields.entries.joinToString("\n") {
-                "    ${formatType(it.key,it.value)};"
-            }} };"
-            is LowLevelType.LLUnion -> "union $name {\n ${type.members.entries.joinToString("\n") {
-                "    ${formatType(it.key,it.value)};"
-            }} };"
+            is LowLevelType.LLStruct -> "struct $name {\n ${type.fields.entries.joinToString("") {
+                "    ${formatType(it.key,it.value)};\n"
+            }}};"
+            is LowLevelType.LLUnion -> "union $name {\n ${type.members.entries.joinToString("") {
+                "    ${formatType(it.key,it.value)};\n"
+            }}};"
             is LowLevelType.Custom -> toCTypedef(type.lowLevelType,name)
             else -> "typedef ${formatType(name, type)};"
         }
