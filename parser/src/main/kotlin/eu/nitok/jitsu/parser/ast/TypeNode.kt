@@ -142,7 +142,7 @@ sealed interface TypeNode : AstNode {
     }
 
     @Serializable
-    class VoidTypeNode(override val location: Range) : TypeNode, AstNodeImpl() {
+    class NullTypeNode(override val location: Range) : TypeNode, AstNodeImpl() {
         override val children: List<AstNode>
             get() = listOf()
     }

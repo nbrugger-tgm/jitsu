@@ -189,46 +189,36 @@ private fun parseStructuralInterface(tokens: Tokens): TypeNode? {
 }
 
 private fun parseSingleType(tokens: Tokens): TypeNode? {
-    tokens.keyword("int")?.let {
-        return TypeNode.IntTypeNode(BitSize.BIT_32, it)
-    }
-    tokens.keyword("void")?.let {
-        return TypeNode.VoidTypeNode(it)
-    }
-    tokens.keyword("float")?.let {
-        return TypeNode.FloatTypeNode(BitSize.BIT_32, it)
-    }
-    tokens.keyword("boolean")?.let {
-        return TypeNode.BooleanTypeNode(it)
-    }
-
-
     val messages = CompilerMessages()
-    parseEnclosedType(tokens, messages)?.let {
-        return it
+    val baseType = tokens.keyword("int")?.let {
+        TypeNode.IntTypeNode(BitSize.BIT_32, it)
+    }?: tokens.keyword("float")?.let {
+        TypeNode.FloatTypeNode(BitSize.BIT_32, it)
+    }?: tokens.keyword("boolean")?.let {
+        TypeNode.BooleanTypeNode(it)
+    }?: parseEnclosedType(tokens, messages)?.let {
+         it
+    }?: parseBitsizedNumberType(tokens)?.let {
+        it
+    }?: parseStructuralInterface(tokens)?.let {
+        it
+    }?: run {
+        val typeReference = parseIdentifier(tokens) ?: return null
+        val generics = tokens.enclosedRepetition(
+            DefaultToken.LEFT_ANGLE_BRACKET,
+            DefaultToken.COMMA,
+            DefaultToken.BIGGER,
+            messages,
+            "generics",
+            "type parameter"
+        ) {
+            parseType(it)
+        }?.elements ?: listOf()
+        TypeNode.NameTypeNode(typeReference, generics, typeReference.location).withMessages(messages)
     }
-
-    parseBitsizedNumberType(tokens)?.let {
-        return it
-    }
-
-    val structuralInterface = parseStructuralInterface(tokens)
-    if (structuralInterface != null) {
-        return structuralInterface
-    }
-    val typeReference = parseIdentifier(tokens) ?: return null
-    var generics = tokens.enclosedRepetition(
-        DefaultToken.LEFT_ANGLE_BRACKET,
-        DefaultToken.COMMA,
-        DefaultToken.BIGGER,
-        messages,
-        "generics",
-        "type parameter"
-    ) {
-        parseType(it)
-    }?.elements ?: listOf()
-    val namedType = TypeNode.NameTypeNode(typeReference, generics, typeReference.location)
-    return namedType.withMessages(messages)
+    return tokens.attempt(DefaultToken.QUESTIONMARK)?.let {
+        TypeNode.UnionTypeNode(listOf(baseType, TypeNode.NullTypeNode(it.location)))
+    }?: baseType;
 }
 
 private fun parseEnclosedType(tokens: Tokens, messages: CompilerMessages): TypeNode? {
@@ -266,10 +256,10 @@ private fun parseBitsizedNumberType(tokens: Tokens): TypeNode? {
 private fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode.UnionTypeNode? {
     if (!tokens.hasNext()) return null
     tokens.skipWhitespace()
-    val pipe = (tokens.attempt {
+    val pipe = tokens.attempt {
         skipWhitespace()
         range { next().type == PIPE }.takeIf { it.value }
-    }) ?: return null
+    } ?: return null
     val types = mutableListOf(firstType)
     val messages = CompilerMessages()
     while (tokens.hasNext()) {

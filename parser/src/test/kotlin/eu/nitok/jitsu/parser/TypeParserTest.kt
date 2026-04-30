@@ -410,15 +410,6 @@ class TypeParserTest : ParsingTest() {
 
         }
 
-        @Test
-        @DisplayName("VOID")
-        fun acceptVoidAsType() {
-            val res = parseType(tokenize("void"))
-            assertThat(res)
-                .isNotNull()
-                .isInstanceOf(TypeNode.VoidTypeNode::class.java)
-        }
-
         @Nested
         @DisplayName("PRIMITIVE")
         inner class PrimitiveTypes : MethodTest<TypeNode.PrimitiveTypeNode>() {
