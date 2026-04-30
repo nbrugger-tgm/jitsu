@@ -27,9 +27,7 @@ sealed interface Type : Element {
                 )
             }
         } else if(type is TypeReference) {
-            val reason = accepts(type.resolvedCache)
-            if (!reason.value) ReasonedBoolean.False("$type not assignable to $this", reason)
-            else reason
+            acceptsInstanceOf(type.resolvedCache)
         } else {
             val reason = accepts(type)
             if (!reason.value) ReasonedBoolean.False("$type not assignable to $this", reason)
