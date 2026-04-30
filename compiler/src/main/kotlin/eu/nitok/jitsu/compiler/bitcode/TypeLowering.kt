@@ -31,7 +31,7 @@ object TypeLowering {
 
             is GraphType.TypeReference -> lower(type.resolvedCache)
 
-            is GraphType.Null -> LLPointer(LLBool, type) // null represented as null pointer
+            is GraphType.Null -> TODO("null not yet supported") // null represented as null pointer
             is GraphType.Value -> lower(type.value.type)
             is GraphType.FunctionTypeSignature -> lowerFunctionPointer(type)
             is GraphType.Undefined -> error("Cannot lower undefined type")

@@ -451,8 +451,8 @@ fun resolveType(type: TypeNode?): Type {
 
         is TypeNode.UnionTypeNode -> Union(type.types.map { resolveType(it) })
         is TypeNode.ValueTypeNode -> TODO()
-        is TypeNode.VoidTypeNode -> TODO()
         is TypeNode.UIntTypeNode -> UInt(type.bitSize)
         is TypeNode.BooleanTypeNode -> Type.Boolean
+        is TypeNode.NullTypeNode -> TODO("Nullability not implemented yet")
     }
 }

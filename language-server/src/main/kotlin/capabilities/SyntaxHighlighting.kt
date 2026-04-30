@@ -154,9 +154,9 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
                             is TypeNode.FloatTypeNode,
                             is TypeNode.IntTypeNode,
                             is TypeNode.NameTypeNode,
-                            is TypeNode.VoidTypeNode,
                             is TypeNode.UIntTypeNode,
                             is TypeNode.BooleanTypeNode,
+                            is TypeNode.NullTypeNode,
                             is TypeNode.ValueTypeNode -> TYPE
 
                             is TypeNode.UnionTypeNode -> ENUM
@@ -182,8 +182,7 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
         is TypeNode.FloatTypeNode,
         is TypeNode.IntTypeNode,
         is TypeNode.UIntTypeNode,
-        is BooleanLiteralNode,
-        is TypeNode.VoidTypeNode -> listOf(token(KEYWORD, location))
+        is BooleanLiteralNode -> listOf(token(KEYWORD, location))
 
         is NamedTypeDeclarationNode.ClassDeclarationNode -> listOfNotNull(
             name?.location?.let { token(CLASS, it) },
