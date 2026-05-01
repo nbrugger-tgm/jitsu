@@ -5,7 +5,6 @@ import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
 import eu.nitok.jitsu.common.ReasonedBoolean.*
 
 class CodeBlockAnalyzer(
@@ -131,16 +130,16 @@ class CodeBlockAnalyzer(
     private fun processInstruction(instruction: Instruction) {
         when (instruction) {
             is VariableDeclaration -> processVariableDeclaration(instruction)
-            is Instruction.FunctionCall -> processFunctionCallInstruction(instruction)
+            is Instruction.FunctionCall -> processFunctionCall(instruction)
             is Instruction.Return -> processReturn(instruction)
-            is Function -> TODO()
+            is Function -> TODO("nested functions not implemented yet")
         }
     }
 
     private fun processVariableDeclaration(decl: VariableDeclaration) {
-        val expression: ExpressionResult? = decl.initialValue?.let { analyzeExpression(it) }
+        val expression: ExpressionResult? = decl.initialValue?.let { analyzeExpression(it, decl.declaredType) }
         decl.implicitType = expression?.type
-        var narrowedType: Type? = when {
+        val narrowedType: Type? = when {
             expression != null -> expression.type
             decl.declaredType != null -> decl.declaredType
             else -> null
@@ -171,10 +170,6 @@ class CodeBlockAnalyzer(
         )
     }
 
-    private fun processFunctionCallInstruction(call: Instruction.FunctionCall) {
-        analyzeExpression(call)
-    }
-
     private fun processReturn(ret: Instruction.Return) {
         val value = ret.value
 
@@ -189,7 +184,7 @@ class CodeBlockAnalyzer(
             return
         }
 
-        val exprResult = analyzeExpression(value)
+        val exprResult = analyzeExpression(value, function.returnType?.value)
 
         if (function.returnType != null) {
             val typeMatches = function.returnType.value.acceptsInstanceOf(exprResult.type)
@@ -218,27 +213,34 @@ class CodeBlockAnalyzer(
         )
     }
 
-    private fun analyzeExpression(expr: Expression): ExpressionResult {
+    private fun analyzeExpression(expr: Expression,typeHint: Type?): ExpressionResult {
         return when (expr) {
             is Constant<*> -> analyzeConstant(expr)
-            is Expression.Operation -> analyzeOperation(expr)
+            is Expression.Operation -> analyzeFunctionCallExpression(expr.functionCall)
             is Expression.VariableReference -> analyzeVariableReference(expr)
-            is Instruction.FunctionCall -> analyzeFunctionCall(expr)
+            is Instruction.FunctionCall -> analyzeFunctionCallExpression(expr)
             is Expression.Undefined -> ExpressionResult(
                 type = Type.Undefined,
                 deterministic = False("Undefined expression"),
                 constValue = AbstractValue.Unknown,
                 paramDeps = emptySet()
             )
-            is Expression.ArrayLiteral -> ExpressionResult(
-                type = expr.calculateType(typeContext, messages)?:Type.Array(Type.Undefined, null),
-                deterministic = expr.elements.asSequence().map { analyzeExpression(it).deterministic }.fold(
-                    ReasonedBoolean.True("Empty array is deterministic") as ReasonedBoolean
-                ) { acc, d -> acc.and(d) },
-                constValue = AbstractValue.Unknown,
-                paramDeps = expr.elements.asSequence().flatMap { analyzeExpression(it).paramDeps }.toSet()
-            )
+            is Expression.ArrayLiteral -> analyzeArrayLiteral(expr, typeHint)
         }
+    }
+
+    private fun analyzeArrayLiteral(expr: Expression.ArrayLiteral,typeHint: Type?): ExpressionResult {
+        val arrayType = expr.calculateType(typeContext, messages, typeHint)
+        val elementType = if (arrayType.elementType !is Type.Undefined) arrayType.elementType else null
+        val elements = expr.elements.asSequence().map { analyzeExpression(it, elementType) }.toList()
+        return ExpressionResult(
+            type = arrayType,
+            deterministic = elements.map { it.deterministic }.fold(
+                ReasonedBoolean.True("Empty array is deterministic") as ReasonedBoolean
+            ) { acc, d -> acc.and(d) },
+            constValue = AbstractValue.Unknown,
+            paramDeps = elements.flatMap { it.paramDeps }.toSet()
+        )
     }
 
     private fun analyzeConstant(constant: Constant<*>): ExpressionResult {
@@ -249,14 +251,6 @@ class CodeBlockAnalyzer(
             constValue = AbstractValue.Const(constant.literal, type),
             paramDeps = emptySet()
         )
-    }
-
-    private fun analyzeOperation(op: Expression.Operation): ExpressionResult {
-        val call = op.asFunctionCall()
-        val analyzedFunction = analyzeFunctionCall(call)
-        op.target = call.target
-        if(call.target != null) op.type = call.type
-        return analyzedFunction
     }
 
     private fun analyzeVariableReference(ref: Expression.VariableReference): ExpressionResult {
@@ -294,11 +288,43 @@ class CodeBlockAnalyzer(
             paramDeps = varState.paramDeps
         )
     }
+    private fun                                                                                                                                                                                                         processFunctionCall(call: Instruction.FunctionCall) : Function?{
+        val target = call.target?: call.resolveTarget(typeContext, messages)
+        call.target = target
+        target?.accessToSelf?.add(call)
+        val targetSummary = target?.let{ calleeOracle(it) }
+        if (target != null) {
+            callees.add(target)
+            if (targetSummary != null) {
+                if (!targetSummary.noSideEffects.value) {
+                    hasSideEffects = hasSideEffects.and(
+                        False(
+                            "'${call.reference.value}' has side effects",
+                            listOf(CompilerMessage.Hint("${call.reference.value} is called here", call.location)),
+                            listOf(null to targetSummary.noSideEffects)
+                        )
+                    )
+                }
+            } else {
+                hasSideEffects = hasSideEffects.and(
+                    ReasonedBoolean.False("Target '${call.reference.value}' has no known summary")
+                )
+            }
+        } else {
+            hasSideEffects = hasSideEffects.and(
+                ReasonedBoolean.False("Unresolved target '${call.reference.value}'")
+            )
+        }
+        return target
+    }
+    private fun analyzeFunctionCallExpression(call: Instruction.FunctionCall): ExpressionResult {
+        val target = processFunctionCall(call)
+        val targetSummary = target?.let{ calleeOracle(it) }
+        val argumentExpressions = call.callParameters.mapIndexed { index, expression ->
+            if(target != null) analyzeExpression(expression, target.parameters.getOrNull(index)?.type)
+            else analyzeExpression(expression, null)
+        }
 
-    private fun analyzeFunctionCall(call: Instruction.FunctionCall): ExpressionResult {
-        val argumentExpressions = call.callParameters.map { analyzeExpression(it) }
-
-        val target = resolveFunctionCall(call, argumentExpressions)
 
         val outputInfluencingParams = target?.summary?.let { targetSummary ->
             targetSummary.returnSummary?.dependsOnParameters
@@ -318,60 +344,14 @@ class CodeBlockAnalyzer(
             messages.error("Expected value but $call calls void function", call.location)
             Type.Undefined
         }
-        val targetSummary = target?.let{ calleeOracle(it) }
         val deterministic = targetSummary?.returnSummary?.deterministic?.and(areOutputInfluencingArgsDeterministic)?:areOutputInfluencingArgsDeterministic
 
-        return if (target != null) {
-            if (targetSummary != null) {
-                if (!targetSummary.noSideEffects.value) {
-                    hasSideEffects = hasSideEffects.and(
-                        False(
-                            "'${call.reference.value}' has side effects",
-                            listOf(CompilerMessage.Hint("${call.reference.value} is called here", call.location)),
-                            listOf(null to targetSummary.noSideEffects)
-                        )
-                    )
-                }
-            } else {
-                hasSideEffects = hasSideEffects.and(
-                    ReasonedBoolean.False("Target '${call.reference.value}' has no known summary")
-                )
-            }
-            ExpressionResult(
+      return ExpressionResult(
                 type = returnType,
                 deterministic = deterministic,
                 constValue = targetSummary?.returnSummary?.compileTimeValue?:AbstractValue.Unknown,
                 paramDeps = allParamDeps
             )
-        } else {
-            hasSideEffects = hasSideEffects.and(
-                ReasonedBoolean.False("Unresolved target '${call.reference.value}'")
-            )
-            ExpressionResult(
-                type = returnType,
-                deterministic = ReasonedBoolean.True("Unresolved target '${call.reference.value}'"),
-                constValue = AbstractValue.Unknown,
-                paramDeps = allParamDeps
-            )
-        }
-    }
-
-    private fun resolveFunctionCall(
-        call: Instruction.FunctionCall,
-        argResults: List<ExpressionResult>
-    ): Function? {
-        if (call.target != null) {
-            return call.target
-        }
-        val argumentTypes = argResults.mapIndexed { i, result ->
-            Located(result.type, call.callParameters[i].location)
-        }.toTypedArray()
-        val resolvedTarget = call.scope.resolveFunction(call.reference, argumentTypes, messages)
-        if (resolvedTarget != null) {
-            call.target = resolvedTarget
-            resolvedTarget.accessToSelf.add(call)
-        }
-        return resolvedTarget;
     }
 
     private val typeContext: Map<String, Type> get() = localVariables.mapValues { it.value.narrowedType }

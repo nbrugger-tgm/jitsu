@@ -11,7 +11,7 @@ import kotlinx.serialization.Transient
 @Serializable
 sealed interface Expression : Element {
     val isConstant: ReasonedBoolean;
-    fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type?
+    fun calculateType(context: Map<String, Type>, messages: CompilerMessages, typeHint: Type? = null): Type?
     val location: Range
     val type: Type
 
@@ -19,7 +19,7 @@ sealed interface Expression : Element {
     data class Undefined(override val location: Range) : Expression {
         @Transient
         override val isConstant: ReasonedBoolean = ReasonedBoolean.False("No value is defined")
-        override fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type {
+        override fun calculateType(context: Map<String, Type>, messages: CompilerMessages, typeHint: Type?): Type {
             return type
         }
 
@@ -30,69 +30,47 @@ sealed interface Expression : Element {
     }
 
     @Serializable
-    data class Operation(val left: Expression, val operator: Located<BiOperator>, val right: Expression) :
+    class Operation(val left: Expression, val operator: Located<BiOperator>, val right: Expression) :
         Expression,
         ScopeAware,
         Access.FunctionAccess {
-        private lateinit var scope: Scope
-        override val isConstant: ReasonedBoolean
-            get() = if (!left.isConstant.value) ReasonedBoolean.False(
-                "Left expression is not constant",
-                left.isConstant
-            )
-            else if (!right.isConstant.value) ReasonedBoolean.False(
-                "Right expression is not constant",
-                right.isConstant
-            )
-            else ReasonedBoolean.True("Left and right expressions are constant", right.isConstant, left.isConstant)
+        val functionCall = Instruction.FunctionCall(
+            operator.map { it.functionName },
+            listOf(left, right),
+            left.location.rangeTo(right.location),
+        )
+        override val isConstant: ReasonedBoolean get() = functionCall.isConstant
 
-        override fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type? {
-            if (target == null) {
-                val leftType = Located(left.calculateType(context, messages) ?: Type.Undefined, left.location)
-                val rightType = Located(right.calculateType(context, messages) ?: Type.Undefined, right.location)
-                target = scope.resolveFunction(
-                    operator.map { it.functionName },
-                    arrayOf(leftType, rightType),
-                    messages
-                )
-            }
-            val type = target?.returnType?.value
-            if (type != null) this.type = type
-            return type
-        }
-
-        override lateinit var type: Type
-            internal set;
+        override fun calculateType(
+            context: Map<String, Type>,
+            messages: CompilerMessages,
+            typeHint: Type?
+        ) = functionCall.calculateType(context, messages, typeHint)
 
         override val location: Range
-            get() = Range(left.location.start, right.location.end)
+            get() = functionCall.location
+        override val type: Type
+            get() = functionCall.type
+        override val children: List<Element>
+            get() = functionCall.children
 
-        @Transient
-        override val children: List<Element> = listOfNotNull(left, right)
-        override fun setEnclosingScope(parent: Scope) {
-            this.scope = parent
-        }
+        override fun setEnclosingScope(parent: Scope) = functionCall.setEnclosingScope(parent)
 
-        override var target: Function? = null
-
-        @Transient
-        override lateinit var accessor: Accessor
-        override val reference: Located<String> = operator.map { it.rune }
+        override var target: Function?
+            get() = functionCall.target
+            set(value) {
+                functionCall.target = value
+            }
+        override var accessor: Accessor
+            get() = functionCall.accessor
+            set(value) {
+                functionCall.accessor = value
+            }
+        override val reference: Located<String>
+            get() = functionCall.reference
 
         override fun resolveAccessTarget(messages: CompilerMessages): Function? {
-            //see FunctionCall#resolveAccessTarget for more information
-            return target;
-        }
-
-        fun asFunctionCall(): Instruction.FunctionCall {
-            val call = Instruction.FunctionCall(
-                reference = operator.map { it.functionName },
-                callParameters = listOf(left, right),
-                location = reference.location
-            )
-            call.scope = scope
-            call.target = target
-            return call
+            return functionCall.resolveAccessTarget(messages)
         }
     }
 
@@ -101,7 +79,7 @@ sealed interface Expression : Element {
         @Transient
         private lateinit var scope: Scope
         override val isConstant: ReasonedBoolean get() = ReasonedBoolean.False("Cuz not implemented yet")
-        override fun calculateType(context: Map<String, Type>, messages: CompilerMessages): Type? {
+        override fun calculateType(context: Map<String, Type>, messages: CompilerMessages, typeHint: Type?): Type? {
             val type = context[reference.value]
                 ?: target?.declaredType
                 ?: target?.initialValue?.calculateType(context, messages)
@@ -139,14 +117,17 @@ sealed interface Expression : Element {
 
         override fun calculateType(
             context: Map<String, Type>,
-            messages: CompilerMessages
-        ): Type? {
-
-            val type = (if (elements.isEmpty()) TODO("STDLIB: Any type or generic fitting")
-            else if (elements.size == 1) elements.single().calculateType(context, messages)
-            else elements.map {
-                it.calculateType(context, messages)
-            }.filterNotNull().reduce { acc, type ->
+            messages: CompilerMessages,
+            typeHint: Type?
+        ): Type.Array {
+            val type = (if (elements.isEmpty()) {
+                if (typeHint is Type.Array) typeHint.elementType else {
+                    messages.error("Cannot infer type of empty array", this.location)
+                    Type.Undefined
+                }
+            } else elements.mapNotNull { element ->
+                element.calculateType(context, messages, typeHint?.let { it as? Type.Array }?.elementType)
+            }.reduce { acc, type ->
                 val aToB = acc.acceptsInstanceOf(type)
                 if (aToB.value) acc
                 else {
@@ -154,8 +135,8 @@ sealed interface Expression : Element {
                     if (bToA.value) type
                     else Type.Union(listOf(acc, type))
                 }
-            })?.let { Type.Array(it, elements.size, 1) }
-            type?.let { this.type = it }
+            }).let { Type.Array(it, elements.size, 1) }
+            this.type = type
             return type
         }
 

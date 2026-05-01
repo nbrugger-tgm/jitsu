@@ -19,7 +19,7 @@ data class VariableDeclaration(
     override val accessToSelf: MutableList<Access<Variable>> = mutableListOf()
     override val children: List<Element> get() = listOfNotNull(declaredType, initialValue)
     override fun toString(): String {
-        return "var ${name.value}${declaredType?.let { ": $it" }}${initialValue?.let{" = $it"}}"
+        return "var ${name.value}${declaredType?.let { ": $it" }?:""}${initialValue?.let{" = $it"}?:""}"
     }
 }
 

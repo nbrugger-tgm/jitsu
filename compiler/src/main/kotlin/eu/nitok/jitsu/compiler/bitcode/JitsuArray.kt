@@ -63,13 +63,17 @@ class JitsuArray private constructor(
         ctx: LoweringContext,
         body: (element: LowLevelExpression.Field, index: LowLevelExpression) -> List<LowLevelInstruction>
     ): List<LowLevelInstruction> {
+        if(fixedSize == 0) return emptyList()
         val sizeExpr = sizeExpression(array)
 
         val (counter, counterInstructs) = ctx.createTmpVar(I32)
         val initCounter = LowLevelInstruction.Write(counter, LowLevelExpression.NumericalValue(0))
 
         val elementAccess = accessIndex(array, counter)
-        val loopBody = body(elementAccess, counter) + LowLevelInstruction.Increase(counter)
+        val logicBody = body(elementAccess, counter)
+
+        if(logicBody.isEmpty()) return listOf();
+        val loopBody = logicBody + LowLevelInstruction.Increase(counter)
 
         return counterInstructs + initCounter + LowLevelInstruction.While(
             LowLevelExpression.CompareGreater(sizeExpr, counter),

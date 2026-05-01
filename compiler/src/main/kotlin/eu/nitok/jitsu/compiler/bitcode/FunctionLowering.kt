@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.compiler.bitcode
 
+import eu.nitok.jitsu.common.Range
 import eu.nitok.jitsu.compiler.bitcode.LowLevelExpression.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
 import eu.nitok.jitsu.compiler.graph.*
@@ -47,6 +48,9 @@ class FunctionLowering(
         block: CodeBlock,
         expectedReturnType: LowLevelType?
     ): List<LowLevelInstruction> {
+        val implicitReturn = if(block.instructions.lastOrNull() !is Instruction.Return && expectedReturnType == null)
+            lowerReturn(Instruction.Return(null, Range(0,0,0,0)), null)
+        else listOf()
         return block.instructions.flatMap { instruction ->
             when (instruction) {
                 is Function -> TODO("Nested functions not yet supported!")
@@ -54,7 +58,7 @@ class FunctionLowering(
                 is Instruction.Return -> lowerReturn(instruction, expectedReturnType)
                 is VariableDeclaration -> lowerVariableDeclaration(instruction)
             }
-        }
+        } + implicitReturn
     }
 
     private fun lowerReturn(
@@ -177,7 +181,7 @@ class FunctionLowering(
 
             is Constant.StringConstant -> TODO("String constants not yet supported")
             is Instruction.FunctionCall -> lowerFunctionCallExpression(expression)
-            is Expression.Operation -> lowerOperation(expression)
+            is Expression.Operation -> lowerFunctionCallExpression(expression.functionCall)
             is Expression.VariableReference -> lowerVariableReference(expression)
             is Expression.ArrayLiteral -> lowerArrayLiteral(expression, hint)
             is Expression.Undefined -> TODO("Cannot lower undefined expression")
@@ -188,7 +192,7 @@ class FunctionLowering(
         val variableName = ref.reference.value
         val lowType = when (val target = ref.target) {
             is Function.Parameter -> {
-                val gt = target.declaredType!!
+                val gt = target.declaredType
                 TypeLowering.lower(gt)
             }
 
@@ -201,25 +205,6 @@ class FunctionLowering(
 
         val varExpr = LowLevelExpression.Variable(variableName)
         return LoweredExpression(varExpr, lowType, emptyList())
-    }
-
-    private fun lowerOperation(op: Expression.Operation): LoweredExpression {
-        val target = op.target ?: TODO("Operation target not resolved")
-        op.asFunctionCall()
-
-        val (invoke, instructions) = invokeFunction(
-            mapOf(
-                target.parameters[0].name.value to op.left,
-                target.parameters[1].name.value to op.right
-            ),
-            target
-        )
-
-        val returnGraphType = target.returnType?.value
-            ?: TODO("non-return operations not yet implemented")
-        val returnType = TypeLowering.lower(returnGraphType)
-
-        return LoweredExpression(ReturnValue(invoke), returnType, instructions)
     }
 
     /**

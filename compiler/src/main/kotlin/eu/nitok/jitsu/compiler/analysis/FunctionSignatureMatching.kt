@@ -19,7 +19,7 @@ sealed interface FunctionSignatureMatch {
     data class Match(val function: Function) : FunctionSignatureMatch
 }
 
-data class TypeMissMatch(val paramDefinition: Located<String>, val parameterValueLocation:Range, val expected: Type, val reason: ReasonedBoolean.False)
+data class TypeMissMatch(val paramDefinition: Located<String>, val parameterValueLocation:Range, val expected: Type, val actual: Type, val reason: ReasonedBoolean.False)
 
 private sealed interface SignatureMatch {
     data class FullMatch(
@@ -66,7 +66,7 @@ private fun Type.FunctionTypeSignature.matches(argumentTypes: Array<Located<Type
         } else {
             val match = expected.acceptsInstanceOf(actual.value)
             if (match is ReasonedBoolean.False) {
-                typeError.add(TypeMissMatch(parameters[i].name,actual.location, expected, match))
+                typeError.add(TypeMissMatch(parameters[i].name,actual.location, expected, actual.value, match))
             } else {
                 correctAssignable++
             }
