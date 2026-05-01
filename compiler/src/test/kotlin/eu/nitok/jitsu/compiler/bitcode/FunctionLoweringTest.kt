@@ -381,9 +381,9 @@ class FunctionLoweringTest {
     inner class EdgeCaseTests {
 
         @Test
-        fun `empty function body produces empty instruction list`() {
-            val instructions = lower("fn noop() { }")
-            assertThat(instructions).isEmpty()
+        fun `empty function produces single return statement`() {
+            val instructions = lower("fn f() { }")
+            assertThat(instructions).containsExactly(Return(null))
         }
 
         @Test

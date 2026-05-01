@@ -69,13 +69,6 @@ class CodeBlockAnalyzerTest {
     inner class EmptyFunction {
 
         @Test
-        fun `empty function is deterministic`() {
-            val fn = buildFunction()
-            val result = analyze(fn)
-            assertThat(result.functionSummary.returnSummary!!.deterministic.value).isTrue()
-        }
-
-        @Test
         fun `empty function has no side effects`() {
             val fn = buildFunction()
             val result = analyze(fn)

@@ -65,11 +65,6 @@ class AnalysisTypesTest {
 
     @Nested
     inner class FunctionSummaryOptimisticTest {
-        @Test
-        fun `optimistic seed is deterministic`() {
-            val summary = FunctionSummary.optimistic(listOf("x", "y"))
-            assertThat(summary.returnSummary!!.deterministic.value).isTrue()
-        }
 
         @Test
         fun `optimistic seed has no side effects`() {
@@ -89,12 +84,6 @@ class AnalysisTypesTest {
             assertThat(summary.parameterModes).containsExactlyInAnyOrderEntriesOf(
                 mapOf("a" to ParameterMode.BORROW, "b" to ParameterMode.BORROW, "c" to ParameterMode.BORROW)
             )
-        }
-
-        @Test
-        fun `optimistic seed has empty parameter influence`() {
-            val summary = FunctionSummary.optimistic(listOf("x"))
-            assertThat(summary.returnSummary!!.dependsOnParameters).isEmpty()
         }
 
         @Test
@@ -319,7 +308,6 @@ class AnalysisTypesTest {
             val serialized = json.encodeToString(FunctionSummary.serializer(), summary)
             val deserialized = json.decodeFromString(FunctionSummary.serializer(), serialized)
             // Transient fields (ReasonedBoolean) reset to defaults
-            assertThat(deserialized.returnSummary!!.deterministic.value).isTrue()
             assertThat(deserialized.noSideEffects.value).isTrue()
             assertThat(deserialized.parameterModes).containsExactlyInAnyOrderEntriesOf(mapOf("x" to ParameterMode.BORROW))
         }

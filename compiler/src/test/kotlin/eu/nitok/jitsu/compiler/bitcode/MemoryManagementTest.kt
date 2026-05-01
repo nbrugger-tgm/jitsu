@@ -650,12 +650,6 @@ class MemoryManagementTest {
     inner class EdgeCases {
 
         @Test
-        fun `empty function produces single return statement`() {
-            val instructions = lower("fn f() { }")
-            assertThat(instructions).containsExactly(Return(null))
-        }
-
-        @Test
         fun `function with only parameters and no variables - no Free instructions`() {
             val instructions = lower("fn f(a: i32, b: i32): i32 { return a; }")
             assertThat(instructions.filterIsInstance<Free>()).isEmpty()
