@@ -3,7 +3,7 @@ package eu.nitok.jitsu.compiler.graph
 import eu.nitok.jitsu.common.ReasonedBoolean
 
 import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
+import eu.nitok.jitsu.common.locating.Located
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -13,7 +13,13 @@ import kotlinx.serialization.Transient
 @Serializable
 sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
     abstract override val name: Located<String>
-    override val accessToSelf: MutableList<Access<TypeDefinition>> = mutableListOf()
+    @Transient override val accessToSelf: MutableList<Access<TypeDefinition>> = mutableListOf()
+    @Transient override lateinit var module: JitsuModule
+        internal set;
+
+    override fun setEnclosingModule(parent: JitsuModule) {
+        this.module = parent
+    }
 
     /**
      * A type that is not directly usable since it is parameterized
@@ -41,8 +47,12 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
             data class Field(override val name: Located<String>, var mutable: kotlin.Boolean, val type: Type) : Element,
                 Accessible<Field> {
                 override val children: List<Element> get() = listOf(type)
-                @Transient
-                override val accessToSelf: MutableList<Access<Field>> = mutableListOf()
+                @Transient override val accessToSelf: MutableList<Access<Field>> = mutableListOf()
+                @Transient override lateinit var module: JitsuModule
+                    internal set;
+                override fun setEnclosingModule(parent: JitsuModule) {
+                    this.module = parent
+                }
             }
 
             val allFields: Set<Field> get() = embedded.flatMap { it.value.allFields }.toSet() + fields
@@ -61,12 +71,12 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
             override val generics: List<TypeParameter>,
             var type: Type
         ) : ParameterizedType(), ScopeProvider, ScopeAware {
-            override val children: List<Element> get() = listOf(type)
+            override val children: List<Element> get() = listOf(type) + generics
             override fun toType(messages: CompilerMessages, typeParameters: Map<String, Type>): Type {
-                return type.resolve(messages, typeParameters);
+                return type.resolveType(messages, typeParameters);
             }
 
-            override val scope: Scope = Scope(emptyList(),generics.associateBy { it.name.value }, emptyMap(), emptyMap())
+            @Transient override val scope: Scope = Scope(types = generics.associateBy { it.name.value })
 
             override fun setEnclosingScope(parent: Scope) {
                 scope.parent = parent
@@ -128,7 +138,7 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
             val constants: List<Constant>
         ) : DirectTypeDefinition() {
             override val children: List<Element> get() = constants
-            override fun resolve(
+            override fun resolveType(
                 messages: CompilerMessages,
                 generics: Map<String, Type>
             ): Type {
@@ -148,10 +158,14 @@ sealed class TypeDefinition : Accessible<TypeDefinition>, Element {
             @Serializable
             data class Constant(override val name: Located<String>) : Element, Accessible<Constant> {
                 override val children: List<Element> get() = listOf()
-                @Transient
-                override val accessToSelf: MutableList<Access<Constant>> = mutableListOf()
-                @Transient
-                lateinit var enum: Enum
+                @Transient override val accessToSelf: MutableList<Access<Constant>> = mutableListOf()
+                @Transient lateinit var enum: Enum
+                @Transient override lateinit var module: JitsuModule
+                    internal set;
+
+                override fun setEnclosingModule(parent: JitsuModule) {
+                    this.module = parent
+                }
             }
         }
     }

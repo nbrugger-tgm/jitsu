@@ -4,7 +4,7 @@ import com.niton.jainparse.token.DefaultToken
 import com.niton.jainparse.token.DefaultToken.*
 import com.niton.jainparse.token.Tokenizer
 import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
+import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.parser.ast.StatementNode.Declaration.*
 import eu.nitok.jitsu.parser.ast.StatementNode.Declaration.FunctionDeclarationNode.*
 import eu.nitok.jitsu.parser.ast.withMessages
@@ -34,7 +34,7 @@ private val fnKeywords = listOf(fnKeyword, "fun", "func", "function")
  *
  * @return A FunctionDeclarationNode, or null if no function keyword is present.
  */
-fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
+internal fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     tokens.elevate()
     val native = tokens.keyword(nativeKeyword)
     if(native != null) tokens.skipWhitespace()
@@ -54,7 +54,7 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
         messages.error(
             CompilerMessage(
                 "function requires a name",
-                tokens.location.toRange(),
+                tokens.position.toLocation(),
                 Hint("Function to name", kw.location)
             )
         )
@@ -66,7 +66,7 @@ fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
     tokens.skipWhitespace()
     val body = parseCodeBlock(tokens)
     if (body == null && native == null) {
-        messages.error("Expected function body (starting with '{')", tokens.location.toRange())
+        messages.error("Expected function body (starting with '{')", tokens.position.toLocation())
     } else if(native != null && body != null) {
         messages.error("Native functions cannot have bodies since they execute C code", body.location,
             Hint("Native declaration", native)
@@ -113,7 +113,7 @@ private fun parseParameters(
     }?.elements ?: run {
         messages.error(
             "Expected '(' after function name",
-            tokens.location.toRange(),
+            tokens.position.toLocation(),
             Hint("function start", kw.location)
         )
         emptyList()

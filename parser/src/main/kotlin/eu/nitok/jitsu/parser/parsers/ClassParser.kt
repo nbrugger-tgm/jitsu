@@ -1,15 +1,13 @@
 package eu.nitok.jitsu.parser.parsers
 
 import com.niton.jainparse.token.DefaultToken
-import com.niton.jainparse.token.DefaultToken.EOF
-import com.niton.jainparse.token.DefaultToken.NEW_LINE
-import com.niton.jainparse.token.DefaultToken.ROUND_BRACKET_CLOSED
+import com.niton.jainparse.token.DefaultToken.*
 import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
+import eu.nitok.jitsu.common.locating.Located
+import eu.nitok.jitsu.parser.*
 import eu.nitok.jitsu.parser.ast.StatementNode.NamedTypeDeclarationNode.ClassDeclarationNode
 import eu.nitok.jitsu.parser.ast.TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode
 import eu.nitok.jitsu.parser.ast.withMessages
-import eu.nitok.jitsu.parser.*
 
 /**
  * Parses a class declaration starting with the `class` keyword.
@@ -23,7 +21,7 @@ import eu.nitok.jitsu.parser.*
  *
  * @return A ClassDeclarationNode, or null if no `class` keyword is present.
  */
-fun parseClass(tokens: Tokens): ClassDeclarationNode? {
+internal fun parseClass(tokens: Tokens): ClassDeclarationNode? {
     val classToken = tokens.keyword("class") ?: return null
     tokens.skipWhitespace()
     val name = parseIdentifier(tokens)
@@ -34,7 +32,7 @@ fun parseClass(tokens: Tokens): ClassDeclarationNode? {
     val bodyStart = tokens.attempt(DefaultToken.ROUND_BRACKET_OPEN);
     bodyStart ?: messages.error(
         "Expected '{' after class declaration",
-        tokens.location.toRange()
+        tokens.position.toLocation()
     )
     val fields = mutableListOf<StructuralFieldNode>()
     val methods = mutableListOf<ClassDeclarationNode.MethodNode>()
@@ -60,7 +58,7 @@ fun parseClass(tokens: Tokens): ClassDeclarationNode? {
         messages.error("Expect field or method declaration", invalid)
     }
     if(bodyStart != null && !closed) {
-        messages.error("Expected '}' to close class body", tokens.location.toRange())
+        messages.error("Expected '}' to close class body", tokens.position.toLocation())
     }
     return ClassDeclarationNode(
         name,
@@ -82,7 +80,7 @@ fun parseClass(tokens: Tokens): ClassDeclarationNode? {
  *
  * @return A StructuralFieldNode, or null if no valid field declaration is present.
  */
-fun parseField(tokens: Tokens): StructuralFieldNode? {
+internal fun parseField(tokens: Tokens): StructuralFieldNode? {
     tokens.elevate()
     val publicKw = tokens.keyword("public");
     if(publicKw != null) tokens.skipWhitespace()
@@ -98,12 +96,12 @@ fun parseField(tokens: Tokens): StructuralFieldNode? {
     val messages = CompilerMessages()
     val type = parseExplicitType(tokens, messages)
     if(type == null) {
-        messages.error("Class fields require type declaration ': fieldtype'",tokens.location.toRange())
+        messages.error("Class fields require type declaration ': fieldtype'",tokens.position.toLocation())
     }
     tokens.skipWhitespace()
     tokens.attempt(DefaultToken.SEMICOLON) ?: messages.error(
         "Expected ';' after field declaration",
-        tokens.location.toRange()
+        tokens.position.toLocation()
     )
     return StructuralFieldNode(
         name,
@@ -120,7 +118,7 @@ fun parseField(tokens: Tokens): StructuralFieldNode? {
  *
  * @return A MethodNode, or null if no valid method declaration is present.
  */
-fun parseMethod(tokens: Tokens): ClassDeclarationNode.MethodNode? {
+internal fun parseMethod(tokens: Tokens): ClassDeclarationNode.MethodNode? {
     tokens.elevate()
     val mutable = tokens.keyword("mut")
     if(mutable != null) tokens.skipWhitespace()

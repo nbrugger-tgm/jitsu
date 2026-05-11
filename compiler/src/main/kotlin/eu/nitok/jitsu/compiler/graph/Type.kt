@@ -1,6 +1,7 @@
 package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.common.*
+import eu.nitok.jitsu.common.locating.Located
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -8,7 +9,7 @@ import java.util.Collections.emptyList
 
 @Serializable
 sealed interface Type : Element {
-    fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type
+    fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type
 
     fun acceptsInstanceOf(type: Type): ReasonedBoolean {
         return if (type is Undefined) ReasonedBoolean.True("While UNDEFINED cannot be assigned to anything, the error lies in the definition of the type not its usage");
@@ -48,7 +49,7 @@ sealed interface Type : Element {
 
     @Serializable
     data class Int(override val size: BitSize) : Primitive {
-        override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
         override fun toString(): String {
             return "i${size.bits}"
         }
@@ -72,7 +73,7 @@ sealed interface Type : Element {
 
     @Serializable
     data class UInt(override val size: BitSize) : Primitive {
-        override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
         override fun toString(): String {
             return "u${size.bits}"
         }
@@ -93,7 +94,7 @@ sealed interface Type : Element {
 
     @Serializable
     data class Float(override val size: BitSize = BitSize.BIT_32) : Primitive {
-        override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
         override fun toString(): String {
             return "f${size.bits}"
         }
@@ -113,7 +114,7 @@ sealed interface Type : Element {
 
     @Serializable
     data class Value(val value: Constant<@Contextual Any>) : Type {
-        override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
         override fun accepts(type: Type): ReasonedBoolean {
             return if (type is Value && value == type.value) ReasonedBoolean.True("$value is the same as ${type.value}")
             else if (type is Value) ReasonedBoolean.True("$value is not the same as ${type.value}")
@@ -129,7 +130,7 @@ sealed interface Type : Element {
 
     @Serializable
     data object Null : Type {
-        override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
         override fun toString(): String {
             return "null"
         }
@@ -149,7 +150,7 @@ sealed interface Type : Element {
      */
     @Serializable
     data object Undefined : Type {
-        override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
         override fun accepts(type: Type): ReasonedBoolean {
             return ReasonedBoolean.True("While the UNDEFINED type does not accept any types, the error is to be treated at the source (the type definition) an not its usage")
         }
@@ -165,8 +166,8 @@ sealed interface Type : Element {
         val dimensions: kotlin.Int = 1
     ) : Type {
 
-        override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type {
-            return Array(elementType.resolve(messages, generics), size, dimensions)
+        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type {
+            return Array(elementType.resolveType(messages, generics), size, dimensions)
         }
 
         override fun accepts(type: Type): ReasonedBoolean {
@@ -198,7 +199,7 @@ sealed interface Type : Element {
             return "boolean"
         }
 
-        override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
 
         override fun accepts(type: Type): ReasonedBoolean {
             return if (type is Boolean) {
@@ -216,10 +217,10 @@ sealed interface Type : Element {
 
     @Serializable
     data class FunctionTypeSignature(val returnType: Type?, val parameters: List<Parameter>) : Type {
-        override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type {
+        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type {
             return FunctionTypeSignature(
-                returnType?.resolve(messages, generics),
-                parameters.map { it.copy(type = it.type.resolve(messages, generics)) })
+                returnType?.resolveType(messages, generics),
+                parameters.map { it.copy(type = it.type.resolveType(messages, generics)) })
         }
 
         override fun accepts(type: Type): ReasonedBoolean {
@@ -247,21 +248,23 @@ sealed interface Type : Element {
     data class TypeReference(
         override val reference: Located<String>,
         val genericParameters: List<Located<Type>>
-    ) : Type, Access.TypeAccess, ScopeAware {
-        override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type {
+    ) : AccessImpl<TypeDefinition>(), Type, Access.TypeAccess, ScopeAware {
+        @Transient override val restore = JitsuModule::getType
+        @Transient override val getSymbolId: JitsuModule.(TypeDefinition) -> SymbolID = JitsuModule::getSymbolID
+        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type {
             var target = target
             if (target == null) {
-                val resolved = resolveAccessTarget(messages)
+                val resolved = resolve(messages)
                 target = resolved
-                this.target = resolved
+                setResolvedTarget(resolved)
             }
             val resolvedType = when (target) {
-                is TypeDefinition.DirectTypeDefinition -> target.resolve(messages, generics)
+                is TypeDefinition.DirectTypeDefinition -> target.resolveType(messages, generics)
                 is TypeDefinition.TypeParameter -> generics[reference.value] ?: Undefined
 
                 is TypeDefinition.ParameterizedType -> {
                     val resolvedGenerics = genericParameters.mapIndexedNotNull { index, type ->
-                        val resolved = type.value.resolve(messages, generics)
+                        val resolved = type.value.resolveType(messages, generics)
                         val targetGenericName = target.generics.getOrNull(index)?.name?.value
                         if (targetGenericName == null) {
                             messages.error(
@@ -288,7 +291,7 @@ sealed interface Type : Element {
             return resolvedType
         }
 
-        public lateinit var resolvedCache: Type
+        lateinit var resolvedCache: Type
         override fun accepts(type: Type): ReasonedBoolean {
             if (!this::resolvedCache.isInitialized) throw Error("Type reference $this cannot be used in type checking. Resolve it first")
             if (resolvedCache == this) {
@@ -319,22 +322,11 @@ sealed interface Type : Element {
         @Transient
         override val children: List<Element> = genericParameters.map { it.value }
 
-        @Transient
-        override var target: TypeDefinition? = null;
-
-        @Transient
-        override lateinit var accessor: Accessor;
-
-        @Transient
-        lateinit var scope: Scope;
-
-        override fun resolveAccessTarget(messages: CompilerMessages): TypeDefinition {
+        override fun resolve(messages: CompilerMessages): TypeDefinition {
             target?.let { return it }
-            return scope.resolveType(reference, messages)
-        }
-
-        override fun setEnclosingScope(parent: Scope) {
-            scope = parent
+            val resolveType = scope.resolveType(reference, messages)
+            setResolvedTarget(resolveType)
+            return resolveType
         }
 
         override fun toString(): String {
@@ -344,17 +336,12 @@ sealed interface Type : Element {
                 separator = ", "
             ) { it.value.toString() } else ""
         }
-
-        override fun finalize(messages: CompilerMessages) {
-            super.finalize(messages)
-            resolvedCache = resolve(messages, mapOf())
-        }
     }
 
     @Serializable
     class Union(var options: List<Type>) : Type {
-        override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type {
-            val resolvedOptions = options.map { it.resolve(messages, generics) }
+        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type {
+            val resolvedOptions = options.map { it.resolveType(messages, generics) }
                 .flatMap { type -> if (type is Union) type.options else listOf(type) }
                 .distinct()
             return if(resolvedOptions.size>1) Union(resolvedOptions)
@@ -382,8 +369,8 @@ sealed interface Type : Element {
 
     @Serializable
     data class StructuralInterface(val fields: Map<String, TypeDefinition.ParameterizedType.Struct.Field>) : Type {
-        override fun resolve(messages: CompilerMessages, generics: Map<String, Type>): Type {
-            return StructuralInterface(fields.mapValues { (_, b) -> b.copy(type = b.type.resolve(messages, generics)) })
+        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type {
+            return StructuralInterface(fields.mapValues { (_, b) -> b.copy(type = b.type.resolveType(messages, generics)) })
         }
 
         override fun accepts(type: Type): ReasonedBoolean {

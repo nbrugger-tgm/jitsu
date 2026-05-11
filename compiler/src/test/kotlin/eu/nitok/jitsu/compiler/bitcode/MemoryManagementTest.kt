@@ -1,18 +1,15 @@
 package eu.nitok.jitsu.compiler.bitcode
 
-import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.compiler.bitcode.LowLevelExpression.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
-import eu.nitok.jitsu.compiler.bitcode.LowLevelType.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelType.Companion.I32
-import eu.nitok.jitsu.compiler.bitcode.LowLevelType.Companion.I64
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.compiler.graph.JitsuFile
-import eu.nitok.jitsu.compiler.graph.Type
+import eu.nitok.jitsu.compiler.graph.JitsuModule
 import eu.nitok.jitsu.compiler.graph.VariableDeclaration
-import eu.nitok.jitsu.compiler.graph.buildGraph
-import eu.nitok.jitsu.parser.parseFile
+import eu.nitok.jitsu.compiler.graph.buildJitsuModule
+import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.InstanceOfAssertFactories.type
 import org.junit.jupiter.api.*
@@ -34,11 +31,11 @@ import java.net.URI
 @DisplayName("Memory Management in Lowering")
 class MemoryManagementTest {
     private fun buildFile(source: String): JitsuFile {
-        val ast = parseFile(source, URI("test://sourcefile.jit"))
+        val ast = parseJitsuFile(source, URI("test://sourcefile.jit"))
         ast.sequence().forEach {
             if (it.errors.isNotEmpty()) throw IllegalArgumentException("Syntax error(s)! ${it.errors.joinToString("\n")}")
         }
-        val graph = buildGraph(ast)
+        val graph = buildJitsuModule(ast)
         if (graph.messages.errors.isNotEmpty()) throw IllegalArgumentException(
             "Compilation error(s)! ${
                 graph.messages.errors.joinToString(
@@ -46,7 +43,7 @@ class MemoryManagementTest {
                 )
             }"
         )
-        return graph
+        return graph.files[0]
     }
 
     private fun lower(source: String): List<LowLevelInstruction> {

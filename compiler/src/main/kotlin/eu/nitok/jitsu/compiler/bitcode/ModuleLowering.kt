@@ -1,36 +1,27 @@
 package eu.nitok.jitsu.compiler.bitcode
 
 import eu.nitok.jitsu.compiler.graph.Function
-import eu.nitok.jitsu.compiler.graph.JitsuFile
-import java.nio.file.Path
+import eu.nitok.jitsu.compiler.graph.JitsuModule
 
 /**
  * Lowers an entire JitsuFile to a LoweredModule.
  * This is the main entry point for lowering - backends should use this
  * instead of dealing with graph types directly.
  */
-class ModuleLowering(
-    private val file: JitsuFile,
-    private val sourcePath: Path
-) {
+class ModuleLowering(private val module: JitsuModule) {
     private val functionNames = mutableMapOf<Function, String>()
     private var nameCounter = 0
 
     fun lower(): LoweredModule {
-        // First pass: assign unique names to all functions
-        file.scope.functions.values.flatten().forEach { fn ->
-            getUniqueName(fn)
-        }
 
         // Second pass: lower all functions
-        val loweredFunctions = file.scope.functions.values.flatten().map { fn ->
-            lowerFunction(fn)
-        }
+        val loweredFunctions = module.allModules
+            .flatMap { it.files }
+            .flatMap { it.functions }
+            .map { fn -> lowerFunction(fn) }
+            .toList()
 
-        return LoweredModule(
-            sourcePath = sourcePath.toString(),
-            functions = loweredFunctions
-        )
+        return LoweredModule(name = module.name,functions = loweredFunctions)
     }
 
     private fun getUniqueName(function: Function): String {

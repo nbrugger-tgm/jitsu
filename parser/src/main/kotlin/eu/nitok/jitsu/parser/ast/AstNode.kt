@@ -3,12 +3,12 @@ package eu.nitok.jitsu.parser.ast
 import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.Walkable
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locating.HasLocation
+import eu.nitok.jitsu.common.locating.Location
 import kotlinx.serialization.Serializable
 
-@Serializable
-sealed interface AstNode : Walkable<AstNode> {
-    val location: Range
+sealed interface AstNode : Walkable<AstNode>, HasLocation {
+    override val location: Location
     val warnings: MutableList<CompilerMessage>
     val errors: MutableList<CompilerMessage>
 
@@ -30,7 +30,6 @@ fun CompilerMessages.applyTo(node: AstNode) {
     node.errors.addAll(errors)
 }
 
-@Serializable
 sealed class AstNodeImpl : AstNode {
     override val warnings: MutableList<CompilerMessage> = mutableListOf()
     override val errors: MutableList<CompilerMessage> = mutableListOf()

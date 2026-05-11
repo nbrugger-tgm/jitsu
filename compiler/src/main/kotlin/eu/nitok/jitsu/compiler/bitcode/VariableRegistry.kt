@@ -29,11 +29,14 @@ class VariableRegistry(val function: Function) {
     /**
      * Get or create an entry for a variable declaration.
      */
-    fun
-            getEntry(variable: VariableDeclaration): Entry {
+    fun getEntry(variable: VariableDeclaration): Entry {
         return entries.getOrPut(variable) {
             val lowLevelType = TypeLowering.lower(variable.type)
-            val requiresFree = function.summary?.variableSummary?.get(variable.name.value)?.ownershipState == OwnershipState.OWNS
+            val varSummary = function.summary?.variableSummary
+                ?: throw IllegalStateException("Function ${function} has no summary - lowering not possible")
+            val declarationSummary = varSummary.get(variable.name.value)
+                ?: throw IllegalStateException("Variable $variable has not variable state analysis in function $function! - lowering not possible")
+            val requiresFree = declarationSummary.ownershipState == OwnershipState.OWNS
             Entry(
                 name = variable.name.value,
                 lowLevelType = lowLevelType,
@@ -55,17 +58,4 @@ class VariableRegistry(val function: Function) {
     val variablesToFree: Collection<Entry>
         get() = entries.values.filter { it.requiresFree }
 
-    /**
-     * Register a parameter and return its entry.
-     */
-    fun registerParameter(param: Function.Parameter): Entry {
-        val lowLevelType = TypeLowering.lower(param.declaredType!!)
-        val entry = Entry(
-            name = param.name.value,
-            lowLevelType = lowLevelType,
-            requiresFree = false // parameters are not owned by the function
-        )
-        // Store in a parameter-specific way if needed, for now just return
-        return entry
-    }
 }

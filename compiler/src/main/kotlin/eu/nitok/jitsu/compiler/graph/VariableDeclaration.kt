@@ -1,6 +1,6 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.common.Located
+import eu.nitok.jitsu.common.locating.Located
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -15,11 +15,16 @@ data class VariableDeclaration(
         internal set;
     val type: Type get() = declaredType ?: implicitType ?: Type.Undefined
 
-    @Transient
-    override val accessToSelf: MutableList<Access<Variable>> = mutableListOf()
+    @Transient override val accessToSelf: MutableList<Access<Variable>> = mutableListOf()
     override val children: List<Element> get() = listOfNotNull(declaredType, initialValue)
     override fun toString(): String {
         return "var ${name.value}${declaredType?.let { ": $it" }?:""}${initialValue?.let{" = $it"}?:""}"
+    }
+    @Transient override lateinit var module: JitsuModule
+        internal set;
+
+    override fun setEnclosingModule(parent: JitsuModule) {
+        this.module = parent
     }
 }
 

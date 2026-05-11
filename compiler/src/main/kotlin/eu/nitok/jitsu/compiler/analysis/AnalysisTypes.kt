@@ -1,13 +1,10 @@
 package eu.nitok.jitsu.compiler.analysis
 
 import eu.nitok.jitsu.common.ReasonedBoolean
-import eu.nitok.jitsu.compiler.graph.Access
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.compiler.graph.Type
-import eu.nitok.jitsu.compiler.graph.Variable
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlin.collections.mutableMapOf
 
 /**
  * Summary of a function's analyzed traits.
@@ -25,7 +22,7 @@ data class FunctionSummary(
     val returnSummary: ReturnSummary? = null,
 
     /** Names of functions called by this function (for serialization/display). */
-    val callees: List<Function> = emptyList(),
+    @Transient val callees: List<Function> = emptyList(), //TODO better solution needed at some point
     val variableSummary: Map<String, VariableSummary>
 ) {
     /** A function is pure if it is deterministic and has no side effects. */

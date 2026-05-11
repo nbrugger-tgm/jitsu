@@ -1,10 +1,11 @@
 package eu.nitok.jitsu.compiler.bitcode
 
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.compiler.bitcode.LowLevelExpression.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
+import java.net.URI
 
 /**
  * Result of lowering an expression.
@@ -49,7 +50,7 @@ class FunctionLowering(
         expectedReturnType: LowLevelType?
     ): List<LowLevelInstruction> {
         val implicitReturn = if(block.instructions.lastOrNull() !is Instruction.Return && expectedReturnType == null)
-            lowerReturn(Instruction.Return(null, Range(0,0,0,0)), null)
+            lowerReturn(Instruction.Return(null, Location(URI("memory://test.jit"),0,0,0,0)), null)
         else listOf()
         return block.instructions.flatMap { instruction ->
             when (instruction) {
@@ -181,7 +182,6 @@ class FunctionLowering(
 
             is Constant.StringConstant -> TODO("String constants not yet supported")
             is Instruction.FunctionCall -> lowerFunctionCallExpression(expression)
-            is Expression.Operation -> lowerFunctionCallExpression(expression.functionCall)
             is Expression.VariableReference -> lowerVariableReference(expression)
             is Expression.ArrayLiteral -> lowerArrayLiteral(expression, hint)
             is Expression.Undefined -> TODO("Cannot lower undefined expression")

@@ -14,8 +14,7 @@ class CBackend : Backend {
     }
 
     private fun transpile(module: LoweredModule, dir: Path): Path {
-        val sourcePath = Path.of(module.sourcePath)
-        val file = dir.resolve("${sourcePath.nameWithoutExtension}.c").createParentDirectories()
+        val file = dir.resolve("${module.name}.c").createParentDirectories()
         file.deleteIfExists()
         file.createFile()
         file.bufferedWriter().use { writer ->

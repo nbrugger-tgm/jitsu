@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.playground
 
 import capabilities.syntaxDiagnostic
-import eu.nitok.jitsu.parser.parseFile
+import eu.nitok.jitsu.parser.parseJitsuFile
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.html.*
@@ -35,7 +35,7 @@ fun main() {
             post("/parse") {
                 val code = call.receiveParameters()["code"]!!
                 println("Parsing: $code")
-                val ast = parseFile(code, URI("memory://root.jit")).let {
+                val ast = parseJitsuFile(code, URI("memory://root.jit")).let {
                     println("Parsed: ${it.statements.size}")
                     "<p>Internal AST</p><pre>${
                         try {

@@ -1,6 +1,6 @@
 package eu.nitok.jitsu.parser
 
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.parser.ast.StatementNode.Declaration.FunctionDeclarationNode
 import eu.nitok.jitsu.parser.ast.StatementNode.Declaration.FunctionDeclarationNode.FunctionBodyNode
 import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.CodeBlockNode.StatementsCodeBlock
@@ -291,6 +291,6 @@ class FunctionParserTest : ParsingTest() {
         assertThat(fn).isNotNull()
         assertThat(fn?.location)
             .isNotNull()
-            .isEqualTo(Range(1, 1, 22, 1))
+            .isEqualTo(Location(url,1, 1, 22, 1))
     }
 }

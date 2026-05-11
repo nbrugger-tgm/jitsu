@@ -1,6 +1,6 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.common.Located
+import eu.nitok.jitsu.common.locating.Located
 import kotlinx.serialization.Serializable
 
 @Serializable

@@ -7,7 +7,7 @@ import eu.nitok.jitsu.parser.ast.withMessages
 import eu.nitok.jitsu.parser.*
 import kotlin.jvm.optionals.getOrElse
 
-fun parseIdentifier(tokens: Tokens): IdentifierNode? {
+internal fun parseIdentifier(tokens: Tokens): IdentifierNode? {
     val firstToken = tokens.range {
         tokens.peekOptional().getOrElse { return null }
     }
@@ -32,7 +32,7 @@ fun parseIdentifier(tokens: Tokens): IdentifierNode? {
         if (type == DOLLAR) {
             messages.warn(
                 "Dollar signs are allowed in identifiers, but are discouraged since they are used in auto-generation",
-                tokens.location.toRange()
+                tokens.position.toLocation()
             )
         }
         value += tokens.next().value

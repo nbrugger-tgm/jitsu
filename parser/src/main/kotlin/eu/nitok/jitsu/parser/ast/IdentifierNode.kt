@@ -1,11 +1,10 @@
 package eu.nitok.jitsu.parser.ast
 
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locating.Location
 import kotlinx.serialization.Serializable
 
-@Serializable
 class IdentifierNode(
-    override val location: Range,
+    override val location: Location,
     val value: String
 ) : AstNodeImpl() {
     override val children: List<AstNode>

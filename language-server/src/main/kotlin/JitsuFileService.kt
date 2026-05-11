@@ -1,11 +1,14 @@
 import capabilities.documentSymbols
 import capabilities.syntaxDiagnostic
 import capabilities.syntaxHighlight
-import eu.nitok.jitsu.compiler.graph.*
+import eu.nitok.jitsu.common.locating.Position
 import eu.nitok.jitsu.common.sequence
-import eu.nitok.jitsu.common.Location
+import eu.nitok.jitsu.compiler.graph.Access
+import eu.nitok.jitsu.compiler.graph.Accessible
+import eu.nitok.jitsu.compiler.graph.JitsuModule
+import eu.nitok.jitsu.compiler.graph.buildJitsuModule
 import eu.nitok.jitsu.parser.ast.SourceFileNode
-import eu.nitok.jitsu.parser.parseFile
+import eu.nitok.jitsu.parser.parseJitsuFile
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.TextDocumentService
@@ -16,7 +19,7 @@ import java.util.concurrent.CompletableFuture
 class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
     private val rawTexts: MutableMap<String, String> = mutableMapOf();
     private val asts = mutableMapOf<String, Lazy<SourceFileNode>>()
-    private val graphs = mutableMapOf<String, Lazy<JitsuFile>>()
+    private val graphs = mutableMapOf<String, Lazy<JitsuModule>>()
     override fun didOpen(params: DidOpenTextDocumentParams?) {
         params?.textDocument?.let {
             rawTexts[it.uri] = it.text
@@ -29,7 +32,7 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
         asts[uri] = lazy {
             customLogger.println("parsing $uri")
             val startMs = System.currentTimeMillis()
-            val ast = parseFile(text, URI(uri))
+            val ast = parseJitsuFile(text, URI(uri))
             val endMs = System.currentTimeMillis()
             val parsingTime = endMs - startMs
             customLogger.println("parsed in ${parsingTime}ms")
@@ -37,13 +40,13 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
             customLogger.println("Per line: ${parsingTime / text.split("\n").size}ms")
             graphs[uri] = lazy {
                 customLogger.println("build graph for $uri")
-                buildGraph(ast)
+                buildJitsuModule(ast)
             }
             server.client?.refreshDiagnostics()
             server.client?.refreshSemanticTokens()
             return@lazy ast
         }
-        graphs[uri] = lazy { buildGraph(asts[uri]!!.value) }
+        graphs[uri] = lazy { buildJitsuModule(asts[uri]!!.value) }
     }
 
     override fun didChange(params: DidChangeTextDocumentParams?) {
@@ -120,16 +123,16 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
         return CompletableFuture.completedFuture(SemanticTokens(tokens))//syntax highlighting
     }
 
-    private fun color(it: Location, write: DocumentHighlightKind): ColorInformation {
+    private fun color(it: Position, write: DocumentHighlightKind): ColorInformation {
         return ColorInformation(
             range(it.rangeTo(it)),
             Color(1.0, .0, .0, 1.0)
         )
     }
 
-    override fun definition(params: DefinitionParams): CompletableFuture<Either<MutableList<out org.eclipse.lsp4j.Location>, MutableList<out LocationLink>>> {
+    override fun definition(params: DefinitionParams): CompletableFuture<Either<MutableList<out Location>, MutableList<out LocationLink>>> {
         return CompletableFuture.supplyAsync {
-            val referencePos = location(params.position)
+            val referencePos = location(params.position, params.textDocument.uri)
             val graph = graphs[params.textDocument.uri]?.value?.let {
                 it.sequence().filterIsInstance<Access<*>>()
                     .find { it.reference.location.contains(referencePos) }
@@ -138,9 +141,9 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
         }
     }
 
-    override fun references(params: ReferenceParams): CompletableFuture<List<org.eclipse.lsp4j.Location?>?>? {
+    override fun references(params: ReferenceParams): CompletableFuture<List<Location?>?>? {
         return CompletableFuture.supplyAsync {
-            val definitionPos = location(params.position)
+            val definitionPos = location(params.position, params.textDocument.uri)
             val graph = graphs[params.textDocument.uri]?.value
             val definition = graph?.sequence()
                 ?.filterIsInstance<Accessible<*>>()

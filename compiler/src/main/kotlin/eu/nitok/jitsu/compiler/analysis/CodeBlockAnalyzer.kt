@@ -1,11 +1,13 @@
 package eu.nitok.jitsu.compiler.analysis
 
 import eu.nitok.jitsu.common.CompilerMessage
+import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.ReasonedBoolean
+import eu.nitok.jitsu.common.ReasonedBoolean.False
+import eu.nitok.jitsu.common.ReasonedBoolean.True
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
-import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.ReasonedBoolean.*
+import eu.nitok.jitsu.compiler.graph.Access
 
 class CodeBlockAnalyzer(
     private val function: Function,
@@ -39,7 +41,7 @@ class CodeBlockAnalyzer(
     private val useSiteInfos: MutableMap<Expression.VariableReference, UseSiteInfo> = mutableMapOf()
     private val returnPaths: MutableList<ReturnPathInfo> = mutableListOf()
     private val callees: MutableList<Function> = mutableListOf()
-    private var hasSideEffects: ReasonedBoolean = ReasonedBoolean.True("No side effects observed yet")
+    private var hasSideEffects: ReasonedBoolean = True("No side effects observed yet")
 
     private data class ReturnPathInfo(
         val type: Type,
@@ -49,7 +51,7 @@ class CodeBlockAnalyzer(
     )
 
     fun analyze(): AnalysisResult {
-         for (param in function.parameters) {
+        for (param in function.parameters) {
             localVariables[param.name.value] = VariableState(
                 declaredType = param.declaredType,
                 narrowedType = param.declaredType,
@@ -58,10 +60,10 @@ class CodeBlockAnalyzer(
                 compileTimeValue = AbstractValue.Unknown,
                 paramDeps = setOf(param.name.value),
                 variable = param,
-                deterministic = ReasonedBoolean.True("Parameters are deterministic")
+                deterministic = True("Parameters are deterministic")
             )
         }
-        if(function.body is Function.Body.Implementation) {
+        if (function.body is Function.Body.Implementation) {
             for (instruction in function.body.block.instructions) {
                 processInstruction(instruction)
             }
@@ -91,8 +93,8 @@ class CodeBlockAnalyzer(
                     possibleTypes = returnPaths.map { rp -> rp.type }.distinct(),
                     compileTimeValue = merged.compileTimeValue,
                     dependsOnParameters = merged.paramDeps
-                        .filter { dep -> fnParams.any { p -> p.name.value == dep } }
-                        .toSet(),//Why is this needed? what else besides parameters is in this stream
+                        .filter { dep -> fnParams.any { p -> p.name.value == dep } }//Why is this needed? what else besides parameters is in this stream
+                        .toSet(),
                     deterministic = merged.deterministic
                 )
             }
@@ -166,7 +168,7 @@ class CodeBlockAnalyzer(
             compileTimeValue = compileTimeValue,
             paramDeps = paramDeps,
             variable = decl,
-            deterministic = expression?.deterministic ?: ReasonedBoolean.True("Variable not assigned yet")
+            deterministic = expression?.deterministic ?: True("Variable not assigned yet")
         )
     }
 
@@ -189,7 +191,9 @@ class CodeBlockAnalyzer(
         if (function.returnType != null) {
             val typeMatches = function.returnType.value.acceptsInstanceOf(exprResult.type)
             if (!typeMatches.value) {
-                messages.error("Function expects return type ${function.returnType.value}: ${typeMatches.fullMessageChain()}", value.location,
+                messages.error(
+                    "Function expects return type ${function.returnType.value}: ${typeMatches.fullMessageChain()}",
+                    value.location,
                     CompilerMessage.Hint("Return type defined here", function.returnType.location)
                 )
             }
@@ -213,10 +217,9 @@ class CodeBlockAnalyzer(
         )
     }
 
-    private fun analyzeExpression(expr: Expression,typeHint: Type?): ExpressionResult {
+    private fun analyzeExpression(expr: Expression, typeHint: Type?): ExpressionResult {
         return when (expr) {
             is Constant<*> -> analyzeConstant(expr)
-            is Expression.Operation -> analyzeFunctionCallExpression(expr.functionCall)
             is Expression.VariableReference -> analyzeVariableReference(expr)
             is Instruction.FunctionCall -> analyzeFunctionCallExpression(expr)
             is Expression.Undefined -> ExpressionResult(
@@ -225,18 +228,19 @@ class CodeBlockAnalyzer(
                 constValue = AbstractValue.Unknown,
                 paramDeps = emptySet()
             )
+
             is Expression.ArrayLiteral -> analyzeArrayLiteral(expr, typeHint)
         }
     }
 
-    private fun analyzeArrayLiteral(expr: Expression.ArrayLiteral,typeHint: Type?): ExpressionResult {
+    private fun analyzeArrayLiteral(expr: Expression.ArrayLiteral, typeHint: Type?): ExpressionResult {
         val arrayType = expr.calculateType(typeContext, messages, typeHint)
         val elementType = if (arrayType.elementType !is Type.Undefined) arrayType.elementType else null
         val elements = expr.elements.asSequence().map { analyzeExpression(it, elementType) }.toList()
         return ExpressionResult(
             type = arrayType,
             deterministic = elements.map { it.deterministic }.fold(
-                ReasonedBoolean.True("Empty array is deterministic") as ReasonedBoolean
+                True("Empty array is deterministic") as ReasonedBoolean
             ) { acc, d -> acc.and(d) },
             constValue = AbstractValue.Unknown,
             paramDeps = elements.flatMap { it.paramDeps }.toSet()
@@ -247,7 +251,7 @@ class CodeBlockAnalyzer(
         val type = constant.type
         return ExpressionResult(
             type = type,
-            deterministic = ReasonedBoolean.True("Constant values are deterministic"),
+            deterministic = True("Constant values are deterministic"),
             constValue = AbstractValue.Const(constant.literal, type),
             paramDeps = emptySet()
         )
@@ -265,16 +269,16 @@ class CodeBlockAnalyzer(
             )
             return ExpressionResult(
                 type = Type.Undefined,
-                deterministic = ReasonedBoolean.True("Variable '$varName' not found"),
+                deterministic = True("Variable '$varName' not found"),
                 constValue = AbstractValue.NoValue,
                 paramDeps = emptySet()
             )
         }
 
-        ref.target = varState.variable
+        ref.setResolvedTarget(varState.variable)
         ref.accessKind = Access.VariableAccess.AccessKind.BORROW
         varState.variable.accessToSelf.add(ref)
-        val type = ref.calculateType(typeContext, messages)?: Type.Undefined
+        val type = ref.calculateType(typeContext, messages) ?: Type.Undefined
 
         useSiteInfos[ref] = UseSiteInfo(
             narrowedType = type,
@@ -288,12 +292,12 @@ class CodeBlockAnalyzer(
             paramDeps = varState.paramDeps
         )
     }
-    private fun                                                                                                                                                                                                         processFunctionCall(call: Instruction.FunctionCall) : Function?{
-        val target = call.target?: call.resolveTarget(typeContext, messages)
-        call.target = target
-        target?.accessToSelf?.add(call)
-        val targetSummary = target?.let{ calleeOracle(it) }
+
+    private fun processFunctionCall(call: Instruction.FunctionCall): Function? {
+        val target = call.target ?: call.resolveTarget(typeContext, messages)
+        val targetSummary = target?.let { calleeOracle(it) }
         if (target != null) {
+            call.setResolvedTarget(target)
             callees.add(target)
             if (targetSummary != null) {
                 if (!targetSummary.noSideEffects.value) {
@@ -317,11 +321,12 @@ class CodeBlockAnalyzer(
         }
         return target
     }
+
     private fun analyzeFunctionCallExpression(call: Instruction.FunctionCall): ExpressionResult {
         val target = processFunctionCall(call)
-        val targetSummary = target?.let{ calleeOracle(it) }
+        val targetSummary = target?.let { calleeOracle(it) }
         val argumentExpressions = call.callParameters.mapIndexed { index, expression ->
-            if(target != null) analyzeExpression(expression, target.parameters.getOrNull(index)?.type)
+            if (target != null) analyzeExpression(expression, target.parameters.getOrNull(index)?.type)
             else analyzeExpression(expression, null)
         }
 
@@ -329,11 +334,12 @@ class CodeBlockAnalyzer(
         val outputInfluencingParams = target?.summary?.let { targetSummary ->
             targetSummary.returnSummary?.dependsOnParameters
                 ?.map { paramName -> target.parameters.indexOfFirst { it.name.value == paramName } }
-        } ?: argumentExpressions.withIndex().map { it.index } //if target doesn't exist assume all parameters to be return value influencing
+        } ?: argumentExpressions.withIndex()
+            .map { it.index } //if target doesn't exist assume all parameters to be return value influencing
 
         val areOutputInfluencingArgsDeterministic = argumentExpressions.asSequence()
             .filterIndexed { index, _ -> outputInfluencingParams.contains(index) }
-            .fold(ReasonedBoolean.True("No arguments") as ReasonedBoolean) { acc, arg ->
+            .fold(True("No arguments") as ReasonedBoolean) { acc, arg ->
                 acc.and(arg.deterministic)
             }
         val allParamDeps = argumentExpressions.asSequence()
@@ -344,14 +350,18 @@ class CodeBlockAnalyzer(
             messages.error("Expected value but $call calls void function", call.location)
             Type.Undefined
         }
-        val deterministic = targetSummary?.returnSummary?.deterministic?.and(areOutputInfluencingArgsDeterministic)?:areOutputInfluencingArgsDeterministic
+        val targetDeterminsitic =
+            if (targetSummary?.returnSummary?.deterministic == null) True("Unresolved functions are assumed to be deterministic")
+            else if (targetSummary.returnSummary.deterministic.value) True("$target is deterministic")
+            else False("$target is not deterministic", targetSummary.returnSummary.deterministic)
+        val deterministic = areOutputInfluencingArgsDeterministic.and(targetDeterminsitic)
 
-      return ExpressionResult(
-                type = returnType,
-                deterministic = deterministic,
-                constValue = targetSummary?.returnSummary?.compileTimeValue?:AbstractValue.Unknown,
-                paramDeps = allParamDeps
-            )
+        return ExpressionResult(
+            type = returnType,
+            deterministic = deterministic,
+            constValue = targetSummary?.returnSummary?.compileTimeValue ?: AbstractValue.Unknown,
+            paramDeps = allParamDeps
+        )
     }
 
     private val typeContext: Map<String, Type> get() = localVariables.mapValues { it.value.narrowedType }
@@ -359,7 +369,7 @@ class CodeBlockAnalyzer(
     private fun buildVariableSummary(state: VariableState): VariableSummary {
         val effectivelyConstant: ReasonedBoolean =
             if (state.isConstant) {//Cant is constant be turned into a ReasonedBoolean itself and therefore be more percise
-                ReasonedBoolean.True("Variable is not reassignable and its initializer is a compile-time constant")
+                True("Variable is not reassignable and its initializer is a compile-time constant")
             } else {
                 ReasonedBoolean.False("Variable is either reassignable or its initializer is not a compile-time constant")
             }

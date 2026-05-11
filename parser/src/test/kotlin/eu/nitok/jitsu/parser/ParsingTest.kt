@@ -6,12 +6,15 @@ import com.niton.jainparse.token.TokenStream
 import eu.nitok.jitsu.common.walk
 import eu.nitok.jitsu.parser.ast.AstNode
 import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.parser.tokenization.FileTokenStream
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import java.io.StringReader
+import java.net.URI
+import java.net.URL
 
 abstract class ParsingTest {
     protected var messages = CompilerMessages();
@@ -29,10 +32,12 @@ abstract class ParsingTest {
         assertThat(messages.warnings).isEmpty()
     }
 
+    val url = URI("memory://test.jit")
+
     protected fun tokenize(txt: String): Tokens {
         val tokens = TokenSource(StringReader(txt), DefaultToken.entries.toTypedArray());
         val tokenStream = TokenStream.of(tokens)
-        return tokenStream
+        return FileTokenStream(url, tokenStream)
     }
     abstract inner class MethodTest<T: AstNode> {
         protected abstract fun parseMethod(input: String):T?

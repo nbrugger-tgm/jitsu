@@ -14,7 +14,7 @@ import eu.nitok.jitsu.parser.*
  *
  * @return The parsed statement node, or null if no valid statement starts at the current position.
  */
-fun parseStatement(tokens: Tokens): StatementNode? {
+internal fun parseStatement(tokens: Tokens): StatementNode? {
     return parseFunction(tokens) ?: parseClass(tokens)?: parseExecutableStatement(tokens) {
         parseVariableDeclaration(it) ?: parseReturnStatement(it) ?: parseTypeDeclaration(tokens)
         ?: parseIdentifierBased(it) { tokens, id ->
@@ -31,14 +31,14 @@ fun parseStatement(tokens: Tokens): StatementNode? {
  * @param kw The already-parsed target identifier.
  * @return An AssignmentNode, or null if no `=` follows the identifier.
  */
-fun parseAssignment(tokens: Tokens, kw: IdentifierNode): StatementNode.InstructionNode.AssignmentNode? {
+internal fun parseAssignment(tokens: Tokens, kw: IdentifierNode): StatementNode.InstructionNode.AssignmentNode? {
     tokens.skipWhitespace()
     tokens.attempt(DefaultToken.EQUAL) ?: return null
     tokens.skipWhitespace()
     val expression = parseExpression(tokens)
     return StatementNode.InstructionNode.AssignmentNode(ExpressionNode.VariableReferenceNode(kw), expression).run {
         if (expression == null)
-            this.error(CompilerMessage("Expected value to assign to '${kw.value}'", tokens.location.toRange()))
+            this.error(CompilerMessage("Expected value to assign to '${kw.value}'", tokens.position.toLocation()))
         this
     }
 }
@@ -49,7 +49,7 @@ fun parseAssignment(tokens: Tokens, kw: IdentifierNode): StatementNode.Instructi
  * @param statements Accumulator list for parsed statements.
  * @param containerNode Error callback for invalid input between statements.
  */
-fun parseStatements(
+internal fun parseStatements(
     tokens: Tokens,
     statements: MutableList<StatementNode>,
     containerNode: (CompilerMessage) -> Unit
@@ -79,7 +79,7 @@ fun parseStatements(
 
 private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> StatementNode?): StatementNode? {
     val res = statmentFn(tokens) ?: return null
-    val endOfStatementPos = tokens.location.toRange()
+    val endOfStatementPos = tokens.position.toLocation()
     tokens.skipWhitespace()
     val semicolon = tokens.peekOptional()
     if (semicolon.map { it.type }.orElse(null) != DefaultToken.SEMICOLON) {
@@ -98,7 +98,7 @@ private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> Sta
  * @param id The already-parsed function name identifier.
  * @return A FunctionCallNode, or null if no `(` follows the identifier.
  */
-fun parseFunctionCall(tokens: Tokens, id: IdentifierNode): StatementNode.InstructionNode.FunctionCallNode? {
+internal fun parseFunctionCall(tokens: Tokens, id: IdentifierNode): StatementNode.InstructionNode.FunctionCallNode? {
     val messages = CompilerMessages()
     val params = tokens.range {
         enclosedRepetition(
@@ -122,7 +122,7 @@ fun parseFunctionCall(tokens: Tokens, id: IdentifierNode): StatementNode.Instruc
  *
  * @return A ReturnNode, or null if no `return` keyword is present.
  */
-fun parseReturnStatement(tokens: Tokens): StatementNode? {
+internal fun parseReturnStatement(tokens: Tokens): StatementNode? {
     val kw = tokens.keyword("return") ?: return null
     tokens.skipWhitespace()
     val value = parseExpression(tokens)
@@ -138,13 +138,13 @@ fun parseReturnStatement(tokens: Tokens): StatementNode? {
  *
  * @return A VariableDeclarationNode, or null if no `var` keyword is present.
  */
-fun parseVariableDeclaration(tokens: Tokens): StatementNode.InstructionNode.VariableDeclarationNode? {
+internal fun parseVariableDeclaration(tokens: Tokens): StatementNode.InstructionNode.VariableDeclarationNode? {
     val kw = tokens.keyword("var") ?: return null
     val messages = CompilerMessages()
     tokens.skipWhitespace()
     val name = parseIdentifier(tokens)
     if (name == null) {
-        messages.error("Expected variable name", tokens.location.toRange())
+        messages.error("Expected variable name", tokens.position.toLocation())
         val invalid = tokens.skipUntil(DefaultToken.SEMICOLON, DefaultToken.NEW_LINE, DefaultToken.EQUAL, DefaultToken.COLON)
     } else {
         tokens.skipWhitespace()
@@ -153,14 +153,14 @@ fun parseVariableDeclaration(tokens: Tokens): StatementNode.InstructionNode.Vari
     tokens.skipWhitespace()
     val eq = tokens.attempt(DefaultToken.EQUAL)
     if (eq == null) {
-        messages.error("Variables need an initial value!", tokens.location.toRange())
+        messages.error("Variables need an initial value!", tokens.position.toLocation())
     } else {
         tokens.skipWhitespace()
     }
     val expression = parseExpression(tokens)
 
     if (expression == null)
-        messages.error("Expected value to assign to '${name?.value}'", tokens.location.toRange())
+        messages.error("Expected value to assign to '${name?.value}'", tokens.position.toLocation())
     return StatementNode.InstructionNode.VariableDeclarationNode(
         name,
         type,

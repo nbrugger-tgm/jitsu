@@ -1,51 +1,71 @@
 package eu.nitok.jitsu.compiler.analysis
 
 import eu.nitok.jitsu.common.BitSize
-import eu.nitok.jitsu.common.Location
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locating.Position
+import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
+import eu.nitok.jitsu.common.locating.Located
+import eu.nitok.jitsu.common.locating.locatedAt
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.net.URI
 
 class AnalysisRepositoryTest {
 
-    private val dummyLoc = Location(1, 1)
-    private val dummyRange = Range(dummyLoc, dummyLoc)
+    private val dummyLoc = Position(1, 1, URI("memory://test.jit"))
+    private val dummyLocation = Location(dummyLoc, dummyLoc)
     private val i32 = Type.Int(BitSize.BIT_32)
     private val i8 = Type.Int(BitSize.BIT_8)
     private lateinit var messages: CompilerMessages
     private lateinit var repo: AnalysisRepository
+    private var module = JitsuModule("test", listOf(), listOf())
 
+
+    private fun <T> T.modularized():T {
+        if(this is ModuleAware) setEnclosingModule(this@AnalysisRepositoryTest.module)
+        if(this is ScopeAware) setEnclosingScope(module.scope)
+        return this
+    }
     @BeforeEach
     fun setup() {
         messages = CompilerMessages()
         repo = AnalysisRepository()
+        module = JitsuModule("test", listOf(), listOf())
     }
 
-    private fun <T> located(s: T) = Located(s, dummyRange)
+    private fun <T> located(s: T) = Located(s, dummyLocation)
 
     private fun buildFunction(
         name: String,
         returnType: Type? = null,
         parameters: List<Function.Parameter> = emptyList(),
         instructions: List<Instruction> = emptyList()
-    ): Function = Function(located(name), returnType?.let { located(it) }, parameters, Function.Body.Implementation(CodeBlock(instructions)))
-
+    ): Function {
+        val function = Function(
+            located(name),
+            returnType?.let { located(it) },
+            parameters,
+            Function.Body.Implementation(CodeBlock(instructions)),
+            dummyLocation
+        )
+        function.setEnclosingModule(module)
+        function.setEnclosingScope(module.scope)
+        return function
+    }
     private fun param(name: String, type: Type): Function.Parameter =
-        Function.Parameter(located(name), type, null)
+        Function.Parameter(located(name), type, null).modularized()
 
     private fun constI32(value: Long): Constant.IntConstant =
-        Constant.IntConstant(value, dummyRange)
+        Constant.IntConstant(value, dummyLocation).modularized()
 
     private fun ret(value: Expression? = null): Instruction.Return =
-        Instruction.Return(value, dummyRange)
+        Instruction.Return(value, dummyLocation).modularized()
 
     private fun call(name: String, args: List<Expression> = emptyList()): Instruction.FunctionCall =
-        Instruction.FunctionCall(located(name), args, dummyRange)
+        Instruction.FunctionCall(located(name), args, dummyLocation).modularized()
 
     @Test
     fun `single non-recursive function gets summary`() {
@@ -74,7 +94,7 @@ class AnalysisRepositoryTest {
 
         val callInstr = call("bar")
         val foo = buildFunction("foo", i32, instructions = listOf(ret(callInstr)))
-        callInstr.target = bar
+        callInstr.setResolvedTarget(bar)
 
         repo.analyzeAll(listOf(foo, bar), messages)
 
@@ -88,7 +108,7 @@ class AnalysisRepositoryTest {
     fun `self-recursive function converges without stack overflow`() {
         val callInstr = call("fib")
         val fib = buildFunction("fib", i32, listOf(param("n", i32)), listOf(ret(callInstr)))
-        callInstr.target = fib
+        callInstr.setResolvedTarget(fib)
 
         repo.analyzeAll(listOf(fib), messages)
 
@@ -99,7 +119,7 @@ class AnalysisRepositoryTest {
     fun `self-recursive function produces a summary`() {
         val callInstr = call("fib")
         val fib = buildFunction("fib", i32, listOf(param("n", i32)), listOf(ret(callInstr)))
-        callInstr.target = fib
+        callInstr.setResolvedTarget(fib)
 
         repo.analyzeAll(listOf(fib), messages)
 
@@ -119,8 +139,8 @@ class AnalysisRepositoryTest {
         val callAFromB = call("a")
         val b = buildFunction("b", null, emptyList(), listOf(callAFromB))
 
-        callBFromA.target = b
-        callAFromB.target = a
+        callBFromA.setResolvedTarget(b)
+        callAFromB.setResolvedTarget(a)
 
         repo.analyzeAll(listOf(a, b), messages)
 
@@ -134,7 +154,7 @@ class AnalysisRepositoryTest {
 
         val callInstr = call("bar")
         val foo = buildFunction("foo", i32, instructions = listOf(ret(callInstr)))
-        callInstr.target = bar
+        callInstr.setResolvedTarget(bar)
 
         repo.analyzeAll(listOf(foo, bar), messages)
 
@@ -171,9 +191,9 @@ class AnalysisRepositoryTest {
             name = located("x"),
             declaredType = i32,
             initialValue = constI32(7)
-        )
-        val ref = Expression.VariableReference(located("x"))
-        ref.target = decl
+        ).modularized()
+        val ref = Expression.VariableReference(located("x")).modularized()
+        ref.setResolvedTarget(decl)
         val foo = buildFunction("foo", i32, instructions = listOf(decl, ret(ref)))
         repo.analyzeAll(listOf(foo), messages)
 

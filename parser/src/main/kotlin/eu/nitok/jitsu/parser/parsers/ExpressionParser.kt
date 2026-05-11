@@ -2,16 +2,16 @@ package eu.nitok.jitsu.parser.parsers
 
 import com.niton.jainparse.token.DefaultToken
 import com.niton.jainparse.token.DefaultToken.*
-import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.parser.ast.ExpressionNode
-import eu.nitok.jitsu.parser.ast.ExpressionNode.StringLiteralNode
-import eu.nitok.jitsu.common.Located
-import eu.nitok.jitsu.parser.ast.withMessages
 import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.CompilerMessage.Hint
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.common.locating.Located
+import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.compiler.model.BiOperator
 import eu.nitok.jitsu.parser.*
+import eu.nitok.jitsu.parser.ast.ExpressionNode
+import eu.nitok.jitsu.parser.ast.ExpressionNode.StringLiteralNode
+import eu.nitok.jitsu.parser.ast.withMessages
 import kotlin.jvm.optionals.getOrNull
 
 /**
@@ -22,7 +22,7 @@ import kotlin.jvm.optionals.getOrNull
  *
  * @return The parsed expression node, or null if no valid expression starts at the current position.
  */
-fun parseExpression(tokens: Tokens): ExpressionNode? {
+internal fun parseExpression(tokens: Tokens): ExpressionNode? {
     var expressionNode = parseSingleExpression(tokens)
     while (expressionNode != null) {
         val composite = parseCompositExpression(tokens, expressionNode) ?: return expressionNode
@@ -43,7 +43,7 @@ private fun parseSingleExpression(tokens: Tokens) =
 
 private fun parseStringLiteral(stream: Tokens): ExpressionNode? {
     val openingQuote = stream.attempt(DOUBLEQUOTE) ?: return null;
-    var termination: Range? = null;
+    var termination: Location? = null;
     var string = mutableListOf<StringLiteralNode.StringPart>()
     var messages = CompilerMessages()
     while (true) {
@@ -53,7 +53,7 @@ private fun parseStringLiteral(stream: Tokens): ExpressionNode? {
             if (terminationChar.value.type != DOUBLEQUOTE) {
                 messages.error(
                     "String interrupted by ${terminationChar.value.type}",
-                    stream.location.toRange(),
+                    stream.position.toLocation(),
                     Hint("String opened", openingQuote.location)
                 )
             }
@@ -65,10 +65,10 @@ private fun parseStringLiteral(stream: Tokens): ExpressionNode? {
     if (termination == null) {
         messages.error(
             "String interrupted by EOF",
-            stream.location.toRange(),
+            stream.position.toLocation(),
             Hint("String opened", openingQuote.location)
         )
-        termination = stream.location.toRange()
+        termination = stream.position.toLocation()
     }
     return StringLiteralNode(string, openingQuote.location.rangeTo(termination!!)).withMessages(messages)
 }
@@ -76,7 +76,7 @@ private fun parseStringLiteral(stream: Tokens): ExpressionNode? {
 /**
  * Parses a single component of a string literal (escape sequence, interpolation, or character sequence).
  */
-fun parseStringPart(stream: Tokens): StringLiteralNode.StringPart? {
+internal fun parseStringPart(stream: Tokens): StringLiteralNode.StringPart? {
     if (!stream.hasNext()) return null
     return parseEscapeCharacterStringPart(stream) ?: parseExpressionStringPart(stream) ?: parseLiteralStringPart(stream)
     ?: parseCharSequenceStringPart(stream);
@@ -86,7 +86,7 @@ fun parseStringPart(stream: Tokens): StringLiteralNode.StringPart? {
 /**
  * Parses an escape sequence in a string literal (e.g., `\n`, `\\`, `\t`).
  */
-fun parseEscapeCharacterStringPart(stream: Tokens): StringLiteralNode.StringPart? {
+internal fun parseEscapeCharacterStringPart(stream: Tokens): StringLiteralNode.StringPart? {
     var kw = stream.attempt(BACK_SLASH) ?: return null;
     var escaped = stream.nullableRange { splice(1) }
 
@@ -108,7 +108,7 @@ fun parseEscapeCharacterStringPart(stream: Tokens): StringLiteralNode.StringPart
 /**
  * Parses a plain character sequence within a string literal (text between special characters).
  */
-fun parseCharSequenceStringPart(stream: Tokens): StringLiteralNode.StringPart? {
+internal fun parseCharSequenceStringPart(stream: Tokens): StringLiteralNode.StringPart? {
     stream.elevate()
     val chars = stream.captureUntil(EOF, NEW_LINE, DOLLAR, BACK_SLASH, DOUBLEQUOTE)
     if (chars.value.isEmpty()) {
@@ -131,7 +131,7 @@ private fun Tokens.captureUntil(vararg token: DefaultToken): Located<String> {
 /**
  * Parses simple string interpolation (`$name`) within a string literal.
  */
-fun parseLiteralStringPart(stream: Tokens): StringLiteralNode.StringPart? {
+internal fun parseLiteralStringPart(stream: Tokens): StringLiteralNode.StringPart? {
     var kw = stream.attempt(DefaultToken.DOLLAR) ?: return null;
     var literal =
         parseIdentifierBased(stream) { tokens, identifier -> ExpressionNode.VariableReferenceNode(identifier) }
@@ -151,7 +151,7 @@ fun parseLiteralStringPart(stream: Tokens): StringLiteralNode.StringPart? {
 /**
  * Parses expression interpolation (`${expr}`) within a string literal.
  */
-fun parseExpressionStringPart(stream: Tokens): StringLiteralNode.StringPart? {
+internal fun parseExpressionStringPart(stream: Tokens): StringLiteralNode.StringPart? {
     val kw = stream.attempt {
         nullableRange { if(next().type == DOLLAR && next().type == ROUND_BRACKET_OPEN) "\${" else null}
     } ?: return null;
@@ -162,7 +162,7 @@ fun parseExpressionStringPart(stream: Tokens): StringLiteralNode.StringPart? {
             if (closingKw == null) this.error(
                 CompilerMessage(
                     "String template expression wasn't closed",
-                    stream.location.toRange(),
+                    stream.position.toLocation(),
                     listOf(Hint("expression opened", kw.location))
                 )
             )
@@ -178,7 +178,7 @@ fun parseExpressionStringPart(stream: Tokens): StringLiteralNode.StringPart? {
  * @return An OperationNode combining left with the parsed operator and right operand,
  *         or null if no operator is present.
  */
-fun parseOperation(tokens: Tokens, left: ExpressionNode): ExpressionNode? {
+internal fun parseOperation(tokens: Tokens, left: ExpressionNode): ExpressionNode? {
     tokens.elevate()
     tokens.skipWhitespace()
     val op = tokens.attempt(PLUS, DefaultToken.MINUS, DefaultToken.STAR, DefaultToken.SLASH)
@@ -206,8 +206,8 @@ fun parseOperation(tokens: Tokens, left: ExpressionNode): ExpressionNode? {
  *
  * @return An IntegerLiteralNode, or null if no integer literal is present.
  */
-fun parseIntLiteral(tokens: Tokens): ExpressionNode? {
-    var literal = tokens.nullableRange {
+internal fun parseIntLiteral(tokens: Tokens): ExpressionNode? {
+    val literal = tokens.nullableRange {
         attempt {
             val sign = tokens.attempt(PLUS, MINUS)
             skip(WHITESPACE)
@@ -222,7 +222,7 @@ fun parseIntLiteral(tokens: Tokens): ExpressionNode? {
 /**
  *
  */
-fun parseArrayLiteral(tokens: Tokens): ExpressionNode? {
+internal fun parseArrayLiteral(tokens: Tokens): ExpressionNode? {
     val messages = CompilerMessages()
     val literal = tokens.enclosedRepetition(
         SQUARE_BRACKET_OPEN,

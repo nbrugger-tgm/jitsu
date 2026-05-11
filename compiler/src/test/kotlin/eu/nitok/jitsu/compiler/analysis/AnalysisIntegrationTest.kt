@@ -3,7 +3,7 @@ package eu.nitok.jitsu.compiler.analysis
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.common.sequence
-import eu.nitok.jitsu.parser.parseFile
+import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -11,19 +11,18 @@ import java.net.URI
 class AnalysisIntegrationTest {
 
     private fun buildFile(source: String): JitsuFile {
-        val ast = parseFile(source, URI("test://sourcefile.jit"))
+        val ast = parseJitsuFile(source, URI("test://sourcefile.jit"))
         ast.sequence().forEach {
             if(it.errors.isNotEmpty()) throw IllegalArgumentException("Syntax error(s)! ${it.errors.joinToString("\n")}")
         }
-        val graph = buildGraph(ast)
+        val graph = buildJitsuModule(ast)
         if(graph.messages.errors.isNotEmpty()) throw IllegalArgumentException("Compilation error(s)! ${graph.messages.errors.joinToString("\n")}")
-        return graph
+        return graph.files[0]
     }
 
     @Test
     fun `pure function returning constant gets deterministic summary`() {
         val file = buildFile("fn five(): i32 { return 5; }")
-        assertThat(file.analysisRepository).isNotNull()
 
         val fn = file.sequence().filterIsInstance<Function>().first()
         assertThat(fn.summary).isNotNull()
@@ -83,27 +82,6 @@ class AnalysisIntegrationTest {
         assertThat(bar.summary).isNotNull()
         assertThat(foo.summary!!.callees).containsExactlyInAnyOrder(bar)
         assertThat(bar.summary!!.returnSummary!!.deterministic.value).isTrue()
-    }
-
-    @Test
-    fun `variable summary accessible via repository`() {
-        val file = buildFile("fn test(): i32 { var x: i32 = 10; return x; }")
-        val repo = file.analysisRepository!!
-
-        val fn = file.sequence().filterIsInstance<Function>().first()
-        val varDecl = (fn.body as Function.Body.Implementation).block.instructions
-            .filterIsInstance<VariableDeclaration>()
-            .first()
-
-        val varSummary = repo.getFunctionSummary(fn)?.variableSummary?.get(varDecl.name.value)
-        assertThat(varSummary).isNotNull()
-        assertThat(varSummary!!.effectivelyConstant.value).isTrue()
-    }
-
-    @Test
-    fun `repository is set on JitsuFile`() {
-        val file = buildFile("fn noop() { }")
-        assertThat(file.analysisRepository).isNotNull()
     }
 
     @Test
@@ -236,10 +214,10 @@ class AnalysisIntegrationTest {
 
         // Variable references in return statement resolve
         val returnStmt = body.filterIsInstance<Instruction.Return>().first()
-        val returnOp = returnStmt.value as? Expression.Operation
+        val returnOp = returnStmt.value as? Instruction.FunctionCall
         assertThat(returnOp).isNotNull()
-        val return1Ref = returnOp!!.left as? Expression.VariableReference
-        val return2Ref = returnOp.right as? Expression.VariableReference
+        val return1Ref = returnOp!!.callParameters[0] as? Expression.VariableReference
+        val return2Ref = returnOp.callParameters[1] as? Expression.VariableReference
         assertThat(return1Ref).isNotNull()
         assertThat(return2Ref).isNotNull()
         assertThat(return1Ref!!.target).isNotNull()

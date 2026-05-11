@@ -1,8 +1,7 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.common.sequence
-import eu.nitok.jitsu.parser.parseFile
+import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.URI
@@ -11,13 +10,13 @@ import java.net.URI
 class GraphBuilderTest {
 
     private fun buildFile(source: String): JitsuFile {
-        val ast = parseFile(source, URI("test://sourcefile.jit"))
+        val ast = parseJitsuFile(source, URI("test://sourcefile.jit"))
         ast.sequence().forEach {
             if(it.errors.isNotEmpty()) throw IllegalArgumentException("Syntax error(s)! ${it.errors.joinToString("\n")}")
         }
-        val graph = buildGraph(ast)
+        val graph = buildJitsuModule(ast)
         if(graph.messages.errors.isNotEmpty()) throw IllegalArgumentException("Compilation error(s)! ${graph.messages.errors.joinToString("\n")}")
-        return graph
+        return graph.files[0]
     }
 
     @Nested
@@ -69,12 +68,6 @@ class GraphBuilderTest {
             assertThat(file).isNotNull()
             val types = file.scope.allTypes
             assertThat(types).isNotEmpty()
-        }
-
-        @Test
-        fun `analysis repository is populated after buildGraph`() {
-            val file = buildFile("fn five(): i32 { return 5; }")
-            assertThat(file.analysisRepository).isNotNull()
         }
     }
 
@@ -140,16 +133,16 @@ class GraphBuilderTest {
         @Test
         fun `resolves binary operation with operator`() {
             val expr = firstReturnExpression("fn plus(a: i32, b: i32): i32 { return a + b; }")
-            assertThat(expr).isInstanceOf(Expression.Operation::class.java)
+            assertThat(expr).isInstanceOf(Instruction.FunctionCall::class.java)
         }
 
         @Test
         fun `resolves binary operation left and right operands`() {
-            val expr = firstReturnExpression("fn plus(a: i32, b: i32): i32 { return a + b; }") as Expression.Operation
-            assertThat(expr.left).isInstanceOf(Expression.VariableReference::class.java)
-            assertThat(expr.right).isInstanceOf(Expression.VariableReference::class.java)
-            assertThat((expr.left as Expression.VariableReference).reference.value).isEqualTo("a")
-            assertThat((expr.right as Expression.VariableReference).reference.value).isEqualTo("b")
+            val expr = firstReturnExpression("fn plus(a: i32, b: i32): i32 { return a + b; }") as Instruction.FunctionCall
+            assertThat(expr.callParameters[0]).isInstanceOf(Expression.VariableReference::class.java)
+            assertThat(expr.callParameters[1]).isInstanceOf(Expression.VariableReference::class.java)
+            assertThat((expr.callParameters[0] as Expression.VariableReference).reference.value).isEqualTo("a")
+            assertThat((expr.callParameters[1] as Expression.VariableReference).reference.value).isEqualTo("b")
         }
 
         @Test
@@ -459,7 +452,7 @@ class GraphBuilderTest {
             val fn = file.sequence().filterIsInstance<Function>().first()
             val body = fn.body as Function.Body.Implementation
             val ret = body.block.instructions.filterIsInstance<Instruction.Return>().first()
-            assertThat(ret.value).isInstanceOf(Expression.Operation::class.java)
+            assertThat(ret.value).isInstanceOf(Instruction.FunctionCall::class.java)
         }
 
         @Test

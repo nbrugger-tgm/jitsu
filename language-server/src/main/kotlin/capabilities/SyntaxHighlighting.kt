@@ -2,7 +2,7 @@ package capabilities
 
 import capabilities.SemanticTokenTypes.*
 import customLogger
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.common.flatMap
 import eu.nitok.jitsu.parser.ast.AstNode
 import eu.nitok.jitsu.parser.ast.ExpressionNode.*
@@ -65,7 +65,7 @@ internal enum class SemanticTokenModifiers(val id: String) {
 private data class SemanticToken(
     val type: SemanticTokenTypes,
     val modifiers: Array<out SemanticTokenModifiers>,
-    val pos: Range
+    val pos: Location
 ) {
     fun decode(previousLine: Int, previousChar: Int): List<Int> {
         val lineDiff = pos.start.line - previousLine
@@ -100,7 +100,7 @@ private data class SemanticToken(
 private fun decode(tokens: List<SemanticToken>): List<Int> {
     val previousLine = AtomicInteger(1)
     val previousChar = AtomicInteger(1)
-    return tokens.sortedWith { a, b -> Range.byStart.compare(a.pos, b.pos) }.flatMap {
+    return tokens.sortedWith { a, b -> Location.byStart.compare(a.pos, b.pos) }.flatMap {
         val ints = it.decode(previousLine.get(), previousChar.get());
         if (it.pos.end.line > previousLine.get()) {
             previousLine.set(it.pos.end.line)
@@ -124,7 +124,7 @@ internal fun syntaxHighlight(statements: SourceFileNode): List<Int> {
 
 private fun token(
     type: SemanticTokenTypes,
-    location: Range,
+    location: Location,
     vararg modifiers: SemanticTokenModifiers
 ): SemanticToken {
     return SemanticToken(type, modifiers, location)

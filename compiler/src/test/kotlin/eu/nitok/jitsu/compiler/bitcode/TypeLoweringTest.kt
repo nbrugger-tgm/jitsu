@@ -2,10 +2,10 @@ package eu.nitok.jitsu.compiler.bitcode
 
 import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.common.BitSize.BIT_64
-import eu.nitok.jitsu.common.Located
-import eu.nitok.jitsu.common.Location
-import eu.nitok.jitsu.common.Range
-import eu.nitok.jitsu.common.locatedAt
+import eu.nitok.jitsu.common.locating.Located
+import eu.nitok.jitsu.common.locating.Position
+import eu.nitok.jitsu.common.locating.Location
+import eu.nitok.jitsu.common.locating.locatedAt
 import eu.nitok.jitsu.compiler.bitcode.LowLevelType.*
 import eu.nitok.jitsu.compiler.graph.Type
 import eu.nitok.jitsu.compiler.graph.Type.TypeReference
@@ -19,17 +19,16 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.EnumSource
-import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
+import java.net.URI
 import java.util.stream.Stream
 import kotlin.streams.asStream
 
 @DisplayName("TypeLowering")
 class TypeLoweringTest {
 
-    private val dummyRange = Range(Location(1, 1), Location(1, 1))
-    private fun locatedName(name: String): Located<String> = Located(name, dummyRange)
+    private val dummyLocation = Location(URI("memory://test.jit"), 1, 1, 1, 1)
+    private fun locatedName(name: String): Located<String> = Located(name, dummyLocation)
 
     private fun structField(name: String, type: Type): TypeDefinition.ParameterizedType.Struct.Field =
         TypeDefinition.ParameterizedType.Struct.Field(locatedName(name), mutable = false, type = type)
@@ -53,7 +52,7 @@ class TypeLoweringTest {
 
 
     private fun genericUnion(): TypeCase {
-        return typeCase(TypeReference(locatedName("Or"), listOf(Type.UInt(BIT_64).locatedAt(dummyRange), Type.Boolean.locatedAt(dummyRange))).also {
+        return typeCase(TypeReference(locatedName("Or"), listOf(Type.UInt(BIT_64).locatedAt(dummyLocation), Type.Boolean.locatedAt(dummyLocation))).also {
             it.resolvedCache = Type.Union(listOf(Type.UInt(BIT_64) , Type.Boolean ))
         }){ JitsuUnion.of(Type.Union(listOf(Type.UInt(BIT_64), Type.Boolean)),listOf(LLUInt(BIT_64, Type.UInt(BIT_64)), LLBool))}
     }

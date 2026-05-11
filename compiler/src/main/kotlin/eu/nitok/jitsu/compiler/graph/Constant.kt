@@ -4,9 +4,9 @@ import eu.nitok.jitsu.common.ReasonedBoolean
 
 
 import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
+import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.common.BitSize
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locating.Location
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -24,7 +24,7 @@ sealed class Constant<out T> : Expression, Element {
 
 
     @Serializable
-    data class IntConstant(override val value: Long, override val location: Range) : Constant<Long>() {
+    data class IntConstant(override val value: Long, override val location: Location) : Constant<Long>() {
         override val type: Type get() = calculateType(mapOf(), CompilerMessages())?: Type.Undefined;
         override val literal: String get() = value.toString()
         override fun calculateType(context: Map<String, Type>, messages: CompilerMessages, typeHint: Type?): Type? {
@@ -48,7 +48,7 @@ sealed class Constant<out T> : Expression, Element {
     }
 
     @Serializable
-    data class UIntConstant(override val value: ULong, override val location: Range) : Constant<ULong>() {
+    data class UIntConstant(override val value: ULong, override val location: Location) : Constant<ULong>() {
         override val type: Type = calculateType(mapOf(), CompilerMessages())?: Type.Undefined;
         override val literal: String get() = value.toString()
         override fun calculateType(context: Map<String, Type>, messages: CompilerMessages, typeHint: Type?): Type? {
@@ -71,8 +71,8 @@ sealed class Constant<out T> : Expression, Element {
     }
 
     @Serializable
-    data class StringConstant(override val value: String, override val location: Range) : Constant<String>() {
-        override val type: Type = Type.TypeReference(Located("String", location), listOf())
+    data class StringConstant(override val value: String, override val location: Location) : Constant<String>() {
+        override val type: Type = Type.TypeReference(Located<String>("String", location), listOf())
         override val literal: String get() = "\"${value}\""
         @Transient override val children: List<Element> = listOfNotNull()
         override fun calculateType(context: Map<String, Type>, messages: CompilerMessages, typeHint: Type?): Type? {
@@ -80,7 +80,7 @@ sealed class Constant<out T> : Expression, Element {
         }
     }
 
-    class BooleanConstant(override val value: Boolean, override val location: Range) : Constant<Boolean>() {
+    class BooleanConstant(override val value: Boolean, override val location: Location) : Constant<Boolean>() {
         override val type: Type get() = Type.Boolean
         override val literal: String get() = value.toString()
         @Transient override val children: List<Element> = listOfNotNull()

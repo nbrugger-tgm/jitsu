@@ -13,9 +13,8 @@ import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.CompilerMessage.Hint
 import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.parser.*
-import eu.nitok.jitsu.common.locatedAt
+import eu.nitok.jitsu.common.locating.locatedAt
 import eu.nitok.jitsu.parser.ast.ExpressionNode
-import javax.lang.model.element.TypeElement
 import kotlin.jvm.optionals.getOrNull
 
 
@@ -27,7 +26,7 @@ import kotlin.jvm.optionals.getOrNull
  *
  * @return The parsed type node, or null if no valid type starts at the current position.
  */
-fun parseType(tokens: Tokens): TypeNode? {
+internal fun parseType(tokens: Tokens): TypeNode? {
     var type = parseSingleType(tokens) ?: return null
     while(true) {
         val uberType = parseUnion(type, tokens) ?: parseArrayType(type, tokens)
@@ -44,7 +43,7 @@ fun parseType(tokens: Tokens): TypeNode? {
  * @param firstType The already-parsed element type.
  * @return An ArrayTypeNode wrapping the element type, or null if no `[` follows.
  */
-fun parseArrayType(
+internal fun parseArrayType(
     firstType: TypeNode,
     tokens: Tokens
 ): TypeNode? {
@@ -60,7 +59,7 @@ fun parseArrayType(
     val closeBrace = tokens.attempt(DefaultToken.SQUARE_BRACKET_CLOSED)
     if (closeBrace == null) {
         messages.error(
-            "Expected closing ']' for array type", tokens.location.toRange(),
+            "Expected closing ']' for array type", tokens.position.toLocation(),
             Hint("Opening ']'", openBrace.location)
         )
     }
@@ -77,7 +76,7 @@ fun parseArrayType(
  * general syntax:
  * type <identifier> = <any type>
  */
-fun parseTypeDeclaration(tokens: Tokens): StatementNode.NamedTypeDeclarationNode? {
+internal fun parseTypeDeclaration(tokens: Tokens): StatementNode.NamedTypeDeclarationNode? {
     return parseTypeAlias(tokens)
 }
 
@@ -88,7 +87,7 @@ fun parseTypeDeclaration(tokens: Tokens): StatementNode.NamedTypeDeclarationNode
  *
  * @return List of type parameter identifiers, or null if no `<` is present.
  */
-fun parseTypeParameterDefinition(tokens: Tokens, messages: CompilerMessages): List<IdentifierNode>? {
+internal fun parseTypeParameterDefinition(tokens: Tokens, messages: CompilerMessages): List<IdentifierNode>? {
     return tokens.enclosedRepetition(
         DefaultToken.LEFT_ANGLE_BRACKET,
         DefaultToken.COMMA,
@@ -107,18 +106,18 @@ private fun parseTypeAlias(tokens: Tokens): StatementNode.NamedTypeDeclarationNo
     val messages = CompilerMessages()
     val name = parseIdentifier(tokens)
     if (name == null) {
-        messages.error("Expected a name for the type alias", tokens.location.toRange())
+        messages.error("Expected a name for the type alias", tokens.position.toLocation())
     }
     val typeParameters = parseTypeParameterDefinition(tokens, messages)
     tokens.skipWhitespace()
     tokens.attempt(DefaultToken.EQUAL) ?: messages.error(
         "Expected '=' after the type alias name",
-        tokens.location.toRange()
+        tokens.position.toLocation()
     )
     tokens.skipWhitespace()
     val type = parseType(tokens)
     if (type == null) {
-        messages.error("Expected a type definition after the '='", tokens.location.toRange())
+        messages.error("Expected a type definition after the '='", tokens.position.toLocation())
     }
     return StatementNode.NamedTypeDeclarationNode.TypeAliasNode(
         name,
@@ -136,7 +135,7 @@ private fun parseTypeAlias(tokens: Tokens): StatementNode.NamedTypeDeclarationNo
  * @param lenient if `true` the ':' (COLON) is semi-optional => type parsing is still attempted but an error for the missing colon is emitted.
  *                When lenient is `false` parsing is not attempted if no colon is present
  */
-fun parseExplicitType(
+internal fun parseExplicitType(
     tokens: Tokens,
     messages: CompilerMessages,
     lenient: Boolean = true
@@ -150,7 +149,7 @@ fun parseExplicitType(
     tokens.skipWhitespace()
     val type = parseType(tokens)
     if (type == null) {
-        messages.error("Expected a type definition after the ':'", tokens.location.toRange())
+        messages.error("Expected a type definition after the ':'", tokens.position.toLocation())
     }
     return type
 }
@@ -229,7 +228,7 @@ private fun parseEnclosedType(tokens: Tokens, messages: CompilerMessages): TypeN
     }?: return null
     tokens.skipWhitespace()
     tokens.attempt(DefaultToken.BRACKET_CLOSED) ?: run {
-        messages.error("Expected closing ')'", tokens.location.toRange(), Hint("Type grouping started here",type.second.location))
+        messages.error("Expected closing ')'", tokens.position.toLocation(), Hint("Type grouping started here",type.second.location))
     }
     return type.first.withMessages(messages)
 }
@@ -253,7 +252,7 @@ private fun parseBitsizedNumberType(tokens: Tokens): TypeNode? {
     }
 }
 
-private fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): TypeNode.UnionTypeNode? {
+private fun parseUnion(firstType: TypeNode, tokens: Tokens): TypeNode.UnionTypeNode? {
     if (!tokens.hasNext()) return null
     tokens.skipWhitespace()
     val pipe = tokens.attempt {
@@ -269,7 +268,7 @@ private fun parseUnion(firstType: TypeNode, tokens: TokenStream<DefaultToken>): 
             messages.error(
                 CompilerMessage(
                     "Expect type for union",
-                    tokens.location.toRange(),
+                    tokens.position.toLocation(),
                     Hint("Union starts here", pipe.location)
                 )
             )

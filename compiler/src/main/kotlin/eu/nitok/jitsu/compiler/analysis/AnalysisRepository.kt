@@ -4,6 +4,7 @@ import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.compiler.graph.Access
 
 class AnalysisRepository {
     private val functionSummaries: MutableMap<Function, FunctionSummary> = mutableMapOf()

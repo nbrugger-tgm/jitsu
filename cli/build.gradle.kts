@@ -1,5 +1,6 @@
 plugins {
     id("eu.nitok.jitsu.kotlin-application-conventions")
+    id("org.jetbrains.kotlin.kapt")
 }
 
 application {

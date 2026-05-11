@@ -6,53 +6,93 @@ import com.niton.jainparse.token.TokenSource
 import com.niton.jainparse.token.TokenStream
 import com.niton.jainparse.token.Tokenizer
 import com.niton.jainparse.token.Tokenizer.AssignedToken
-import eu.nitok.jitsu.parser.ast.*
 import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.CompilerMessage.Hint
 import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
-import eu.nitok.jitsu.common.Location
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locating.Located
+import eu.nitok.jitsu.common.locating.Location
+import eu.nitok.jitsu.common.locating.Position
+import eu.nitok.jitsu.parser.ast.*
 import eu.nitok.jitsu.parser.parsers.parseIdentifier
 import eu.nitok.jitsu.parser.parsers.parseStatements
-import java.io.Reader
+import eu.nitok.jitsu.parser.tokenization.FileTokenStream
 import java.io.StringReader
 import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.io.path.*
 import kotlin.jvm.optionals.getOrNull
+import kotlin.streams.asSequence
 
-typealias Tokens = TokenStream<DefaultToken>
+typealias Tokens = FileTokenStream
 typealias ParserFn<T> = Tokens.() -> T
 
-fun parseFile(input: Reader, uri: URI): SourceFileNode {
-    val tokenSource = TokenSource(input, tokenizer);
-    val tokens = TokenStream.of(tokenSource)
+fun parseJitsuModule(module: Path, name: String?): JitsuModuleAst {
+    if (!module.exists()) throw IllegalArgumentException("module directory does not exist $module")
+    if (module.isRegularFile()) throw IllegalArgumentException("expect a source directory, not file $module")
+
+    val sources = Files.list(module).asSequence().filter { it.isRegularFile() && it.name.endsWith(".jit") }
+    val subModules = Files.list(module).asSequence().filter { it.isDirectory() }
+    val sourceAsts = sources.map { parseJitsuFile(it.readText(), it.toUri()) }.toList()
+    return JitsuModuleAst(name ?: module.name, sourceAsts, subModules.map { parseJitsuModule(it, null) }.toList())
+}
+
+fun parseJitsuModule(moduleFiles: Set<Path>, name: String): JitsuModuleAst {
+    val commonRoot = moduleFiles.reduce { acc, paths ->
+        var common = acc
+        while (!paths.startsWith(common)) {
+            common = acc.parent
+        }
+        common
+    }
+
+    val filesByModule = moduleFiles.groupBy({ it.parent }) { parseJitsuFile(it.readText(), it.toUri()) }
+
+    fun findSubModules(path: Path): List<JitsuModuleAst> {
+        val subModulesWithFiles = filesByModule.entries.asSequence()
+            .filter { it.key.parent.isSameFileAs(path) }
+            .map { JitsuModuleAst(it.key.name, it.value, findSubModules(it.key)) }
+            .toList()
+        val subModulesWithoutFiles = filesByModule.entries.asSequence()
+            .filter { it.key.parent.startsWith(path) }
+            .map {
+                var emptyModule = it.key
+                while(!it.key.parent.isSameFileAs(path)) {
+                    emptyModule = it.key.parent
+                }
+                emptyModule
+            }
+            .filter { filesByModule[it]?.isEmpty()?: true }
+            .map { JitsuModuleAst(it.name, emptyList(), findSubModules(it)) }
+            .toList()
+        return subModulesWithFiles + subModulesWithoutFiles
+    }
+
+    return JitsuModuleAst(name, filesByModule[commonRoot]?:listOf(), findSubModules(commonRoot))
+}
+
+fun parseJitsuFile(txt: String, uri: URI): SourceFileNode {
+    val tokenSource = TokenSource(StringReader(txt), tokenizer);
+    val tokens = FileTokenStream(uri, TokenStream.of(tokenSource))
     val statements = mutableListOf<StatementNode>()
-    val sourceFileNode = SourceFileNode(uri.toString(), statements)
+    val sourceFileNode = SourceFileNode(uri, statements)
     parseStatements(tokens, statements, sourceFileNode::error)
     return sourceFileNode;
 }
 
-fun parseFile(txt: String, uri: URI): SourceFileNode {
-    val tokens = tokenize(txt)
-    val statements = mutableListOf<StatementNode>()
-    val sourceFileNode = SourceFileNode(uri.toString(), statements)
-    parseStatements(tokens, statements, sourceFileNode::error)
-    return sourceFileNode;
-}
-
-fun Tokens.skipUntil(vararg stoppers: DefaultToken): Range {
+internal fun Tokens.skipUntil(vararg stoppers: DefaultToken): Location {
     return range {
         while (peekOptional().map { !stoppers.contains(it.type) }.orElse(false)) skip()
     }.location
 }
 
-fun Tokens.skip(vararg toSkip: DefaultToken) {
+internal fun Tokens.skip(vararg toSkip: DefaultToken) {
     while (this.hasNext() && toSkip.contains(this.peek().type)) {
         this.next()
     }
 }
 
-fun Tokens.skip(n: Int = 1) {
+internal fun Tokens.skip(n: Int = 1) {
     var count = n;
     while (count-- > 0 && hasNext()) {
         this@skip.next()
@@ -61,13 +101,7 @@ fun Tokens.skip(n: Int = 1) {
 
 private val tokenizer = Tokenizer(DefaultToken.entries)
 
-private fun tokenize(txt: String): Tokens {
-    val tokens = TokenSource(StringReader(txt), tokenizer);
-    val tokenStream = TokenStream.of(tokens)
-    return tokenStream
-}
-
-fun <T> parseIdentifierBased(tokens: Tokens, parser: (tokens: Tokens, id: IdentifierNode) -> T?): T? {
+internal fun <T> parseIdentifierBased(tokens: Tokens, parser: (tokens: Tokens, id: IdentifierNode) -> T?): T? {
     tokens.elevate()
     val id = parseIdentifier(tokens) ?: run {
         tokens.rollback()
@@ -79,14 +113,14 @@ fun <T> parseIdentifierBased(tokens: Tokens, parser: (tokens: Tokens, id: Identi
     return res
 }
 
-sealed interface LastElementState {
+internal sealed interface LastElementState {
     object Delimitted : LastElementState
-    data class NotDelimitted(val location: Location) : LastElementState
+    data class NotDelimitted(val position: Position) : LastElementState
 }
 
-data class EnclosedRepetition<T>(val openKw: Range, val elements: List<T>, val closeKw: Range?)
+internal data class EnclosedRepetition<T>(val openKw: Location, val elements: List<T>, val closeKw: Location?)
 
-fun <T> Tokens.enclosedRepetition(
+internal fun <T> Tokens.enclosedRepetition(
     start: DefaultToken,
     delimitter: DefaultToken,
     end: DefaultToken,
@@ -107,7 +141,7 @@ fun <T> Tokens.enclosedRepetition(
     while (hasNext()) {
         when (val x = parseElement(this)) {
             null -> {
-                if(wasLastElementDelimitted is LastElementState.NotDelimitted) {
+                if (wasLastElementDelimitted is LastElementState.NotDelimitted) {
                     //The last element was not followed by a delimitter, therefore an invalid element here means
                     // Its more probable that the user forgot the "end" mark rather than that they forgot a delimitter
                     break
@@ -116,7 +150,7 @@ fun <T> Tokens.enclosedRepetition(
                 val invalid = skipUntil(end, delimitter, NEW_LINE, SEMICOLON)
                 messages.error(CompilerMessage("Expected a $elementName", invalid))
                 val next = peekOptional().getOrNull()?.type
-                if(invalidObjectPlaceholder != null && (next == end || next == delimitter))
+                if (invalidObjectPlaceholder != null && (next == end || next == delimitter))
                     lst.add(invalidObjectPlaceholder)
                 if (next != delimitter) {
                     break;
@@ -127,22 +161,23 @@ fun <T> Tokens.enclosedRepetition(
             }
 
             else -> {
-                if(wasLastElementDelimitted is LastElementState.NotDelimitted) {
+                if (wasLastElementDelimitted is LastElementState.NotDelimitted) {
                     messages.error(
                         "Expected a '$delimitter' between $elementName elements",
-                        wasLastElementDelimitted.location.toRange()
+                        wasLastElementDelimitted.position.toLocation()
                     )
                 }
                 lst.add(x)
-                val expectedDelimiterPos = location
+                val expectedDelimiterPos = position
                 skipWhitespace()
                 val next = peekOptional().getOrNull()?.type
-                wasLastElementDelimitted = when(next) {
+                wasLastElementDelimitted = when (next) {
                     delimitter -> {
                         skip() //consume delimitter
                         skipWhitespace()
                         LastElementState.Delimitted
                     }
+
                     end -> break
                     else -> LastElementState.NotDelimitted(expectedDelimiterPos)
                 }
@@ -154,34 +189,34 @@ fun <T> Tokens.enclosedRepetition(
 
     endKw = this@enclosedRepetition.attempt(end)?.location;
     endKw ?: messages.error(
-        "Unclosed $subject, expected $end", location.toRange(), Hint(
+        "Unclosed $subject, expected $end", position.toLocation(), Hint(
             "$subject started here", openKw
         )
     )
-    return EnclosedRepetition(openKw,lst,endKw)
+    return EnclosedRepetition(openKw, lst, endKw)
 }
 
-fun Tokens.skipWhitespace():Tokens {
+internal fun Tokens.skipWhitespace(): Tokens {
     skip(WHITESPACE, NEW_LINE)
     return this
 }
 
-inline fun <T> Tokens.range(action: ParserFn<T>): Located<T> {
-    val start = location
+internal inline fun <T> Tokens.range(action: ParserFn<T>): Located<T> {
+    val start = position
     val res = action()
     val end = lastConsumedLocation
     return Located(res, start.rangeTo(end))
 }
 
-inline fun <T> Tokens.nullableRange(action: ParserFn<T?>): Located<T>? {
-    val start = location
+internal inline fun <T> Tokens.nullableRange(action: ParserFn<T?>): Located<T>? {
+    val start = position
     val res = action()
     if (res == null) return null
     val end = lastConsumedLocation
     return Located(res, start.rangeTo(end))
 }
 
-fun Tokens.attempt(vararg tokens: DefaultToken): Located<AssignedToken<DefaultToken>>? {
+internal fun Tokens.attempt(vararg tokens: DefaultToken): Located<AssignedToken<DefaultToken>>? {
     val next = peekOptional().getOrNull() ?: return null;
     if (tokens.contains(next.type)) {
         return range { this.next() }
@@ -189,7 +224,7 @@ fun Tokens.attempt(vararg tokens: DefaultToken): Located<AssignedToken<DefaultTo
     return null;
 }
 
-fun <T> Tokens.attempt(function: ParserFn<T>): T? {
+internal fun <T> Tokens.attempt(function: ParserFn<T>): T? {
     if (!hasNext()) {
         return null
     }
@@ -203,7 +238,7 @@ fun <T> Tokens.attempt(function: ParserFn<T>): T? {
     return res;
 }
 
-fun Tokens.keyword(s: String): Range? {
+internal fun Tokens.keyword(s: String): Location? {
     return attempt {
         val (token, location) = range { nextOptional().getOrNull() }
         return@attempt if (token == null) null
@@ -212,10 +247,10 @@ fun Tokens.keyword(s: String): Range? {
     }
 }
 
-val Tokens.lastConsumedLocation: Location
+internal val Tokens.lastConsumedLocation: Position
     get() {
         val loc = this.lastConsumedLocation();
-        return Location(loc.fromLine, loc.fromColumn)
+        return Position(loc.fromLine, loc.fromColumn, file)
     }
-val Tokens.location: Location
-    get() = Location(this.line, this.column)
+internal val Tokens.position: Position
+    get() = Position(this.line, this.column, file)

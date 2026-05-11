@@ -1,9 +1,9 @@
 package eu.nitok.jitsu.compiler.bitcode
 
 import eu.nitok.jitsu.common.BitSize
-import eu.nitok.jitsu.common.Located
-import eu.nitok.jitsu.common.Location
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locating.Located
+import eu.nitok.jitsu.common.locating.Position
+import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.compiler.analysis.AbstractValue
@@ -11,13 +11,13 @@ import eu.nitok.jitsu.compiler.analysis.FunctionSummary
 import eu.nitok.jitsu.compiler.analysis.OwnershipState
 import eu.nitok.jitsu.compiler.analysis.ReturnSummary
 import eu.nitok.jitsu.compiler.analysis.VariableSummary
-import eu.nitok.jitsu.compiler.graph.Expression
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.compiler.graph.JitsuFile
+import eu.nitok.jitsu.compiler.graph.JitsuModule
 import eu.nitok.jitsu.compiler.graph.Type
 import eu.nitok.jitsu.compiler.graph.VariableDeclaration
-import eu.nitok.jitsu.compiler.graph.buildGraph
-import eu.nitok.jitsu.parser.parseFile
+import eu.nitok.jitsu.compiler.graph.buildJitsuModule
+import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.*
@@ -26,17 +26,17 @@ import java.net.URI
 @DisplayName("VariableRegistry")
 class VariableRegistryTest {
 
-    private val dummyRange = Range(Location(1, 1), Location(1, 1))
-    private fun <T> loc(value: T) = Located(value, dummyRange)
+    private val dummyLocation = Location(URI("memory://test.jit"),1,1,1,1)
+    private fun <T> loc(value: T) = Located(value, dummyLocation)
 
     private fun buildFile(source: String): JitsuFile {
-        val ast = parseFile(source, URI("test://sourcefile.jit"))
+        val ast = parseJitsuFile(source, URI("test://sourcefile.jit"))
         ast.sequence().forEach {
             if(it.errors.isNotEmpty()) throw IllegalArgumentException("Syntax error(s)! ${it.errors.joinToString("\n")}")
         }
-        val graph = buildGraph(ast)
+        val graph = buildJitsuModule(ast)
         if(graph.messages.errors.isNotEmpty()) throw IllegalArgumentException("Compilation error(s)! ${graph.messages.errors.joinToString("\n")}")
-        return graph
+        return graph.files[0]
     }
 
     private fun firstFunction(source: String): Function =

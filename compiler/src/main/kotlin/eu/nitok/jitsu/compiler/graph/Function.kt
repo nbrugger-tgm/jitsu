@@ -1,8 +1,8 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.common.locating.Locatable
+import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.compiler.analysis.FunctionSummary
-import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -11,9 +11,10 @@ class Function(
     override val name: Located<String>?,
     val returnType: Located<Type>?,
     val parameters: List<Parameter>,
-    val body: Body
-) : Instruction, Element, Accessible<Function>, Accessor, ScopeAware, ScopeProvider, Finalizable {
-    override val scope: Scope = Scope(listOf(), mapOf(), mapOf(), parameters.associateBy { it.name.value })
+    val body: Body,
+    val location: Locatable
+) : Instruction, Element, Accessible<Function>, Accessor, ScopeProvider {
+    @Transient override val scope = Scope(variables =  parameters.associateBy { it.name.value })
 
     @Serializable
     sealed interface Body : Element {
@@ -36,22 +37,16 @@ class Function(
         }
     }
 
-    init {
-        fun informChildren(children: List<Element>) {
-            children.forEach {
-                if (it is FunctionAware) it.setEnclosingFunction(this)
-                if (it is Function) it.setScopes()
-                else informChildren(it.children)
-            }
+    private fun informChildren(children: List<Element>) {
+        children.forEach {
+            if (it is FunctionAware) it.setEnclosingFunction(this)
+            if (it !is Function) informChildren(it.children)
         }
+    }
+    init {
         informChildren(body.children)
     }
 
-    override fun setEnclosingScope(parent: Scope) {
-        scope.parent = parent
-    }
-
-    @Transient
     var summary: FunctionSummary? = null
         internal set
     val signature: Type.FunctionTypeSignature = Type.FunctionTypeSignature(
@@ -61,12 +56,17 @@ class Function(
 
     override val children: List<Element> get() = listOfNotNull(returnType?.value) + parameters + body
 
-    @Transient
-    override val accessToSelf: MutableList<Access<Function>> = mutableListOf()
+    @Transient override val accessToSelf: MutableList<Access<Function>> = mutableListOf()
 
     override val accessFromSelf: List<Access<*>> by lazy {
         if (body is Body.Implementation) findAccessesFromSelf(body.block.instructions)
         else emptyList()
+    }
+    @Transient override lateinit var module: JitsuModule
+        internal set;
+
+    override fun setEnclosingModule(parent: JitsuModule) {
+        this.module = parent
     }
 
     @Serializable
@@ -79,7 +79,7 @@ class Function(
          * alias for [declaredType]
          */
         val type get() = declaredType
-        override val accessToSelf: MutableList<Access<Variable>> = mutableListOf()
+        @Transient override val accessToSelf: MutableList<Access<Variable>> = mutableListOf()
         override val children: List<Element> get() = listOfNotNull(declaredType, initialValue)
 
         override fun toString(): String {
@@ -87,10 +87,13 @@ class Function(
         }
 
         override val reassignable: Boolean = false
-    }
 
-    override fun finalizeGraph(messages: CompilerMessages) {
-        // no-op: analysis moved to AnalysisRepository
+        @Transient override lateinit var module: JitsuModule
+            internal set;
+
+        override fun setEnclosingModule(parent: JitsuModule) {
+            this.module = parent
+        }
     }
 
     override fun toString(): String {

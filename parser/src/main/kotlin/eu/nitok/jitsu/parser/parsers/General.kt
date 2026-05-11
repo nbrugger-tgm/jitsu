@@ -17,7 +17,7 @@ import eu.nitok.jitsu.parser.*
  *
  * @return A StatementsCodeBlock containing the parsed statements, or null if no `{` is present.
  */
-fun parseCodeBlock(tokens: Tokens): StatementsCodeBlock? {
+internal fun parseCodeBlock(tokens: Tokens): StatementsCodeBlock? {
     val openKw = tokens.attempt(DefaultToken.ROUND_BRACKET_OPEN)?.location ?: return null
     val lst = mutableListOf<StatementNode>()
     val messages = CompilerMessages()
@@ -25,7 +25,7 @@ fun parseCodeBlock(tokens: Tokens): StatementsCodeBlock? {
     tokens.skipWhitespace()
     val closeKw = tokens.attempt(DefaultToken.ROUND_BRACKET_CLOSED)?.location
     if(closeKw == null){
-        messages.error("Unclosed code block, expected '}'", tokens.location.toRange(), Hint(
+        messages.error("Unclosed code block, expected '}'", tokens.position.toLocation(), Hint(
             "Code block opened here", openKw
         ))
     }

@@ -1,7 +1,8 @@
 package eu.nitok.jitsu.compiler.cli.commands
 
-import eu.nitok.jitsu.compiler.graph.JitsuFile
-import eu.nitok.jitsu.compiler.graph.buildGraph
+import eu.nitok.jitsu.common.format
+import eu.nitok.jitsu.compiler.graph.JitsuModule
+import eu.nitok.jitsu.compiler.graph.buildJitsuModule
 import kotlinx.serialization.encodeToString
 import picocli.CommandLine.*
 import picocli.CommandLine.Model.CommandSpec
@@ -13,27 +14,29 @@ import kotlin.io.path.*
     name = "process",
     description = ["processes sourcecode and builds an internal graph"]
 )
-class Process : Callable<List<Pair<JitsuFile, Path>>> {
+class Process : Callable<List<Pair<JitsuModule, Path>>> {
     @Mixin
     lateinit var cli: Parse;
 
     @Spec
     lateinit var spec: CommandSpec
-    override fun call(): List<Pair<JitsuFile, Path>> {
+    override fun call(): List<Pair<JitsuModule, Path>> {
         val scopes = cli.call().map {
-            buildGraph(it.first) to it.second
+            buildJitsuModule(it.first) to it.second
         }
         cli.cacheDirectory.ensureExistingDir();
         val graphCache = cli.cacheDirectory.resolve("graph").ensureExistingDir()
         scopes.forEach {
             val cacheFile = graphCache.resolve("${it.second.nameWithoutExtension}.graph.json").ensureExistingFile()
-//            cacheFile.writeText(
-//                cli.json.encodeToString(it.first)
-//            )
+            cacheFile.writeText(
+                cli.json.encodeToString(it.first)
+            )
             spec.commandLine().out.println("Write graph to $cacheFile")
 
             val errors = it.first.messages.errors
-            cli.printErrors(errors, it.second)
+            errors.forEach {
+                cli.spec.commandLine().err.println(it.format("ERROR"))
+            }
             if(errors.isNotEmpty()) {
                 throw IllegalStateException("Errors found in ${it.second}")
             }

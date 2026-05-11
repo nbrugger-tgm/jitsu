@@ -1,57 +1,41 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.common.CompilerMessage
+import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.compiler.analysis.FunctionSignatureMatch
 import eu.nitok.jitsu.compiler.analysis.matchFunctionSignatures
-import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
-import eu.nitok.jitsu.common.CompilerMessage
-import eu.nitok.jitsu.common.Range
-import kotlinx.serialization.Contextual
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 
 /**
  * Content of a file or everything that is between { and }
  */
-@Serializable
-open class Scope constructor(
-    private val contants: List<Constant<@Contextual Any>>,
-    private val types: Map<String, TypeDefinition>,
-    val functions: Map<String, List<Function>>,
-    private val variables: Map<String, Variable>
-) : Accessor {
-    constructor(
-        contants: List<Constant<@Contextual Any>>,
-        types: List<TypeDefinition>,
-        functions: List<Function>,
-        variables: List<Variable>,
-        messages: CompilerMessages
-    ) : this(
-        contants,
-        types.groupBy { it.name.value }.mapValues { ensureSingleName(it, messages, "Type") { name } },
-        functions.filter {
-            val unnamed = it.name?.value == null;
-            if (unnamed) {
-                messages.error("Function without name", Range(0, 0, 0, 0));
-            }
-            !unnamed
-        }.groupBy { it.name!!.value },
-        variables.groupBy { it.name.value }.mapValues { ensureSingleName(it, messages, "Variable") { name } }
-    )
-
-    val elements: Sequence<Element> get() = types.values.asSequence() + variables.values.asSequence() + contants.asSequence() + functions.values.flatMap { it.asSequence() }
-
-
-    @Transient
+class Scope(
+    private val types: Map<String, TypeDefinition> = mapOf(),
+    private val functions: Map<String, List<Function>> = mapOf(),
+    private val variables: Map<String, Variable> = mapOf(),
+    private val imports: List<Import> = listOf(),
+) {
     var parent: Scope? = null
     val allFunctions: Map<String, List<Function>>
-        get() = functions.merge(parent?.allFunctions ?: emptyMap()) { a, b -> a + b }
+        get() = merge(
+            functions,
+            parent?.allFunctions ?: emptyMap(),
+            *imports.mapNotNull { it.target?.exportScope?.functions }.toTypedArray()
+        ) { a, b -> a + b }
 
     val allTypes: Map<String, TypeDefinition>
-        get() = types.merge(parent?.allTypes ?: emptyMap()) { a, _ -> a } //shadowing
+        get() = merge(
+            types,
+            parent?.allTypes ?: emptyMap(),
+            *imports.mapNotNull { it.target?.exportScope?.types }.toTypedArray()
+        ) { a, _ -> a } //shadowing
 
     val allVariables: Map<String, Variable>
-        get() = variables.merge(parent?.allVariables ?: emptyMap()) { a, _ -> a }//shadowing
+        get() = merge(
+            variables,
+            parent?.allVariables ?: emptyMap(),
+            *imports.mapNotNull { it.target?.exportScope?.variables }.toTypedArray()
+        ) { a, _ -> a }//shadowing
 
     fun resolveType(reference: Located<String>, messages: CompilerMessages): TypeDefinition {
         return types[reference.value] ?: parent?.resolveType(reference, messages) ?: run {
@@ -60,7 +44,11 @@ open class Scope constructor(
         }
     }
 
-    fun resolveFunction(name: Located<String>, parameterTypes: Array<Located<Type>>, messages: CompilerMessages): Function? {
+    fun resolveFunction(
+        name: Located<String>,
+        parameterTypes: Array<Located<Type>>,
+        messages: CompilerMessages
+    ): Function? {
         val matchingFunctions = allFunctions[name.value] ?: run {
             messages.error("No function named '${name.value}'", name.location)
             return null
@@ -90,7 +78,10 @@ open class Scope constructor(
                     messages.error(
                         "Type mismatch for parameter '${it.paramDefinition.value}': '${it.expected}', '${fullMesageChain.first}'",
                         it.parameterValueLocation,
-                        CompilerMessage.Hint("Parameter '${it.paramDefinition.value}' defined here", it.paramDefinition.location),
+                        CompilerMessage.Hint(
+                            "Parameter '${it.paramDefinition.value}' defined here",
+                            it.paramDefinition.location
+                        ),
                         *fullMesageChain.second.toTypedArray()
                     )
                 }
@@ -118,11 +109,27 @@ open class Scope constructor(
         return parent!!.resolveVariable(located, messages)
     }
 
-    @Transient
-    override val accessFromSelf: List<Access<*>> = findAccessesFromSelf(elements.asIterable())
+    fun restoreType(id: Located<SymbolID>, messages: CompilerMessages): TypeDefinition? {
+       return restore(id, messages, JitsuModule::getType)
+    }
+    fun restoreFunction(id: Located<SymbolID>, messages: CompilerMessages): TypeDefinition? {
+        return restore(id, messages, JitsuModule::getType)
+    }
+    fun restoreVariable(id: Located<SymbolID>, messages: CompilerMessages): TypeDefinition? {
+        return restore(id, messages, JitsuModule::getType)
+    }
+
+    fun <T> restore(id: Located<SymbolID>, messages: CompilerMessages, getElement: JitsuModule.(Int)->T?): T? {
+        if(id.value.module == null) throw IllegalArgumentException("restore() requires module name to be set")
+        val import = resolveModule(id.value.module!!)
+        if(import == null) messages.error("Unable to restore symbol ${id.value}: Module ${id.value.module} not found", id)
+        return import?.target?.getElement(id.value.index)
+    }
+
+    private fun resolveModule(module: String): Import? = imports.find { it.name.value == module }?: parent?.resolveModule(module)
 }
 
-private fun <T> ensureSingleName(
+fun <T> ensureSingleName(
     it: Map.Entry<String, List<T>>,
     messages: CompilerMessages,
     subjects: String,

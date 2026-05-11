@@ -1,18 +1,14 @@
 package capabilities
 
 
+import eu.nitok.jitsu.common.mapTree
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.compiler.graph.TypeDefinition.DirectTypeDefinition.Enum
-import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Alias
-import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Class
-import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Interface
-import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Struct
-import eu.nitok.jitsu.common.mapTree
+import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.*
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
 import range
-
 
 
 private fun TypeDefinition.documentSymbols(children: Iterable<DocumentSymbol>): List<DocumentSymbol> = listOf(
@@ -66,7 +62,7 @@ private fun Type.resolveTypeKind(): SymbolKind {
     }
 }
 
-fun JitsuFile.documentSymbols(): List<DocumentSymbol> {
+fun JitsuModule.documentSymbols(): List<DocumentSymbol> {
     return this.mapTree { node, children ->
         if (node !is Accessible<*>) return@mapTree children;
         node.documentSymbols(children)

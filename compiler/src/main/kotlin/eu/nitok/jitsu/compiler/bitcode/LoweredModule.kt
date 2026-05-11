@@ -1,12 +1,8 @@
 package eu.nitok.jitsu.compiler.bitcode
 
-import eu.nitok.jitsu.compiler.graph.JitsuFile
+import eu.nitok.jitsu.compiler.graph.JitsuModule
 import java.nio.file.Path
 
-/**
- * A fully lowered function ready for backend consumption.
- * Contains no graph types - only low-level IR.
- */
 data class LoweredFunction(
     val name: String,
     val parameters: List<LoweredParameter>,
@@ -27,18 +23,8 @@ sealed interface LoweredBody {
     data class Native(val nativeTarget: String) : LoweredBody
 }
 
-/**
- * A fully lowered module (corresponds to one source file).
- * Contains all lowered functions, ready for backend transpilation.
- */
-data class LoweredModule(
-    val sourcePath: String,
-    val functions: List<LoweredFunction>
-)
+data class LoweredModule(val name: String, val functions: List<LoweredFunction>)
 
-/**
- * Extension to lower a JitsuFile directly.
- */
-fun JitsuFile.lower(sourcePath: Path): LoweredModule {
-    return ModuleLowering(this, sourcePath).lower()
+fun JitsuModule.lower(): LoweredModule {
+    return ModuleLowering(this).lower()
 }

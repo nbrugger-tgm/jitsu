@@ -4,7 +4,6 @@ import eu.nitok.jitsu.compiler.bitcode.lower
 import eu.nitok.jitsu.compiler.cli.BackendRegistry
 import picocli.CommandLine
 import picocli.CommandLine.Mixin
-import java.io.File
 import java.nio.file.Path
 import java.util.concurrent.Callable
 
@@ -20,10 +19,10 @@ class Transpile: Callable<List<Path>> {
     override fun call(): List<Path> {
         val graphs = cli.call()
         // Lower all graphs to LoweredModules before passing to backend
-        val modules = graphs.map { (file, path) -> file.lower(path) }
-        val backend = BackendRegistry.create(backendName)
+        val modules = graphs.map { (file, _) -> file.lower() }
+        val backend = BackendRegistry.get(backendName)
         val files = backend.run {
-            transpile(modules, cli.cli.outpurDir.resolve(backendName))
+            transpile(modules, cli.cli.outputDir.resolve(backendName))
         }
         cli.spec.commandLine().out.println("Transpiled to $files")
         return files

@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.parser
 
 import eu.nitok.jitsu.common.BitSize
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.parser.ast.StatementNode.NamedTypeDeclarationNode.ClassDeclarationNode
 import eu.nitok.jitsu.parser.ast.TypeNode
 import eu.nitok.jitsu.parser.ast.TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode
@@ -493,7 +493,7 @@ class ClassParserTest : ParsingTest() {
         @DisplayName("method location is set")
         fun methodLocationIsSet() {
             val method = parseMethod(tokenize("fn write() {}"))
-            assertThat(method?.location).isEqualTo(Range(1,1,13,1))
+            assertThat(method?.location).isEqualTo(Location(url, 1,1,13,1))
         }
     }
 }

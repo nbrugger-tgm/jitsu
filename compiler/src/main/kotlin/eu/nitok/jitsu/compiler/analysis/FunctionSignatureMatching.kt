@@ -1,11 +1,11 @@
 package eu.nitok.jitsu.compiler.analysis
 
 import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
+import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.compiler.graph.Type
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locating.Location
 
 sealed interface FunctionSignatureMatch {
     data object NoMatch : FunctionSignatureMatch
@@ -19,7 +19,7 @@ sealed interface FunctionSignatureMatch {
     data class Match(val function: Function) : FunctionSignatureMatch
 }
 
-data class TypeMissMatch(val paramDefinition: Located<String>, val parameterValueLocation:Range, val expected: Type, val actual: Type, val reason: ReasonedBoolean.False)
+data class TypeMissMatch(val paramDefinition: Located<String>, val parameterValueLocation:Location, val expected: Type, val actual: Type, val reason: ReasonedBoolean.False)
 
 private sealed interface SignatureMatch {
     data class FullMatch(
@@ -39,9 +39,9 @@ private sealed interface SignatureMatch {
     }
 }
 
-private fun structuralyEqual(expected: Type, value: Type): Boolean {
-    val expectedRaw = if(expected is Type.TypeReference) expected.resolvedCache else expected
-    val valueRaw = if(value is Type.TypeReference) value.resolvedCache else value
+private fun structuralyEqual(expected: Type, value: Type, messages: CompilerMessages): Boolean {
+    val expectedRaw = expected.resolveType(messages = messages, mapOf())
+    val valueRaw = value.resolveType(messages = messages, mapOf())
     return expectedRaw == valueRaw
 }
 private fun Type.FunctionTypeSignature.matches(argumentTypes: Array<Located<Type>>): SignatureMatch {
@@ -57,7 +57,7 @@ private fun Type.FunctionTypeSignature.matches(argumentTypes: Array<Located<Type
         val expected = parameters[i].type
         val actual = argumentTypes[i]
         val messages = CompilerMessages()
-        val same = structuralyEqual(expected, actual.value)
+        val same = structuralyEqual(expected, actual.value, messages)
         if(messages.errors.isNotEmpty()) {
             throw IllegalStateException("Error during resolvation!"+ messages.errors.map{it.toString()})
         }

@@ -1,17 +1,25 @@
 package eu.nitok.jitsu.parser.ast
 
-import eu.nitok.jitsu.common.Range
-import kotlinx.serialization.Contextual
+import eu.nitok.jitsu.common.locating.Location
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import java.net.URI
+import java.nio.file.Path
 
-@Serializable
-data class SourceFileNode(
-    val url: String,
-    val statements: List<StatementNode>
+
+class SourceFileNode(
+    val url: URI,
+    val statements: List<StatementNode>,
 ) : AstNodeImpl() {
+
     override val children: List<AstNode>
         get() = statements
-    override val location: Range
-        get() = if(statements.isEmpty()) Range(0,0,0,0) else statements.first().location.span(statements.last().location)
+    override val location: Location
+        get() = if(statements.isEmpty()) Location(url,0,0,0,0) else statements.first().location.span(statements.last().location)
 }

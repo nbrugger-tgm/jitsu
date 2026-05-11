@@ -1,24 +1,21 @@
 package eu.nitok.jitsu.parser.ast
 
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locating.Location
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 
 
-@Serializable
 data class AttributeNode(
     var name: IdentifierNode,
     var values: List<AttributeValueNode>,
-    override val location: Range
+    override val location: Location
 ) : AstNodeImpl() {
     override val children: List<AstNode> get() = values + name
-    @Serializable
-    data class AttributeValueNode(
+        data class AttributeValueNode(
         var name: IdentifierNode,
         var value: ExpressionNode?,
     ) : AstNodeImpl() {
         override val children: List<AstNode> get() = listOfNotNull(value, name)
-        override val location: Range
+        override val location: Location
             get() = value?.let { name.location.rangeTo(it.location) } ?: name.location
     }
 }

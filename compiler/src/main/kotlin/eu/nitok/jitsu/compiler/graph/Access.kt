@@ -1,24 +1,11 @@
 package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
+import eu.nitok.jitsu.common.locating.Located
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
-@Serializable
-sealed interface Accessible<T : Accessible<T>> {
-    @Transient
-    val accessToSelf: MutableList<Access<T>>
-    val name: Located<String>?
-}
-
-@Serializable
-sealed interface Accessor {
-    @Transient
-    val accessFromSelf: List<Access<*>>
-}
-
-fun findAccessesFromSelf(elems: Iterable<Element>): List<Access<*>> {
+internal fun findAccessesFromSelf(elems: Iterable<Element>): List<Access<*>> {
     val lst = mutableListOf<Access<*>>()
     fun findAccesses(inst: Element) {
         if (inst is Access<*>) lst.add(inst)
@@ -29,19 +16,9 @@ fun findAccessesFromSelf(elems: Iterable<Element>): List<Access<*>> {
 }
 
 @Serializable
-sealed interface Access<T : Accessible<T>> {
-    @Transient
-    var target: T?
-    @Transient
-    var accessor: Accessor
-    @Transient
+sealed interface Access<T : Accessible<T>>{
+    val target: T?
     val reference: Located<String>
-
-    fun resolveAccessTarget(messages: CompilerMessages): T?
-    fun finalize(messages: CompilerMessages) {
-        target = resolveAccessTarget(messages)
-        target?.accessToSelf?.add(this)
-    }
 
     sealed interface FunctionAccess : Access<Function>
     sealed interface VariableAccess : Access<Variable> {
@@ -59,5 +36,42 @@ sealed interface Access<T : Accessible<T>> {
             MOVE
         }
     }
-    sealed interface TypeAccess : Access<TypeDefinition>
+    sealed interface TypeAccess : Access<TypeDefinition> {
+        fun resolve(messages: CompilerMessages): TypeDefinition
+    }
+}
+
+@Serializable
+abstract class AccessImpl<T: Accessible<T>>: Access<T>, ScopeAware, ModuleAware {
+    var targetId: SymbolID? = null
+    @Transient lateinit var scope: Scope
+    @Transient override lateinit var module: JitsuModule
+    @Transient final override var target: T? = null
+        private set;
+    @Transient protected abstract val restore: JitsuModule.(Int)->T?
+    @Transient protected abstract val getSymbolId: JitsuModule.(T)-> SymbolID
+
+    override fun setEnclosingScope(parent: Scope) {
+        this.scope = parent
+    }
+    internal fun restore(messages: CompilerMessages) {
+        val symbol = targetId ?: throw IllegalStateException("Cannot restore without symbol ID")
+        if(target != null) throw IllegalStateException("Cannot restore twice")
+        target = if(symbol.module == null) module.restore(symbol.index)
+        else scope.restore(reference.map { symbol }, messages, restore)
+        if(target != null) target!!.accessToSelf.add(this)
+    }
+
+    internal fun setResolvedTarget(target: T) {
+        if(this.target != null) this.target?.accessToSelf?.remove(this)
+        this.target = target
+        target.accessToSelf.add(this)
+        val symbol = if(target.module.name == this.module.name) SymbolID(null,this.module.getSymbolId(target).index)
+        else target.module.getSymbolId(target)
+        this.targetId = symbol
+    }
+
+    override fun setEnclosingModule(parent: JitsuModule) {
+        this.module = parent
+    }
 }

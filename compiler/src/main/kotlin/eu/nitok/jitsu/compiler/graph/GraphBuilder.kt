@@ -1,68 +1,171 @@
 package eu.nitok.jitsu.compiler.graph
 
 
+import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.Located
+import eu.nitok.jitsu.common.locating.Located
+import eu.nitok.jitsu.common.locating.Position
+import eu.nitok.jitsu.common.sequence
+import eu.nitok.jitsu.compiler.analysis.AnalysisRepository
+import eu.nitok.jitsu.compiler.graph.Constant.*
+import eu.nitok.jitsu.compiler.graph.Expression.ArrayLiteral
+import eu.nitok.jitsu.compiler.graph.Expression.VariableReference
+import eu.nitok.jitsu.compiler.graph.Type.*
+import eu.nitok.jitsu.compiler.graph.Type.Array
+import eu.nitok.jitsu.compiler.graph.Type.Boolean
+import eu.nitok.jitsu.compiler.graph.Type.Float
+import eu.nitok.jitsu.compiler.graph.Type.Int
+import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Struct.Field
+import eu.nitok.jitsu.compiler.graph.TypeDefinition.TypeParameter
 import eu.nitok.jitsu.parser.ast.*
 import eu.nitok.jitsu.parser.ast.StatementNode.*
 import eu.nitok.jitsu.parser.ast.StatementNode.Declaration.FunctionDeclarationNode
 import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.*
-import eu.nitok.jitsu.compiler.graph.TypeDefinition.TypeParameter
-import eu.nitok.jitsu.compiler.analysis.AnalysisRepository
-import eu.nitok.jitsu.common.sequence
-import eu.nitok.jitsu.common.walk
-import eu.nitok.jitsu.compiler.graph.Constant.*
-import eu.nitok.jitsu.compiler.graph.Expression.*
-import eu.nitok.jitsu.compiler.graph.Type.*
-import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Struct.Field
-import kotlin.math.exp
+import java.net.URI
 
 private class GraphBuilder {
     val messages: CompilerMessages = CompilerMessages()
 }
 
-fun buildGraph(srcFile: SourceFileNode): JitsuFile {
-    return GraphBuilder().buildGraph(srcFile);
+/**
+ * Restores a de-serialized Module to its former inter-connected state
+ */
+fun restoreJitsuModule(module: JitsuModule, dependencies: List<JitsuModule> = listOf()) {
+    val moduleLookup = merge(*(dependencies + module).map { it.moduleLookup }.toTypedArray()) { a, b ->
+        if (!(a.files.isEmpty() && b.files.isEmpty()))
+            module.messages.error(
+                "Module name conflict, ${a.name}, ${b.name}",
+                Position(1, 1, URI((a.files.getOrNull(0) ?: b.files[0]).path))
+            )
+        a
+    }
+    populateBackReferences(module, module.messages, moduleLookup)
+    module.sequence().forEach {
+        if (it is AccessImpl<*>) it.restore(module.messages)
+    }
 }
 
-private fun GraphBuilder.buildGraph(srcFile: SourceFileNode): JitsuFile {
-    val file = JitsuFile(processStatements(srcFile.statements) {
-        if (it !is Declaration) messages.error("Statement not allowed at root level", it.location)
-    }, messages)
-    file.setScopes()
-    file.walk {
-        if (it is Access<*>) it.finalize(messages)
+fun buildJitsuModule(moduleAst: JitsuModuleAst, dependencies: List<JitsuModule> = listOf()): JitsuModule {
+    return GraphBuilder().buildGraph(moduleAst, dependencies)
+}
 
-        //code blocks require sequential processing for functions & variable accesses
-        if (it is CodeBlock) it.walk {
-            if (it is Access.TypeAccess) it.finalize(messages)
-            return@walk true;
+fun buildJitsuModule(file: SourceFileNode, dependencies: List<JitsuModule> = listOf()): JitsuModule {
+    return GraphBuilder().buildGraph(
+        JitsuModuleAst(singleFileModuleName(file.url), listOf(file), listOf()),
+        dependencies
+    )
+}
+
+private fun singleFileModuleName(file: URI): String {
+    val parts = file.path.split("/")
+    return parts.last().replace(".jit", "")
+}
+
+private fun GraphBuilder.buildGraph(moduleAst: JitsuModuleAst, dependencies: List<JitsuModule>): JitsuModule {
+    val messages = CompilerMessages()
+    val typeDb: IrStore<TypeDefinition> = IrStore()
+    val functionDb: IrStore<Function> = IrStore()
+    val variableDb: IrStore<Variable> = IrStore()
+
+    fun buildModule(
+        prefix: String?,
+        module: JitsuModuleAst,
+        typeDb: IrStore<TypeDefinition> = IrStore(),
+        functionDb: IrStore<Function> = IrStore(),
+        variableDb: IrStore<Variable> = IrStore()
+    ): JitsuModule {
+        val moduleName = prefix?.let { "$it.${module.name}" } ?: module.name
+        val subModules = module.modules.map { buildModule(moduleName, it) }
+        val files = module.files.map { buildGraph(it, module.name, typeDb, functionDb, variableDb) }
+        val module = JitsuModule(moduleName, files, subModules, typeDb, functionDb, variableDb)
+        return module
+    }
+
+    val module = buildModule(null, moduleAst, typeDb, functionDb, variableDb)
+
+    val moduleLookup = merge(*(dependencies + module).map { it.moduleLookup }.toTypedArray()) { a, b ->
+        if (!(a.files.isEmpty() && b.files.isEmpty()))
+            messages.error(
+                "Module name conflict, ${a.name}, ${b.name}",
+                Position(1, 1, URI((a.files.getOrNull(0) ?: b.files[0]).path))
+            )
+        a
+    }
+
+    //backreferences
+    populateBackReferences(module, messages, moduleLookup)
+    module.sequence().forEach {
+        if (it is Access.TypeAccess) {
+            it.resolve(messages)
         }
-        return@walk it !is CodeBlock
     }
-    file.sequence().forEach {
-        if (it is Finalizable) it.finalizeGraph(messages)
-    }
+
     val repository = AnalysisRepository()
-    val topLevelFunctions = file.scope.functions.values.flatten()
+    val allFiles = module.allModules.flatMap { it.files }.toList()
+    val topLevelFunctions = allFiles.flatMap { it.functions }
     repository.analyzeAll(topLevelFunctions, messages)
-    file.analysisRepository = repository
-    file.sequence().forEach {
+    allFiles.asSequence().flatMap { it.sequence() }.forEach {
         if (it is Function) {
             it.summary = repository.getFunctionSummary(it)
         }
     }
-    return file;
+    module.messages.add(messages)
+    return module
 }
+
+private fun populateBackReferences(
+    module: JitsuModule,
+    messages: CompilerMessages,
+    moduleLookup: Map<String, JitsuModule>
+) {
+    module.setScopes()
+    module.sequence().forEach {
+        if (it is Import) {
+            it.resolve(messages, moduleLookup)
+        }
+    }
+}
+
+private fun GraphBuilder.buildGraph(
+    srcFile: SourceFileNode, module: String,
+    typeDb: IrStore<TypeDefinition> = IrStore(),
+    functionDb: IrStore<Function> = IrStore(),
+    variableDb: IrStore<Variable> = IrStore()
+): JitsuFile {
+    val statements = processStatements(srcFile.statements, module) {
+        if (it !is Declaration) messages.error("Statement not allowed at root level", it.location)
+    }
+    return JitsuFile(
+        functions = statements.functions,
+        types = statements.types,
+        variables = statements.variables,
+        imports = statements.imports,
+        path = srcFile.url.toString(), //TODO: toString should not be needed
+        typeDb = typeDb,
+        functionDb = functionDb,
+        variableDb = variableDb
+    )
+}
+
+data class Statements(
+    val functions: List<Function>,
+    val variables: List<VariableDeclaration>,
+    val constants: List<Constant<Any>>,
+    val types: List<TypeDefinition>,
+    val imports: List<Import>
+)
 
 private fun GraphBuilder.processStatements(
     statements: List<StatementNode>,
+    module: String?,
     instructionHandler: (InstructionNode) -> Unit
-): Scope {
+): Statements {
     val functions: MutableList<Function> = mutableListOf()
-    val variables: MutableList<Variable> = mutableListOf()
+    val variables: MutableList<VariableDeclaration> = mutableListOf()
     val constants: MutableList<Constant<Any>> = mutableListOf()
     val types: MutableList<TypeDefinition> = mutableListOf()
+    val imports = mutableMapOf<String, Import>()
+    val allowImports = module != null
     for (statement in statements) {
         when (statement) {
             is NamedTypeDeclarationNode.EnumDeclarationNode -> types.add(buildGraph(statement))
@@ -74,16 +177,27 @@ private fun GraphBuilder.processStatements(
             }
 
             is VariableDeclarationNode -> {
-                val declaration = buildGraph(statement)
+                variables.add(buildGraph(statement))
                 instructionHandler(statement)
-                variables.add(declaration)
             }
 
             is InstructionNode -> instructionHandler(statement)
             is NamedTypeDeclarationNode.ClassDeclarationNode -> buildClassGraph(statement)?.let { types.add(it) }
+            is Declaration.ImportNode -> {
+                if (allowImports) messages.error("This scope does not (yet) allow imports", statement)
+                else if (imports[statement.moduleReference.value] != null) messages.warn(
+                    "Duplicated import", statement.location, CompilerMessage.Hint(
+                        "First occurence", imports[statement.moduleReference.value]!!
+                    )
+                ) else if (statement.moduleReference.value == module) messages.error(
+                    "A module cannot import itself",
+                    statement.location
+                )
+                else imports[statement.moduleReference.value] = Import(statement.moduleReference)
+            }
         }
     }
-    return Scope(constants, types, functions, variables, messages)
+    return Statements(functions, variables, constants, types, imports.values.toList())
 }
 
 private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.ClassDeclarationNode): TypeDefinition.ParameterizedType.Class? {
@@ -106,14 +220,16 @@ private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.Cla
                     base.returnType,
                     listOf(
                         Function.Parameter(
-                            Located("this", name.location),
+                            Located<String>("this", name.location),
                             TypeReference(name.located, listOf()),
                             null
                         )
                     ) + base.parameters,
-                    base.body
+                    base.body,
+                    base.location
                 )
-            })
+            }
+        )
     }
 }
 
@@ -149,7 +265,7 @@ fun buildGraph(statement: VariableDeclarationNode): VariableDeclaration {
     val initialValue = statement.value?.let { node -> buildExpressionGraph(node) }
     val variableDeclaration = VariableDeclaration(
         false,
-        statement.name?.located ?: Located("unnamed", statement.keywordLocation),
+        statement.name?.located ?: Located<String>("unnamed", statement.keywordLocation),
         explicitType,
         initialValue
     )
@@ -176,11 +292,11 @@ private fun buildGraph(
 
 private fun buildGraph(
     it: TypeNode.FunctionTypeSignatureNode
-) = Type.FunctionTypeSignature(
+) = FunctionTypeSignature(
     it.returnType?.let { resolveType(it) },
     it.parameters.map {
         val type = resolveType(it.type);
-        Type.FunctionTypeSignature.Parameter(it.name.located, type, false)
+        FunctionTypeSignature.Parameter(it.name.located, type, false)
     }
 )
 
@@ -194,7 +310,7 @@ private fun buildTypeParameterGraph(node: IdentifierNode): TypeParameter = TypeP
 
 private fun buildGraph(
     array: TypeNode.ArrayTypeNode
-) = Type.Array(
+) = Array(
     resolveType(array.type),
     array.fixedSize?.value?.toInt()
 )
@@ -204,11 +320,18 @@ fun buildExpressionGraph(expression: ExpressionNode): Expression {
         is ExpressionNode.BooleanLiteralNode -> BooleanConstant(expression.value, expression.location)
         is ExpressionNode.NumberLiteralNode.FloatLiteralNode -> TODO()
         is ExpressionNode.NumberLiteralNode.IntegerLiteralNode -> resolveIntConstant(expression)
-        is ExpressionNode.OperationNode -> Operation(
-            buildExpressionGraph(expression.left),
-            expression.operator,
-            expression.right?.let { buildExpressionGraph(it) } ?: Expression.Undefined(expression.operator.location)
-        );
+        is ExpressionNode.OperationNode -> {
+            val left = buildExpressionGraph(expression.left)
+            val right = expression.right?.let { buildExpressionGraph(it) }
+                ?: Expression.Undefined(expression.operator.location)
+            val operator = expression.operator
+            Instruction.FunctionCall(
+                operator.map { it.functionName },
+                listOf(left, right),
+                left.location.rangeTo(right.location),
+            )
+        }
+
         is ExpressionNode.StringLiteralNode -> StringConstant(expression.toString(), expression.location)
         is ExpressionNode.VariableReferenceNode -> resolveVariableReference(expression)
         is ExpressionNode.FieldAccessNode -> TODO()
@@ -220,7 +343,10 @@ fun buildExpressionGraph(expression: ExpressionNode): Expression {
         is IfNode -> TODO()
         is MethodInvocationNode -> TODO()
         is SwitchNode -> TODO()
-        is ExpressionNode.ArrayLiteralNode -> ArrayLiteral(expression.elements.map { buildExpressionGraph(it) }, expression.location)
+        is ExpressionNode.ArrayLiteralNode -> ArrayLiteral(
+            expression.elements.map { buildExpressionGraph(it) },
+            expression.location
+        )
     }
 }
 
@@ -235,7 +361,7 @@ fun resolveFunctionCall(expression: FunctionCallNode): Instruction.FunctionCall 
 fun resolveVariableReference(
     expression: ExpressionNode.VariableReferenceNode
 ): Expression {
-    return Expression.VariableReference(expression.variable.located)
+    return VariableReference(expression.variable.located)
 }
 
 private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNode): Function {
@@ -258,19 +384,21 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
                 }
             }",
         )
+
         null -> Function.Body.Missing
     }
     return Function(
         name?.located,
         functionNode.returnType?.let { Located(resolveType(it), it.location) },
         parameters,
-        functionBody
+        functionBody,
+        functionNode.name?.location ?: functionNode.keywordLocation
     );
 }
 
 private fun GraphBuilder.buildCodeBlockGraph(statements: List<StatementNode>): CodeBlock {
     val instructions = mutableListOf<Instruction>()
-    processStatements(statements) {
+    processStatements(statements, null) {
         val instruction = buildInstructionGraph(it)
         if (instruction != null) instructions.add(instruction)
     }
@@ -417,15 +545,15 @@ private fun resolveIntConstant(
 ): Constant<Any> {
     val value = expression.value
     return if (value.startsWith("-"))
-        Constant.IntConstant(value.toLong(), location = expression.location)
+        IntConstant(value.toLong(), location = expression.location)
     else
-        Constant.UIntConstant(value.toULong(), location = expression.location)
+        UIntConstant(value.toULong(), location = expression.location)
 }
 
-val IdentifierNode.located: Located<String> get() = Located(value, location)
+val IdentifierNode.located: Located<String> get() = Located<String>(value, location)
 
 fun resolveType(type: TypeNode?): Type {
-    if (type == null) return Type.Undefined
+    if (type == null) return Undefined
     return when (type) {
         is TypeNode.ArrayTypeNode -> Array(
             resolveType(type.type),
@@ -441,6 +569,7 @@ fun resolveType(type: TypeNode?): Type {
                 it.location
             )
         })
+
         is TypeNode.StructuralInterfaceTypeNode -> StructuralInterface(type.fields.map {
             Field(
                 it.name.located,
@@ -452,7 +581,7 @@ fun resolveType(type: TypeNode?): Type {
         is TypeNode.UnionTypeNode -> Union(type.types.map { resolveType(it) })
         is TypeNode.ValueTypeNode -> TODO()
         is TypeNode.UIntTypeNode -> UInt(type.bitSize)
-        is TypeNode.BooleanTypeNode -> Type.Boolean
+        is TypeNode.BooleanTypeNode -> Boolean
         is TypeNode.NullTypeNode -> TODO("Nullability not implemented yet")
     }
 }

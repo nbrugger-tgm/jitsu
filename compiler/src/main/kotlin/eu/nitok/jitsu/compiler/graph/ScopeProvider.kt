@@ -1,7 +1,9 @@
 package eu.nitok.jitsu.compiler.graph
 
-internal interface ScopeProvider: Element {
-    val scope: Scope
+import kotlinx.serialization.Transient
+
+internal interface ScopeProvider: Element, ScopeAware {
+    @Transient val scope: Scope
     fun setScopes() {
         fun informChildren(children: List<Element>) {
             children.forEach {
@@ -11,5 +13,9 @@ internal interface ScopeProvider: Element {
             }
         }
         informChildren(children)
+    }
+
+    override fun setEnclosingScope(parent: Scope) {
+        scope.parent = parent
     }
 }

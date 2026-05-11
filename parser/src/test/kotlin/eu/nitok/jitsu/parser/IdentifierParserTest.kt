@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.parser
 
 import eu.nitok.jitsu.parser.parsers.parseIdentifier
-import eu.nitok.jitsu.common.Range
+import eu.nitok.jitsu.common.locating.Location
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
@@ -15,7 +15,7 @@ class IdentifierParserTest : ParsingTest() {
         val txt = tokenize("someidentifier")
         val identifier = parseIdentifier(txt)!!
         assertThat(identifier.value).isEqualTo("someidentifier")
-        assertThat(identifier.location).isEqualTo(Range(1, 1, 14,1))
+        assertThat(identifier.location).isEqualTo(Location(url,1, 1, 14,1))
         assertThat(identifier.errors).isEmpty();
     }
 
@@ -24,7 +24,7 @@ class IdentifierParserTest : ParsingTest() {
         val txt = tokenize("SomeIdentifier")
         val identifier = parseIdentifier(txt)!!
         assertThat(identifier.value).isEqualTo("SomeIdentifier")
-        assertThat(identifier.location).isEqualTo(Range(1, 1, 14,1))
+        assertThat(identifier.location).isEqualTo(Location(url,1, 1, 14,1))
         assertThat(identifier.errors).isEmpty();
     }
 
@@ -33,7 +33,7 @@ class IdentifierParserTest : ParsingTest() {
         val txt = tokenize("some_identifier")
         val identifier = parseIdentifier(txt)!!
         assertThat(identifier.value).isEqualTo("some_identifier")
-        assertThat(identifier.location).isEqualTo(Range(1, 1, 15,1))
+        assertThat(identifier.location).isEqualTo(Location(url,1, 1, 15,1))
         assertThat(identifier.errors).isEmpty();
     }
 
@@ -42,7 +42,7 @@ class IdentifierParserTest : ParsingTest() {
         val txt = tokenize("some\$identifier")
         val identifier = parseIdentifier(txt)!!
         assertThat(identifier.value).isEqualTo("some\$identifier")
-        assertThat(identifier.location).isEqualTo(Range(1,1, 15,1))
+        assertThat(identifier.location).isEqualTo(Location(url,1,1, 15,1))
         assertThat(identifier.errors).isEmpty();
     }
 
@@ -51,7 +51,7 @@ class IdentifierParserTest : ParsingTest() {
         val txt = tokenize("some1identifier")
         val identifier = parseIdentifier(txt)!!
         assertThat(identifier.value).isEqualTo("some1identifier")
-        assertThat(identifier.location).isEqualTo(Range(1,1, 15,1))
+        assertThat(identifier.location).isEqualTo(Location(url,1,1, 15,1))
         assertThat(identifier.errors).isEmpty();
     }
 
@@ -60,7 +60,7 @@ class IdentifierParserTest : ParsingTest() {
         val txt = tokenize("some1_identifier\$")
         val identifier = parseIdentifier(txt)!!
         assertThat(identifier.value).isEqualTo("some1_identifier\$")
-        assertThat(identifier.location).isEqualTo(Range(1, 1, 17, 1))
+        assertThat(identifier.location).isEqualTo(Location(url,1, 1, 17, 1))
         assertThat(identifier.errors).isEmpty();
     }
 
@@ -70,7 +70,7 @@ class IdentifierParserTest : ParsingTest() {
         val txt = tokenize("1someidentifier")
         val identifier = parseIdentifier(txt)!!
         assertThat(identifier.value).isEqualTo("1someidentifier")
-        assertThat(identifier.location).isEqualTo(Range(1,1, 15,1))
+        assertThat(identifier.location).isEqualTo(Location(url,1,1, 15,1))
         assertThat(identifier.errors).hasSize(1)
     }
 
@@ -86,7 +86,7 @@ class IdentifierParserTest : ParsingTest() {
         val txt = tokenize("some\$identifier");
         val identifier = parseIdentifier(txt)!!
         assertThat(identifier.value).isEqualTo("some\$identifier");
-        assertThat(identifier.location).isEqualTo(Range(1, 1, 15, 1));
+        assertThat(identifier.location).isEqualTo(Location(url,1, 1, 15, 1));
         assertThat(identifier.warnings).hasSize(1);
         assertThat(identifier.errors).isEmpty();
     }
@@ -96,7 +96,7 @@ class IdentifierParserTest : ParsingTest() {
         val txt = tokenize("someidentifier otheridentifier");
         val identifier = parseIdentifier(txt)!!;
         assertThat(identifier.value).isEqualTo("someidentifier");
-        assertThat(identifier.location).isEqualTo(Range(1, 1, 14, 1));
+        assertThat(identifier.location).isEqualTo(Location(url,1, 1, 14, 1));
         assertThat(identifier.errors).isEmpty();
     }
 }

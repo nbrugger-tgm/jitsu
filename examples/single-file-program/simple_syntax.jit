@@ -1,8 +1,0 @@
-fn main():i128 {
-    var input : u32 | u16 = 23;
-    var y = 1;
-    return input + y;
-}
-
-
-native fn plus(a: i64, b: i64): i64

@@ -8,7 +8,7 @@ object BackendRegistry {
         "c" to CBackend()
     )
 
-    fun create(name: String): Backend {
+    fun get(name: String): Backend {
         return backends[name] ?: throw IllegalArgumentException("No backend with name $name")
     }
 }
