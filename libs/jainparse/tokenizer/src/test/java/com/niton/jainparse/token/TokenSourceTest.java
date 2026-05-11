@@ -95,25 +95,19 @@ class TokenSourceTest {
 
         @TestFactory
         Stream<DynamicTest> remaningBufferGeneric() {
-            return IntStream.of(2, 4, 6).boxed().flatMap(
-                    sz -> Stream.of(
+            return IntStream.of(2, 4, 6).boxed().flatMap(sz -> Stream.of(
                             "ABCDREF890723891",
                             "ANDADADAJHFKA ",
                             " DASDHJAGSDH",
                             "AAAAAAAAAAA       AAAAAAA"
-                    ).map(input -> DynamicTest.dynamicTest(
-                            format(
-                                    "remainingBufferGeneric(%d, %s)",
-                                    sz,
-                                    input
-                            ),
+            ).map(input -> DynamicTest.dynamicTest(
+                            format("remainingBufferGeneric(%d, %s)", sz, input),
                             () -> {
                                 var source = new TokenSource<>(new StringReader(input), DefaultToken.values());
                                 source.setChunkSize(sz);
                                 var res = source.get(0);
                                 assertThat(res.getStart()).isZero();
-                                assertThat(source.getBuffer()).doesNotStartWith(
-                                        res.getValue());
+                                assertThat(source.getBuffer()).doesNotStartWith(res.getValue());
                             }
                     ))
             );
@@ -147,9 +141,27 @@ class TokenSourceTest {
             }
 
             @Test
-            void sizeInitial0() {
+            void sizeIs0WithEmptyInput() {
+                var source = new TokenSource<>(new StringReader(""), DefaultToken.values());
+                assertThat(source).hasSize(0);
+            }
+
+            @Test
+            void tokenLenghtEqualingChunkSizeWorking(){
                 var source = new TokenSource<>(new StringReader("ABC123+"), DefaultToken.values());
-                assertThat(source).hasSize(1);
+                source.setChunkSize(1);
+                assertThat(source.size()).isGreaterThanOrEqualTo(1);
+                assertThat(source.get(0)).extracting(it -> it.getValue()).isEqualTo("ABC");
+                assertThat(source.size()).isGreaterThanOrEqualTo(2);
+                assertThat(source.get(1)).extracting(it -> it.getValue()).isEqualTo("123");
+                assertThat(source.size()).isEqualTo(3);
+                assertThat(source.get(2)).extracting(it -> it.getValue()).isEqualTo("+");
+            }
+
+            @Test
+            void sizeInitial1() {
+                var source = new TokenSource<>(new StringReader("ABC123+"), DefaultToken.values());
+                assertThat(source).hasSize(3);
             }
 
             @Test

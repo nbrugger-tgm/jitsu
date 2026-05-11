@@ -25,6 +25,10 @@ public class TokenSource<T extends Enum<T> & Tokenable> extends AbstractList<Ass
     @Getter(AccessLevel.PRIVATE)
     private final LinkedList<AssignedToken<T>> readTokens = new LinkedList<>();
     private final Tokenizer<T> tokenizer;
+    /**
+     * Holds no yet tokenized text read from the stream
+     * <p>at most {@link #chunkSize} long</p>
+     */
     @Setter(AccessLevel.PRIVATE)
     private String buffer = "";
     @Setter(AccessLevel.PRIVATE)
@@ -62,7 +66,7 @@ public class TokenSource<T extends Enum<T> & Tokenable> extends AbstractList<Ass
                 outOfBoundsException(index);
             }
             try {
-                readNextToken();
+                readNextTokens();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -78,14 +82,17 @@ public class TokenSource<T extends Enum<T> & Tokenable> extends AbstractList<Ass
         ));
     }
 
-    private void readNextToken() throws IOException {
+    /**
+     * reads at least one new token from the underlying reader
+     */
+    private void readNextTokens() throws IOException {
         tokenizer.setIgnoreEOF(true);
         if (ended) {
             throw new IllegalStateException("All tokens read, no more tokens available");
         }
         List<AssignedToken<T>> newTokens = new ArrayList<>();
         while (newTokens.size() < 2 && !ended) {
-            enlargeBuffer();
+            readNextChunkIntoBuffer();
             var tokenResult = tokenizer.tokenize(buffer);
             if (!tokenResult.wasParsed()) throw new RuntimeException(
                     tokenResult.exception().getMostProminentDeepException().getMessage()
@@ -102,11 +109,15 @@ public class TokenSource<T extends Enum<T> & Tokenable> extends AbstractList<Ass
             newTokens.remove(newTokens.size() - 1);
         }
         readTokens.addAll(newTokens);
-        AssignedToken<T> lastParsed = newTokens.get(newTokens.size() - 1);
-        buffer = buffer.substring(lastParsed.getEnd());
+        if(!ended) {
+            AssignedToken<T> lastParsed = newTokens.get(newTokens.size() - 1);
+            buffer = buffer.substring(lastParsed.getEnd());
+        } else {
+            buffer = "";
+        }
     }
 
-    private void enlargeBuffer() throws IOException {
+    private void readNextChunkIntoBuffer() throws IOException {
         char[] chars = new char[chunkSize];
         int cnt;
         ended = ((cnt = reader.read(chars)) == -1 || cnt < chunkSize);
@@ -120,11 +131,21 @@ public class TokenSource<T extends Enum<T> & Tokenable> extends AbstractList<Ass
         if (ended) {
             return readTokens.size();
         }
+        if(readTokens.size() == 0) {
+	        try {
+		        readNextTokens();
+	        } catch (IOException e) {
+		        throw new RuntimeException(e);
+	        }
+            if (ended) {
+                return readTokens.size();
+            }
+        }
         return readTokens.size() + 1;
     }
 
     @Override
     public String toString() {
-        return String.format("TokenSource{%s}", reader);
+        return String.format("TokenSource@%d", hashCode());
     }
 }

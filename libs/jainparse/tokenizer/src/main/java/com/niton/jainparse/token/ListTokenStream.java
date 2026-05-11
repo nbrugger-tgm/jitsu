@@ -5,13 +5,10 @@ import com.niton.jainparse.token.Tokenizer.AssignedToken;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
+
 import org.jetbrains.annotations.Nullable;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
