@@ -78,21 +78,15 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
     }
 
     override fun didClose(params: DidCloseTextDocumentParams?) {
-        val text = params?.textDocument?.uri?.let {
-            val file = File(URI(it))
-            return@let file.readText();
+        if (params != null) {
+            updateFile(params.textDocument.uri)
         }
-        rawTexts[params?.textDocument?.uri ?: return] = text ?: return
-        updateFile(params.textDocument.uri)
     }
 
     override fun didSave(params: DidSaveTextDocumentParams?) {
-        val text = params?.textDocument?.uri?.let {
-            val file = File(URI(it))
-            return@let file.readText();
+        if (params != null) {
+            updateFile(params.textDocument.uri)
         }
-        rawTexts[params?.textDocument?.uri ?: return] = text ?: return
-        updateFile(params.textDocument.uri)
     }
 
     override fun documentHighlight(params: DocumentHighlightParams?): CompletableFuture<MutableList<out DocumentHighlight>> {
