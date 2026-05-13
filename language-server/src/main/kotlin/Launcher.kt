@@ -13,7 +13,7 @@ fun main(vararg args: String) {
     log2.createNewFile()
 
     if(args.isEmpty()) {
-        print("No run mode provided, falling back to 'stdio'. To change run mode use 'tcp' as programm argument")
+        //print("No run mode provided, falling back to 'stdio'. To change run mode use 'tcp' as programm argument")
     }
     if (args.isEmpty() || args[0] == "stdio") {
         customLogger = PrintStream(log);
