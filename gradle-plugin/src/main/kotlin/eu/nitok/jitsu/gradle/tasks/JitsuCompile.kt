@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.gradle.tasks
 
+import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.format
 import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.compiler.graph.JitsuModule
@@ -14,7 +15,6 @@ import kotlinx.serialization.json.decodeFromStream
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*

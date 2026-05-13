@@ -31,7 +31,9 @@ class JitsuBasePlugin: Plugin<Project> {
     override fun apply(project: Project) {
         project.plugins.apply(BasePlugin::class.java)
 
-        val extension = project.extensions.create("jitsu", JitsuExtension::class.java)
+        val extension = project.extensions.create("jitsu", JitsuExtension::class.java).also {
+            it.moduleName.convention(project.name)
+        }
 
         val main = project.registerJitsuSourceSet("main", extension, consumable = true)
         val test = project.registerJitsuSourceSet("test", extension, consumable = false)
@@ -59,7 +61,7 @@ class JitsuBasePlugin: Plugin<Project> {
         val compileTask = tasks.register("compile${string.capitalized()}Jitsu", JitsuCompile::class.java) {
             it.dependencies.from(classpath)
             it.sources.setFrom(sourceDirectory)
-            it.moduleName.set(project.name)
+            it.moduleName.set(extension.moduleName)
             it.targetFile.set(project.layout.buildDirectory.file("modules/$string.jim"))
         }
         val transpileCTask = tasks.register("transpile${string.capitalized()}JitsuToC", JitsuTranspile::class.java) {
