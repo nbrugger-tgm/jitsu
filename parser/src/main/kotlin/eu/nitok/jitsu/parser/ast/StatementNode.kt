@@ -7,8 +7,8 @@ import kotlinx.serialization.SerialName
 
 sealed interface StatementNode : AstNode {
 
-        sealed interface InstructionNode : StatementNode {
-                class FunctionCallNode(
+    sealed interface InstructionNode : StatementNode {
+        class FunctionCallNode(
             val function: IdentifierNode,
             val parameters: List<ExpressionNode>,
             override val location: Location
@@ -19,20 +19,20 @@ sealed interface StatementNode : AstNode {
                 get() = parameters + function
         }
 
-                class AssignmentNode(
+        class AssignmentNode(
             val target: AssignmentTarget,
             val value: ExpressionNode?,
         ) : InstructionNode, AstNodeImpl() {
             override val children: List<AstNode>
                 get() = listOfNotNull(target, value)
 
-                        sealed interface AssignmentTarget : AstNode
+            sealed interface AssignmentTarget : AstNode
 
             override val location: Location
                 get() = target.location.rangeTo(value?.location ?: target.location)
         }
 
-                class MethodInvocationNode(
+        class MethodInvocationNode(
             val method: ExpressionNode.FieldAccessNode,
             val parameters: List<ExpressionNode>,
             override val location: Location
@@ -43,7 +43,7 @@ sealed interface StatementNode : AstNode {
                 get() = parameters + method
         }
 
-                data class LineCommentNode(val content: Located<String>, override val location: Location) : InstructionNode,
+        data class LineCommentNode(val content: Located<String>, override val location: Location) : InstructionNode,
             AstNodeImpl() {
 
 
@@ -52,7 +52,7 @@ sealed interface StatementNode : AstNode {
         }
 
 
-                data class YieldStatement(
+        data class YieldStatement(
             val expression: ExpressionNode?,
             val keywordLocation: Location
         ) : InstructionNode, AstNodeImpl() {
@@ -62,7 +62,7 @@ sealed interface StatementNode : AstNode {
                 get() = if (expression == null) keywordLocation else keywordLocation.rangeTo(expression.location)
         }
 
-                class SwitchNode(
+        class SwitchNode(
             val item: ExpressionNode?,
             val cases: List<CaseNode>,
             override val location: Location,
@@ -71,10 +71,14 @@ sealed interface StatementNode : AstNode {
             override val children: List<AstNode>
                 get() = cases + listOfNotNull(item)
 
-                        abstract class CaseNode(val matcher: CaseMatchNode, val body: CaseBodyNode?, val keywordLocation: Location) :
+            abstract class CaseNode(
+                val matcher: CaseMatchNode,
+                val body: CaseBodyNode?,
+                val keywordLocation: Location
+            ) :
                 AstNode {
-                                sealed interface CaseMatchNode : AstNode {
-                                        class ConstantCaseNode(
+                sealed interface CaseMatchNode : AstNode {
+                    class ConstantCaseNode(
                         val value: ExpressionNode,
                         val keywordLocation: Location,
                         override val location: Location
@@ -86,7 +90,7 @@ sealed interface StatementNode : AstNode {
                             get() = listOf(value)
                     }
 
-                                        class TypeCaseNode(
+                    class TypeCaseNode(
                         @SerialName("type_definition")
                         val type: TypeNode.NameTypeNode,
                         val keywordLocation: Location,
@@ -98,26 +102,26 @@ sealed interface StatementNode : AstNode {
                             get() = listOf(type)
                     }
 
-                                        class DefaultCaseNode(override val location: Location) : CaseMatchNode, AstNodeImpl()
+                    class DefaultCaseNode(override val location: Location) : CaseMatchNode, AstNodeImpl()
 
                     override val children: List<AstNode>
                         get() = listOf()
                 }
 
-                                sealed interface CaseBodyNode : AstNode
+                sealed interface CaseBodyNode : AstNode
             }
         }
 
-                sealed interface CodeBlockNode : InstructionNode, ExpressionNode,
+        sealed interface CodeBlockNode : InstructionNode, ExpressionNode,
             SwitchNode.CaseNode.CaseBodyNode,
             Declaration.FunctionDeclarationNode.FunctionBodyNode {
-                        class SingleExpressionCodeBlock(val expression: ExpressionNode, override val location: Location) :
+            class SingleExpressionCodeBlock(val expression: ExpressionNode, override val location: Location) :
                 AstNodeImpl(), CodeBlockNode {
                 override val children: List<AstNode>
                     get() = listOf(expression)
             }
 
-                        class StatementsCodeBlock(val statements: List<StatementNode>, override val location: Location) :
+            class StatementsCodeBlock(val statements: List<StatementNode>, override val location: Location) :
                 AstNodeImpl(), CodeBlockNode {
 
                 override val children: List<AstNode>
@@ -125,7 +129,7 @@ sealed interface StatementNode : AstNode {
             }
         }
 
-                class IfNode(
+        class IfNode(
             val condition: ExpressionNode?,
             val thenCodeBlockNode: CodeBlockNode?,
             val elseStatement: ElseNode?,
@@ -135,10 +139,10 @@ sealed interface StatementNode : AstNode {
             override val children: List<AstNode>
                 get() = listOfNotNull(condition, thenCodeBlockNode, elseStatement)
 
-                        sealed interface ElseNode : AstNode {
+            sealed interface ElseNode : AstNode {
                 val keywordLocation: Location
 
-                                class ElseIfNode(val ifNode: IfNode, override val keywordLocation: Location) : AstNodeImpl(),
+                class ElseIfNode(val ifNode: IfNode, override val keywordLocation: Location) : AstNodeImpl(),
                     ElseNode {
                     override val children: List<AstNode>
                         get() = listOf(ifNode)
@@ -146,7 +150,7 @@ sealed interface StatementNode : AstNode {
                         get() = keywordLocation.rangeTo(ifNode.location)
                 }
 
-                                class ElseBlockNode(val codeBlock: CodeBlockNode?, override val keywordLocation: Location) :
+                class ElseBlockNode(val codeBlock: CodeBlockNode?, override val keywordLocation: Location) :
                     AstNodeImpl(), ElseNode {
                     override val children: List<AstNode>
                         get() = listOfNotNull(codeBlock)
@@ -156,7 +160,11 @@ sealed interface StatementNode : AstNode {
             }
         }
 
-                class ReturnNode(val expression: ExpressionNode?, override val location: Location, val keywordLocation: Location) :
+        class ReturnNode(
+            val expression: ExpressionNode?,
+            override val location: Location,
+            val keywordLocation: Location
+        ) :
             AstNodeImpl(), InstructionNode {
 
 
@@ -164,7 +172,7 @@ sealed interface StatementNode : AstNode {
                 get() = listOfNotNull(expression)
         }
 
-                class VariableDeclarationNode(
+        class VariableDeclarationNode(
             val name: IdentifierNode?,
             @SerialName("type_definition")
             val type: TypeNode?,
@@ -180,8 +188,8 @@ sealed interface StatementNode : AstNode {
         }
     }
 
-        sealed interface Declaration : StatementNode {
-                class FunctionDeclarationNode(
+    sealed interface Declaration : StatementNode {
+        class FunctionDeclarationNode(
             val name: IdentifierNode?,
             val parameters: List<ParameterNode>,
             val returnType: TypeNode?,
@@ -196,12 +204,14 @@ sealed interface StatementNode : AstNode {
                 body?.location ?: returnType?.location ?: parameters.lastOrNull()?.location ?: name?.location
                 ?: keywordLocation
             )
-                        sealed interface FunctionBodyNode : AstNode {
-                                data class NativeImplementation(override val location: Location): FunctionBodyNode, AstNodeImpl() {
+
+            sealed interface FunctionBodyNode : AstNode {
+                data class NativeImplementation(override val location: Location) : FunctionBodyNode, AstNodeImpl() {
                     override val children: List<AstNode> get() = emptyList()
                 }
             }
-                        class ParameterNode(
+
+            class ParameterNode(
                 val name: IdentifierNode,
                 val type: TypeNode?,
                 val defaultValue: ExpressionNode?,
@@ -215,28 +225,28 @@ sealed interface StatementNode : AstNode {
 
         }
 
-        data class ImportNode(val kw: Location, val moduleReference: Located<String>): AstNodeImpl(), Declaration {
+        data class ImportNode(val kw: Location, val moduleReference: Located<String>) : AstNodeImpl(), Declaration {
             override val location: Location get() = kw.rangeTo(moduleReference.location.end)
             override val children: List<AstNode> get() = listOf()
         }
     }
 
-        sealed interface NamedTypeDeclarationNode : AstNode, Declaration {
+    sealed interface NamedTypeDeclarationNode : AstNode, Declaration, CanHaveAttributes {
         val name: IdentifierNode?;
 
-                data class TypeAliasNode(
+        data class TypeAliasNode(
             override val name: IdentifierNode?,
             val typeParameters: List<IdentifierNode>,
             @SerialName("definition") val type: TypeNode?,
             override val location: Location,
             val keywordLocation: Location,
             override val attributes: List<AttributeNode>
-        ) : NamedTypeDeclarationNode, AstNodeImpl(), CanHaveAttributes {
+        ) : NamedTypeDeclarationNode, AstNodeImpl() {
             override val children: List<AstNode>
                 get() = attributes + listOfNotNull(name, type)
         }
 
-                data class ClassDeclarationNode(
+        data class ClassDeclarationNode(
             override val name: IdentifierNode?,
             val typeParameters: List<IdentifierNode>,
             val fields: List<StructuralFieldNode>,
@@ -248,18 +258,19 @@ sealed interface StatementNode : AstNode {
             override val children: List<AstNode>
                 get() = attributes + methods + fields + listOfNotNull(name) + typeParameters
 
-                        data class MethodNode(val function: Declaration.FunctionDeclarationNode, val mutableKw: Location?) :
+            data class MethodNode(val function: Declaration.FunctionDeclarationNode, val mutableKw: Location?) :
                 AstNodeImpl() {
                 override val location: Location get() = mutableKw?.rangeTo(function.location) ?: function.location
                 override val children: List<AstNode> get() = listOf(function)
             }
         }
 
-                data class EnumDeclarationNode(
+        data class EnumDeclarationNode(
             override val name: IdentifierNode,
             val constants: List<IdentifierNode>,
             override val location: Location,
-            val keywordLocation: Location
+            val keywordLocation: Location,
+            override val attributes: List<AttributeNode>
         ) : NamedTypeDeclarationNode, AstNodeImpl() {
             override val children: List<AstNode>
                 get() = constants + name
@@ -269,7 +280,7 @@ sealed interface StatementNode : AstNode {
             }
         }
 
-                data class InterfaceTypeNode(
+        data class InterfaceTypeNode(
             override val name: IdentifierNode,
             val functions: List<FunctionSignatureNode>,
             override val location: Location,
@@ -283,7 +294,7 @@ sealed interface StatementNode : AstNode {
                 return name.value
             }
 
-                        class FunctionSignatureNode(
+            class FunctionSignatureNode(
                 val name: IdentifierNode,
                 val typeSignature: TypeNode.FunctionTypeSignatureNode,
             ) : AstNodeImpl() {

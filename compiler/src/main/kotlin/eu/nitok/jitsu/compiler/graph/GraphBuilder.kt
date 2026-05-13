@@ -63,9 +63,6 @@ private fun singleFileModuleName(file: URI): String {
 
 private fun GraphBuilder.buildGraph(moduleAst: JitsuModuleAst, dependencies: List<JitsuModule>): JitsuModule {
     val messages = CompilerMessages()
-    val typeDb: IrStore<TypeDefinition> = IrStore()
-    val functionDb: IrStore<Function> = IrStore()
-    val variableDb: IrStore<Variable> = IrStore()
 
     fun buildModule(
         prefix: String?,
@@ -81,7 +78,7 @@ private fun GraphBuilder.buildGraph(moduleAst: JitsuModuleAst, dependencies: Lis
         return module
     }
 
-    val module = buildModule(null, moduleAst, typeDb, functionDb, variableDb)
+    val module = buildModule(null, moduleAst)
 
     val moduleLookup = merge(*(dependencies + module).map { it.moduleLookup }.toTypedArray()) { a, b ->
         if (!(a.files.isEmpty() && b.files.isEmpty()))

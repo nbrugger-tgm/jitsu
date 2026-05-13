@@ -40,7 +40,7 @@ class JitsuFile internal constructor(
         typeIds.map { id -> module.getType(id.index) }
     }
     val uri by lazy { URI(path) }
-    override val children: List<Element> get() = functions + types
+    override val children: List<Element> get() = functions + types + variables + imports
     @Transient
     override val scope: Scope = Scope(imports = imports)
     @Transient
