@@ -20,7 +20,7 @@ class FunctionParserTest : ParsingTest() {
     @Nested
     @DisplayName("parseFunction()")
     inner class ParseFunction : MethodTest<FunctionDeclarationNode>() {
-        override fun parseMethod(input: String) = parseFunction(tokenize(input))
+        override fun parseMethod(input: String) = parseFunction(tokenize(input), listOf())
 
         override fun fullyValidInputs() = listOf(
             "fn foo() {}",
@@ -56,7 +56,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("parses function name correctly")
     fun parsesFunctionNameCorrectly() {
-        val fn = parseFunction(tokenize("fn myFunction() {}"))
+        val fn = parseFunction(tokenize("fn myFunction() {}"), listOf())
         assertThat(fn).isNotNull()
         assertThat(fn?.name)
             .isNotNull()
@@ -67,7 +67,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("attaches error when function name is missing")
     fun attachesErrorWhenNameMissing() {
-        val fn = parseFunction(tokenize("fn () {}"))
+        val fn = parseFunction(tokenize("fn () {}"), listOf())
         assertThat(fn)
             .`as`("Should still produce a node even when name is missing")
             .isNotNull()
@@ -84,7 +84,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("parses empty parameter list")
     fun parsesEmptyParameterList() {
-        val fn = parseFunction(tokenize("fn foo() {}"))
+        val fn = parseFunction(tokenize("fn foo() {}"), listOf())
         assertThat(fn?.parameters)
             .isNotNull()
             .isEmpty()
@@ -93,7 +93,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("parses single parameter correctly")
     fun parsesSingleParameterCorrectly() {
-        val fn = parseFunction(tokenize("fn foo(x: i32) {}"))
+        val fn = parseFunction(tokenize("fn foo(x: i32) {}"), listOf())
         assertThat(fn?.parameters)
             .isNotNull()
             .hasSize(1)
@@ -105,7 +105,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("parses multiple parameters correctly")
     fun parsesMultipleParametersCorrectly() {
-        val fn = parseFunction(tokenize("fn test(a: i32, b: boolean) {}"))
+        val fn = parseFunction(tokenize("fn test(a: i32, b: boolean) {}"), listOf())
         assertThat(fn?.parameters)
             .isNotNull()
             .hasSize(2)
@@ -118,7 +118,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("parses three parameters correctly")
     fun parsesThreeParametersCorrectly() {
-        val fn = parseFunction(tokenize("fn test(a: i32, b: i64, c: f32) {}"))
+        val fn = parseFunction(tokenize("fn test(a: i32, b: i64, c: f32) {}"), listOf())
         assertThat(fn?.parameters)
             .isNotNull()
             .hasSize(3)
@@ -127,7 +127,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("attaches error when opening parenthesis is missing")
     fun attachesErrorWhenParenthesisMissing() {
-        val fn = parseFunction(tokenize("fn foo {}"))
+        val fn = parseFunction(tokenize("fn foo {}"), listOf())
         assertThat(fn)
             .`as`("Should still produce a node even when '(' is missing")
             .isNotNull()
@@ -143,7 +143,7 @@ class FunctionParserTest : ParsingTest() {
     @DisplayName("parses parameter types correctly for primitive types")
     @ValueSource(strings = ["i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "f32", "f64", "boolean"])
     fun parsesParameterTypesCorrectly(typeName: String) {
-        val fn = parseFunction(tokenize("fn foo(x: $typeName) {}"))
+        val fn = parseFunction(tokenize("fn foo(x: $typeName) {}"), listOf())
         assertThat(fn?.parameters)
             .isNotNull()
             .hasSize(1)
@@ -155,14 +155,14 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("has no return type when not specified")
     fun hasNoReturnTypeWhenNotSpecified() {
-        val fn = parseFunction(tokenize("fn foo() {}"))
+        val fn = parseFunction(tokenize("fn foo() {}"), listOf())
         assertThat(fn?.returnType).isNull()
     }
 
     @Test
     @DisplayName("parses return type correctly")
     fun parsesReturnTypeCorrectly() {
-        val fn = parseFunction(tokenize("fn test(): i32 {}"))
+        val fn = parseFunction(tokenize("fn test(): i32 {}"), listOf())
         assertThat(fn?.returnType)
             .`as`("Return type should be parsed")
             .isNotNull()
@@ -173,7 +173,7 @@ class FunctionParserTest : ParsingTest() {
     @DisplayName("parses various return types")
     @ValueSource(strings = ["i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "f32", "f64", "boolean", "MyType"])
     fun parsesVariousReturnTypes(typeName: String) {
-        val fn = parseFunction(tokenize("fn foo(): $typeName {}"))
+        val fn = parseFunction(tokenize("fn foo(): $typeName {}"), listOf())
         assertThat(fn)
             .`as`("Should parse function with return type '$typeName'")
             .isNotNull()
@@ -185,7 +185,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("parses function body for non-native function")
     fun parsesFunctionBodyForNonNative() {
-        val fn = parseFunction(tokenize("fn foo() {}"))
+        val fn = parseFunction(tokenize("fn foo() {}"), listOf())
         assertThat(fn?.body)
             .`as`("Non-native function should have a body")
             .isNotNull()
@@ -197,7 +197,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("attaches error when body is missing for non-native function")
     fun attachesErrorWhenBodyMissingForNonNative() {
-        val fn = parseFunction(tokenize("fn foo()"))
+        val fn = parseFunction(tokenize("fn foo()"), listOf())
         assertThat(fn)
             .`as`("Should still produce a node even when body is missing")
             .isNotNull()
@@ -214,7 +214,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("parses native function without body")
     fun parsesNativeFunctionWithoutBody() {
-        val fn = parseFunction(tokenize("native fn ext()"))
+        val fn = parseFunction(tokenize("native fn ext()"), listOf())
         assertThat(fn)
             .`as`("Native function should be parsed")
             .isNotNull()
@@ -225,7 +225,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("native function produces no errors when body is absent")
     fun nativeFunctionProducesNoErrorsWhenBodyAbsent() {
-        val fn = parseFunction(tokenize("native fn external()"))
+        val fn = parseFunction(tokenize("native fn external()"), listOf())
         assertThat(fn).isNotNull()
         assertThat(fn?.errors).isEmpty()
         assertThat(fn?.warnings).isEmpty()
@@ -234,7 +234,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("native function with body produces an error")
     fun nativeFunctionWithBodyProducesError() {
-        val fn = parseFunction(tokenize("native fn foo() {}"))
+        val fn = parseFunction(tokenize("native fn foo() {}"), listOf())
         assertThat(fn)
             .`as`("Should still produce a node even with invalid body")
             .isNotNull()
@@ -249,7 +249,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("native function preserves NativeImplementation body type")
     fun nativeFunctionHasNativeImplementationBody() {
-        val fn = parseFunction(tokenize("native fn compute(a: i32, b: i64)"))
+        val fn = parseFunction(tokenize("native fn compute(a: i32, b: i64)"), listOf())
         assertThat(fn?.body)
             .isNotNull()
             .asInstanceOf(type(FunctionBodyNode.NativeImplementation::class.java))
@@ -259,7 +259,7 @@ class FunctionParserTest : ParsingTest() {
     @DisplayName("wrong fn-like keywords produce an error but still parse")
     @ValueSource(strings = ["func", "fun", "function"])
     fun wrongFnKeywordsProduceErrorButStillParse(keyword: String) {
-        val fn = parseFunction(tokenize("$keyword foo() {}"))
+        val fn = parseFunction(tokenize("$keyword foo() {}"), listOf())
         assertThat(fn)
             .`as`("'$keyword' is close enough to 'fn' to still parse, but should produce an error")
             .isNotNull()
@@ -274,7 +274,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("parses full function with params and return type")
     fun parsesFullFunctionWithParamsAndReturnType() {
-        val fn = parseFunction(tokenize("fn compute(a: i32, b: i64): u8 {}"))
+        val fn = parseFunction(tokenize("fn compute(a: i32, b: i64): u8 {}"), listOf())
         assertThat(fn).isNotNull()
         assertThat(fn?.name?.value).isEqualTo("compute")
         assertThat(fn?.parameters).hasSize(2)
@@ -287,7 +287,7 @@ class FunctionParserTest : ParsingTest() {
     @Test
     @DisplayName("location spans the entire function declaration")
     fun locationSpansEntireFunction() {
-        val fn = parseFunction(tokenize("fn foo(x: i32): i64 {}"))
+        val fn = parseFunction(tokenize("fn foo(x: i32): i64 {}"), listOf())
         assertThat(fn).isNotNull()
         assertThat(fn?.location)
             .isNotNull()

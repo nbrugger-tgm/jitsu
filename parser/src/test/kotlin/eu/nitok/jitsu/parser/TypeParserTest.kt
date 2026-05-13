@@ -1,7 +1,6 @@
 package eu.nitok.jitsu.parser
 
 import eu.nitok.jitsu.common.BitSize
-import eu.nitok.jitsu.parser.ast.StatementNode
 import eu.nitok.jitsu.parser.ast.StatementNode.NamedTypeDeclarationNode.TypeAliasNode
 import eu.nitok.jitsu.parser.ast.TypeNode
 import eu.nitok.jitsu.parser.parsers.parseExplicitType
@@ -251,13 +250,13 @@ class TypeParserTest : ParsingTest() {
         @ParameterizedTest
         @ValueSource(strings = ["My = i64", "My:i64", "My i64"])
         fun shouldReturnNullWhenTypeKeywordMissing(text: String) {
-            val res = parseTypeDeclaration(tokenize(text))
+            val res = parseTypeDeclaration(tokenize(text), listOf())
             assertThat(res).isNull()
         }
 
         @Test
         fun shouldParseSimpleTypeDeclaration() {
-            val res = parseTypeDeclaration(tokenize("type My = i64"))
+            val res = parseTypeDeclaration(tokenize("type My = i64"), listOf())
             assertThat(res)
                 .isNotNull()
                 .asInstanceOf(type(TypeAliasNode::class.java))
@@ -271,7 +270,7 @@ class TypeParserTest : ParsingTest() {
 
         @Test
         fun shouldParseGenericTypeDeclaration() {
-            val res = parseTypeDeclaration(tokenize("type Box<T> = T"))
+            val res = parseTypeDeclaration(tokenize("type Box<T> = T"), listOf())
             assertThat(res)
                 .asInstanceOf(type(TypeAliasNode::class.java))
                 .let {
@@ -286,7 +285,7 @@ class TypeParserTest : ParsingTest() {
 
         @Test
         fun shouldProduceErrorWhenEqualsMissing() {
-            val res = parseTypeDeclaration(tokenize("type My i64"))
+            val res = parseTypeDeclaration(tokenize("type My i64"), listOf())
             assertThat(res)
                 .`as`("Even with missing = the parser should still return a node but attach errors to it")
                 .isNotNull()
@@ -309,7 +308,7 @@ class TypeParserTest : ParsingTest() {
         @ParameterizedTest
         @ValueSource(strings = ["type = i64", "type   = i64", "type=i64"])
         fun shouldProduceErrorWhenMissingName(text: String) {
-            val res = parseTypeDeclaration(tokenize(text))
+            val res = parseTypeDeclaration(tokenize(text), listOf())
             assertThat(res)
                 .`as`("Even with missing = the parser should still return a node but attach errors to it")
                 .isNotNull().let {
@@ -326,7 +325,7 @@ class TypeParserTest : ParsingTest() {
         @ParameterizedTest
         @ValueSource(strings = ["type My =", "type   My=     "])
         fun shouldProduceErrorWhenMissingType(text: String) {
-            val res = parseTypeDeclaration(tokenize(text))
+            val res = parseTypeDeclaration(tokenize(text), listOf())
             assertThat(res)
                 .`as`("Even with missing the type itself the parser should still return a node but attach errors to it")
                 .isNotNull().asInstanceOf(type(TypeAliasNode::class.java)).let {
@@ -343,7 +342,7 @@ class TypeParserTest : ParsingTest() {
 
         @Test
         fun shouldParseEvenWithJustTypeKeyword() {
-            val res = parseTypeDeclaration(tokenize("type"))
+            val res = parseTypeDeclaration(tokenize("type"), listOf())
             assertThat(res)
                 .`as`("Even with just the type keyword the parser should still return a node but attach errors to it")
                 .isNotNull().asInstanceOf(type(TypeAliasNode::class.java)).let {

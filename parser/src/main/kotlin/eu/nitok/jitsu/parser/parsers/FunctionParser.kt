@@ -11,6 +11,7 @@ import eu.nitok.jitsu.parser.ast.withMessages
 import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.CompilerMessage.Hint
 import eu.nitok.jitsu.parser.*
+import eu.nitok.jitsu.parser.ast.AttributeNode
 import kotlin.jvm.optionals.getOrNull
 
 /** The canonical keyword for function declarations. */
@@ -34,7 +35,7 @@ private val fnKeywords = listOf(fnKeyword, "fun", "func", "function")
  *
  * @return A FunctionDeclarationNode, or null if no function keyword is present.
  */
-internal fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
+internal fun parseFunction(tokens: Tokens, attributes: List<AttributeNode>): FunctionDeclarationNode? {
     tokens.elevate()
     val native = tokens.keyword(nativeKeyword)
     if(native != null) tokens.skipWhitespace()
@@ -81,7 +82,7 @@ internal fun parseFunction(tokens: Tokens): FunctionDeclarationNode? {
             else FunctionBodyNode.NativeImplementation(it)
         },
         keywordLocation = kw.location,
-        attributes = listOf()
+        attributes = attributes
     ).withMessages(
         messages
     )
@@ -108,7 +109,7 @@ private fun parseParameters(
         }
         tokens.skipWhitespace()
         val parameterMessages = CompilerMessages()
-        val type = parseExplicitType(tokens, parameterMessages)
+        val type = parseExplicitType(tokens, parameterMessages, explicitTypeRequiredMessage = "Parameter types need to be explicitly defined ': paramtype'")
         ParameterNode(argName, type, null).withMessages(parameterMessages)
     }?.elements ?: run {
         messages.error(

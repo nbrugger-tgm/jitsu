@@ -35,7 +35,7 @@ class GeneralParserTest : ParsingTest() {
             Input("{", 1),
             Input("{ var x = 5;", 1),
             Input("{ var x = 5", 2),
-            Input("{ var x = 5 return x;", 3)
+            Input("{ var x = 5 return x;", 2) //missing ; + missing }
         )
 
         @Test

@@ -5,11 +5,15 @@ import kotlinx.serialization.Serializable
 
 
 data class AttributeNode(
-    var name: IdentifierNode,
-    var values: List<AttributeValueNode>,
-    override val location: Location
+    val name: IdentifierNode?,
+    val values: List<AttributeValueNode>,
+    val openKw: Location,
+    val closeKw: Location?,
 ) : AstNodeImpl() {
-    override val children: List<AstNode> get() = values + name
+    override val location: Location = if(closeKw != null) openKw.rangeTo(closeKw)
+    else if(name != null) openKw.rangeTo(name)
+    else openKw
+    override val children: List<AstNode> get() = values + listOfNotNull(name)
         data class AttributeValueNode(
         var name: IdentifierNode,
         var value: ExpressionNode?,

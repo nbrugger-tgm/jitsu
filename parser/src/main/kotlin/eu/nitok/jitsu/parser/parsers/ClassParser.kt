@@ -5,6 +5,7 @@ import com.niton.jainparse.token.DefaultToken.*
 import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.parser.*
+import eu.nitok.jitsu.parser.ast.AttributeNode
 import eu.nitok.jitsu.parser.ast.StatementNode.NamedTypeDeclarationNode.ClassDeclarationNode
 import eu.nitok.jitsu.parser.ast.TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode
 import eu.nitok.jitsu.parser.ast.withMessages
@@ -21,7 +22,7 @@ import eu.nitok.jitsu.parser.ast.withMessages
  *
  * @return A ClassDeclarationNode, or null if no `class` keyword is present.
  */
-internal fun parseClass(tokens: Tokens): ClassDeclarationNode? {
+internal fun parseClass(tokens: Tokens, attributes: List<AttributeNode>): ClassDeclarationNode? {
     val classToken = tokens.keyword("class") ?: return null
     tokens.skipWhitespace()
     val name = parseIdentifier(tokens)
@@ -29,7 +30,7 @@ internal fun parseClass(tokens: Tokens): ClassDeclarationNode? {
     val messages = CompilerMessages()
     val typeParameters = parseTypeParameterDefinition(tokens, messages)
     tokens.skipWhitespace()
-    val bodyStart = tokens.attempt(DefaultToken.ROUND_BRACKET_OPEN);
+    val bodyStart = tokens.attempt(ROUND_BRACKET_OPEN);
     bodyStart ?: messages.error(
         "Expected '{' after class declaration",
         tokens.position.toLocation()
@@ -44,12 +45,13 @@ internal fun parseClass(tokens: Tokens): ClassDeclarationNode? {
             closed = true
             break
         }
-        val method = parseMethod(tokens)
+        val attributes = parseAttributes(tokens)
+        val method = parseMethod(tokens, attributes)
         if (method != null) {
             methods.add(method)
             continue
         }
-        val field = parseField(tokens)
+        val field = parseField(tokens, attributes)
         if (field != null) {
             fields.add(field)
             continue
@@ -67,7 +69,7 @@ internal fun parseClass(tokens: Tokens): ClassDeclarationNode? {
         methods,
         classToken.rangeTo(tokens.lastConsumedLocation),
         classToken,
-        listOf()
+        attributes
     ).withMessages(messages)
 }
 
@@ -80,7 +82,7 @@ internal fun parseClass(tokens: Tokens): ClassDeclarationNode? {
  *
  * @return A StructuralFieldNode, or null if no valid field declaration is present.
  */
-internal fun parseField(tokens: Tokens): StructuralFieldNode? {
+internal fun parseField(tokens: Tokens, attributes: List<AttributeNode>): StructuralFieldNode? {
     tokens.elevate()
     val publicKw = tokens.keyword("public");
     if(publicKw != null) tokens.skipWhitespace()
@@ -94,12 +96,9 @@ internal fun parseField(tokens: Tokens): StructuralFieldNode? {
 
     tokens.skipWhitespace()
     val messages = CompilerMessages()
-    val type = parseExplicitType(tokens, messages)
-    if(type == null) {
-        messages.error("Class fields require type declaration ': fieldtype'",tokens.position.toLocation())
-    }
+    val type = parseExplicitType(tokens, messages, explicitTypeRequiredMessage = "Class fields require type declaration ': fieldtype'")
     tokens.skipWhitespace()
-    tokens.attempt(DefaultToken.SEMICOLON) ?: messages.error(
+    tokens.attempt(SEMICOLON) ?: messages.error(
         "Expected ';' after field declaration",
         tokens.position.toLocation()
     )
@@ -118,11 +117,11 @@ internal fun parseField(tokens: Tokens): StructuralFieldNode? {
  *
  * @return A MethodNode, or null if no valid method declaration is present.
  */
-internal fun parseMethod(tokens: Tokens): ClassDeclarationNode.MethodNode? {
+internal fun parseMethod(tokens: Tokens, attributes: List<AttributeNode>): ClassDeclarationNode.MethodNode? {
     tokens.elevate()
     val mutable = tokens.keyword("mut")
     if(mutable != null) tokens.skipWhitespace()
-    val func = parseFunction(tokens)
+    val func = parseFunction(tokens, attributes)
     if (func == null) {
         tokens.rollback();
         return null

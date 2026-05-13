@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import kotlin.collections.listOf
 
 @DisplayName("Class Parsing")
 class ClassParserTest : ParsingTest() {
@@ -22,7 +23,7 @@ class ClassParserTest : ParsingTest() {
     @Nested
     @DisplayName("parseClass()")
     inner class ParseClass : MethodTest<ClassDeclarationNode>() {
-        override fun parseMethod(input: String) = parseClass(tokenize(input))
+        override fun parseMethod(input: String) = parseClass(tokenize(input), listOf())
 
         override fun fullyValidInputs() = listOf(
             "class MyClass {}",
@@ -64,8 +65,8 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("returns null when 'class' keyword is absent")
         fun returnsNullWhenClassKeywordAbsent() {
-            assertThat(parseClass(tokenize("MyClass {}"))).isNull()
-            assertThat(parseClass(tokenize("klass Foo {}"))).isNull()
+            assertThat(parseClass(tokenize("MyClass {}"), listOf())).isNull()
+            assertThat(parseClass(tokenize("klass Foo {}"), listOf())).isNull()
         }
 
         // ── Name ─────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("parses class name correctly")
         fun parsesClassNameCorrectly() {
-            val cls = parseClass(tokenize("class MyClass {}"))
+            val cls = parseClass(tokenize("class MyClass {}"), listOf())
             assertThat(cls).isNotNull()
             assertThat(cls?.name?.value).isEqualTo("MyClass")
         }
@@ -81,7 +82,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("class without name still produces a node")
         fun classWithoutNameStillProducesNode() {
-            val cls = parseClass(tokenize("class {}"))
+            val cls = parseClass(tokenize("class {}"), listOf())
             assertThat(cls)
                 .`as`("Parser should still produce a node even without a class name")
                 .isNotNull()
@@ -93,7 +94,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("parses single type parameter correctly")
         fun parsesSingleTypeParameter() {
-            val cls = parseClass(tokenize("class Box<T> {}"))
+            val cls = parseClass(tokenize("class Box<T> {}"), listOf())
             assertThat(cls).isNotNull()
             assertThat(cls?.typeParameters)
                 .isNotNull()
@@ -106,7 +107,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("parses multiple type parameters correctly")
         fun parsesMultipleTypeParameters() {
-            val cls = parseClass(tokenize("class Pair<A, B> {}"))
+            val cls = parseClass(tokenize("class Pair<A, B> {}"), listOf())
             assertThat(cls?.typeParameters)
                 .isNotNull()
                 .hasSize(2)
@@ -117,7 +118,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("class without type parameters has empty type parameter list")
         fun classWithoutTypeParametersHasEmptyList() {
-            val cls = parseClass(tokenize("class Simple {}"))
+            val cls = parseClass(tokenize("class Simple {}"), listOf())
             assertThat(cls?.typeParameters)
                 .isNotNull()
                 .isEmpty()
@@ -128,7 +129,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("class with empty body has no fields and no methods")
         fun emptyBodyHasNoFieldsOrMethods() {
-            val cls = parseClass(tokenize("class Empty {}"))
+            val cls = parseClass(tokenize("class Empty {}"), listOf())
             assertThat(cls?.fields).isNotNull().isEmpty()
             assertThat(cls?.methods).isNotNull().isEmpty()
         }
@@ -138,7 +139,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("parses single field inside class")
         fun parsesSingleFieldInsideClass() {
-            val cls = parseClass(tokenize("class Point { x: i32; }"))
+            val cls = parseClass(tokenize("class Point { x: i32; }"), listOf())
             assertThat(cls?.fields)
                 .isNotNull()
                 .hasSize(1)
@@ -150,7 +151,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("parses multiple fields inside class")
         fun parsesMultipleFieldsInsideClass() {
-            val cls = parseClass(tokenize("class Point { x: i32; y: i64; }"))
+            val cls = parseClass(tokenize("class Point { x: i32; y: i64; }"), listOf())
             assertThat(cls?.fields)
                 .isNotNull()
                 .hasSize(2)
@@ -161,7 +162,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("parses mutable field inside class")
         fun parsesMutableFieldInsideClass() {
-            val cls = parseClass(tokenize("class Counter { mut count: i32; }"))
+            val cls = parseClass(tokenize("class Counter { mut count: i32; }"), listOf())
             assertThat(cls?.fields)
                 .isNotNull()
                 .hasSize(1)
@@ -173,7 +174,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("parses public field inside class")
         fun parsesPublicFieldInsideClass() {
-            val cls = parseClass(tokenize("class Named { public name: i32; }"))
+            val cls = parseClass(tokenize("class Named { public name: i32; }"), listOf())
             val field = cls?.fields?.first()
             assertThat(field?.visibility)
                 .`as`("Field should have public visibility")
@@ -186,7 +187,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("parses single method inside class")
         fun parsesSingleMethodInsideClass() {
-            val cls = parseClass(tokenize("class Counter { fn increment() {} }"))
+            val cls = parseClass(tokenize("class Counter { fn increment() {} }"), listOf())
             assertThat(cls?.methods)
                 .isNotNull()
                 .hasSize(1)
@@ -196,7 +197,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("distinguishes fields from methods in the same class")
         fun distinguishesFieldsFromMethods() {
-            val cls = parseClass(tokenize("class Mixed { x: i32; fn getX(): i32 {} }"))
+            val cls = parseClass(tokenize("class Mixed { x: i32; fn getX(): i32 {} }"), listOf())
             assertThat(cls?.fields).isNotNull().hasSize(1)
             assertThat(cls?.methods).isNotNull().hasSize(1)
         }
@@ -206,7 +207,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("'mut fn' inside class should be parsed as a mutable method")
         fun mutFnInsideClassShouldBeParsedAsMethod() {
-            val cls = parseClass(tokenize("class Counter { mut fn reset() {} }"))
+            val cls = parseClass(tokenize("class Counter { mut fn reset() {} }"), listOf())
             assertThat(cls).isNotNull()
             assertThat(cls?.methods)
                 .`as`("'mut fn' should be parsed as a MethodNode with mutableKw set")
@@ -221,7 +222,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("attaches error when opening brace is missing")
         fun attachesErrorWhenOpeningBraceMissing() {
-            val cls = parseClass(tokenize("class MyClass"))
+            val cls = parseClass(tokenize("class MyClass"), listOf())
             assertThat(cls)
                 .`as`("Should still produce a node even when '{' is missing")
                 .isNotNull()
@@ -238,14 +239,14 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("location spans the entire class declaration")
         fun locationSpansEntireClass() {
-            val cls = parseClass(tokenize("class MyClass {}"))
+            val cls = parseClass(tokenize("class MyClass {}"), listOf())
             assertThat(cls?.location).isNotNull()
         }
 
         @Test
         @DisplayName("keyword location is recorded separately")
         fun keywordLocationIsRecorded() {
-            val cls = parseClass(tokenize("class MyClass {}"))
+            val cls = parseClass(tokenize("class MyClass {}"), listOf())
             assertThat(cls?.keywordLocation).isNotNull()
         }
     }
@@ -253,7 +254,7 @@ class ClassParserTest : ParsingTest() {
     @Nested
     @DisplayName("parseField()")
     inner class ParseField : MethodTest<StructuralFieldNode>() {
-        override fun parseMethod(input: String) = parseField(tokenize(input))
+        override fun parseMethod(input: String) = parseField(tokenize(input), listOf())
 
         override fun fullyValidInputs() = listOf(
             "x: i32;",
@@ -273,16 +274,17 @@ class ClassParserTest : ParsingTest() {
 
         override fun partiallyValidInputs() = listOf(
             Input("x: i32", 1),    // missing ';' → 1 error
-            Input("x:;", 2),       // missing type after : and field needs type
+            Input("x:;", 1),       // missing type after :
             Input("test;", 1),     // missing type
             Input("x", 2),         // missing type & semicolon
             Input("x i32;", 1),    // missing : before type
+            Input("x i32", 2),     // missing : before type & semicolon
         )
 
         @Test
         @DisplayName("parses field name correctly")
         fun parsesFieldNameCorrectly() {
-            val field = parseField(tokenize("myField: i32;"))
+            val field = parseField(tokenize("myField: i32;"), listOf())
             assertThat(field).isNotNull()
             assertThat(field?.name?.value).isEqualTo("myField")
         }
@@ -291,7 +293,7 @@ class ClassParserTest : ParsingTest() {
         @DisplayName("returns null when identifier (name) is missing due to bracket token")
         fun returnsNullWhenTokenIsNotIdentifierStart() {
             // '{' is ROUND_BRACKET_OPEN, not accepted by parseIdentifier → null
-            val field = parseField(tokenize("{ }"))
+            val field = parseField(tokenize("{ }"), listOf())
             assertThat(field)
                 .`as`("Without a parseable field name the parser should return null")
                 .isNull()
@@ -302,7 +304,7 @@ class ClassParserTest : ParsingTest() {
         fun lettersKeywordsAreValidFieldNames() {
             // parseIdentifier only rejects non-LETTERS/NUMBER/UNDERSCORE/DOLLAR starts.
             // 'fn', 'class', etc. tokenize as LETTERS and are accepted as field names.
-            val field = parseField(tokenize("fn: i32;"))
+            val field = parseField(tokenize("fn: i32;"), listOf())
             assertThat(field)
                 .`as`("'fn' is a reserved term, so it should error but produce a valid node")
                 .isNotNull()
@@ -312,7 +314,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("parses field type correctly")
         fun parsesFieldTypeCorrectly() {
-            val field = parseField(tokenize("x: i32;"))
+            val field = parseField(tokenize("x: i32;"), listOf())
             assertThat(field?.type)
                 .isNotNull()
                 .asInstanceOf(type(TypeNode.IntTypeNode::class.java))
@@ -324,7 +326,7 @@ class ClassParserTest : ParsingTest() {
         @DisplayName("parses various primitive field types")
         @ValueSource(strings = ["i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "f32", "f64", "boolean"])
         fun parsesVariousPrimitiveFieldTypes(typeName: String) {
-            val field = parseField(tokenize("x: $typeName;"))
+            val field = parseField(tokenize("x: $typeName;"), listOf())
             assertThat(field)
                 .`as`("Should parse field with type '$typeName'")
                 .isNotNull()
@@ -336,14 +338,14 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("immutable field has null mutableKw")
         fun immutableFieldHasNullMutableKw() {
-            val field = parseField(tokenize("x: i32;"))
+            val field = parseField(tokenize("x: i32;"), listOf())
             assertThat(field?.mutableKw).isNull()
         }
 
         @Test
         @DisplayName("mutable field has non-null mutableKw")
         fun mutableFieldHasNonNullMutableKw() {
-            val field = parseField(tokenize("mut x: i32;"))
+            val field = parseField(tokenize("mut x: i32;"), listOf())
             assertThat(field?.mutableKw)
                 .`as`("'mut' keyword should be recorded on a mutable field")
                 .isNotNull()
@@ -352,14 +354,14 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("field without visibility modifier has null visibility")
         fun fieldWithoutVisibilityHasNullVisibility() {
-            val field = parseField(tokenize("x: i32;"))
+            val field = parseField(tokenize("x: i32;"), listOf())
             assertThat(field?.visibility).isNull()
         }
 
         @Test
         @DisplayName("public field has visibility value 'public'")
         fun publicFieldHasVisibilityPublic() {
-            val field = parseField(tokenize("public x: i32;"))
+            val field = parseField(tokenize("public x: i32;"), listOf())
             assertThat(field?.visibility)
                 .`as`("'public' visibility should be recorded")
                 .isNotNull()
@@ -369,7 +371,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("public mutable field has both visibility and mutableKw set")
         fun publicMutableFieldHasBothModifiers() {
-            val field = parseField(tokenize("public mut value: i64;"))
+            val field = parseField(tokenize("public mut value: i64;"), listOf())
             assertThat(field?.visibility).isNotNull()
             assertThat(field?.mutableKw).isNotNull()
             assertThat(field?.name?.value).isEqualTo("value")
@@ -380,7 +382,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("attaches error when semicolon is missing")
         fun attachesErrorWhenSemicolonMissing() {
-            val field = parseField(tokenize("x: i32"))
+            val field = parseField(tokenize("x: i32"), listOf())
             assertThat(field)
                 .`as`("Should still produce a node even when ';' is missing")
                 .isNotNull()
@@ -395,7 +397,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("attaches error when type is missing after colon")
         fun attachesErrorWhenTypeIsMissingAfterColon() {
-            val field = parseField(tokenize("x:;"))
+            val field = parseField(tokenize("x:;"), listOf())
             assertThat(field)
                 .`as`("Should still produce a node even when type is missing")
                 .isNotNull()
@@ -406,7 +408,7 @@ class ClassParserTest : ParsingTest() {
     @Nested
     @DisplayName("parseMethod()")
     inner class ParseMethod : MethodTest<ClassDeclarationNode.MethodNode>() {
-        override fun parseMethod(input: String) = parseMethod(tokenize(input))
+        override fun parseMethod(input: String) = parseMethod(tokenize(input), listOf())
 
         override fun fullyValidInputs() = listOf(
             "fn increment() {}",
@@ -433,7 +435,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("'mut fn ...' should be parsed as a mutable method")
         fun mutFnShouldBeParsedAsMethod() {
-            val method = parseMethod(tokenize("mut fn write() {}"))
+            val method = parseMethod(tokenize("mut fn write() {}"), listOf())
             assertThat(method)
                 .`as`("'mut fn ...' should be parsed as a valid method")
                 .isNotNull()
@@ -446,7 +448,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("'mut fn ...' with parameters should be parsed correctly")
         fun mutFnWithParametersShouldBeParsed() {
-            val method = parseMethod(tokenize("mut fn setX(x: i32) {}"))
+            val method = parseMethod(tokenize("mut fn setX(x: i32) {}"), listOf())
             assertThat(method).isNotNull()
             assertThat(method?.function?.parameters).hasSize(1)
         }
@@ -454,7 +456,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("wraps the underlying function declaration node")
         fun wrapsUnderlyingFunctionNode() {
-            val method = parseMethod(tokenize("fn myMethod() {}"))
+            val method = parseMethod(tokenize("fn myMethod() {}"), listOf())
             assertThat(method).isNotNull()
             assertThat(method?.function).isNotNull()
             assertThat(method?.function?.name?.value).isEqualTo("myMethod")
@@ -463,7 +465,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("parses method parameters correctly")
         fun parsesMethodParametersCorrectly() {
-            val method = parseMethod(tokenize("fn add(a: i32, b: i32): i32 {}"))
+            val method = parseMethod(tokenize("fn add(a: i32, b: i32): i32 {}"), listOf())
             assertThat(method?.function?.parameters)
                 .isNotNull()
                 .hasSize(2)
@@ -474,7 +476,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("parses method return type correctly")
         fun parsesMethodReturnTypeCorrectly() {
-            val method = parseMethod(tokenize("fn getValue(): i64 {}"))
+            val method = parseMethod(tokenize("fn getValue(): i64 {}"), listOf())
             assertThat(method?.function?.returnType)
                 .`as`("Return type should be parsed")
                 .isNotNull()
@@ -483,7 +485,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("non-mutable method has null mutableKw")
         fun nonMutableMethodHasNullMutableKw() {
-            val method = parseMethod(tokenize("fn read() {}"))
+            val method = parseMethod(tokenize("fn read() {}"), listOf())
             assertThat(method?.mutableKw).isNull()
         }
 
@@ -492,7 +494,7 @@ class ClassParserTest : ParsingTest() {
         @Test
         @DisplayName("method location is set")
         fun methodLocationIsSet() {
-            val method = parseMethod(tokenize("fn write() {}"))
+            val method = parseMethod(tokenize("fn write() {}"), listOf())
             assertThat(method?.location).isEqualTo(Location(url, 1,1,13,1))
         }
     }

@@ -197,7 +197,7 @@ class StatementParserTest : ParsingTest() {
         @ParameterizedTest
         @ValueSource(strings = ["x = 5;", "myVar = 42;", "result = someValue;"])
         fun shouldParseSimpleAssignment(input: String) {
-            val result = parseStatement(tokenize(input))
+            val result = parseStatement(tokenize(input)) {}
             assertThat(result)
                 .isNotNull()
                 .isInstanceOf(StatementNode.InstructionNode.AssignmentNode::class.java)
@@ -205,7 +205,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldParseAssignmentTarget() {
-            val result = parseStatement(tokenize("myVar = 42;"))
+            val result = parseStatement(tokenize("myVar = 42;")) {}
             assertThat(result)
                 .isNotNull()
                 .asInstanceOf(type(StatementNode.InstructionNode.AssignmentNode::class.java))
@@ -218,7 +218,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldParseAssignmentValue() {
-            val result = parseStatement(tokenize("x = 99;"))
+            val result = parseStatement(tokenize("x = 99;")) {}
             assertThat(result)
                 .isNotNull()
                 .asInstanceOf(type(StatementNode.InstructionNode.AssignmentNode::class.java))
@@ -228,7 +228,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldAttachErrorWhenValueMissing() {
-            val result = parseStatement(tokenize("x =;"))
+            val result = parseStatement(tokenize("x =;")) {}
             assertThat(result)
                 .isNotNull()
                 .isInstanceOf(StatementNode.InstructionNode.AssignmentNode::class.java)
@@ -265,7 +265,7 @@ class StatementParserTest : ParsingTest() {
         @ParameterizedTest
         @ValueSource(strings = ["foo();", "bar();", "myFunction();"])
         fun shouldParseNoArgFunctionCall(input: String) {
-            val result = parseStatement(tokenize(input))
+            val result = parseStatement(tokenize(input)) {}
             assertThat(result)
                 .isNotNull()
                 .isInstanceOf(StatementNode.InstructionNode.FunctionCallNode::class.java)
@@ -274,7 +274,7 @@ class StatementParserTest : ParsingTest() {
         @ParameterizedTest
         @ValueSource(strings = ["foo(1);", "bar(1, 2);", "myFn(a, b, c);"])
         fun shouldParseFunctionCallWithArguments(input: String) {
-            val result = parseStatement(tokenize(input))
+            val result = parseStatement(tokenize(input)) {}
             assertThat(result)
                 .isNotNull()
                 .isInstanceOf(StatementNode.InstructionNode.FunctionCallNode::class.java)
@@ -282,7 +282,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldParseFunctionName() {
-            val result = parseStatement(tokenize("myFunc();"))
+            val result = parseStatement(tokenize("myFunc();")) {}
             assertThat(result)
                 .isNotNull()
                 .asInstanceOf(type(StatementNode.InstructionNode.FunctionCallNode::class.java))
@@ -292,7 +292,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldParseEmptyParameterList() {
-            val result = parseStatement(tokenize("foo();"))
+            val result = parseStatement(tokenize("foo();")) {}
             assertThat(result)
                 .isNotNull()
                 .asInstanceOf(type(StatementNode.InstructionNode.FunctionCallNode::class.java))
@@ -303,7 +303,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldParseSingleParameter() {
-            val result = parseStatement(tokenize("foo(42);"))
+            val result = parseStatement(tokenize("foo(42);")) {}
             assertThat(result)
                 .isNotNull()
                 .asInstanceOf(type(StatementNode.InstructionNode.FunctionCallNode::class.java))
@@ -314,7 +314,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldParseMultipleParameters() {
-            val result = parseStatement(tokenize("bar(1, 2, 3);"))
+            val result = parseStatement(tokenize("bar(1, 2, 3);")) {}
             assertThat(result)
                 .isNotNull()
                 .asInstanceOf(type(StatementNode.InstructionNode.FunctionCallNode::class.java))
@@ -348,7 +348,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldParseVariableDeclarationStatement() {
-            val result = parseStatement(tokenize("var x = 5;"))
+            val result = parseStatement(tokenize("var x = 5;")) {}
             assertThat(result)
                 .isNotNull()
                 .isInstanceOf(VariableDeclarationNode::class.java)
@@ -356,7 +356,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldParseVariableDeclarationWithType() {
-            val result = parseStatement(tokenize("var x: i32 = 5;"))
+            val result = parseStatement(tokenize("var x: i32 = 5;")) {}
             assertThat(result)
                 .isNotNull()
                 .isInstanceOf(VariableDeclarationNode::class.java)
@@ -364,7 +364,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldParseReturnStatementWithValue() {
-            val result = parseStatement(tokenize("return 42;"))
+            val result = parseStatement(tokenize("return 42;")) {}
             assertThat(result)
                 .isNotNull()
                 .isInstanceOf(ReturnNode::class.java)
@@ -372,7 +372,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldParseReturnStatementWithoutValue() {
-            val result = parseStatement(tokenize("return;"))
+            val result = parseStatement(tokenize("return;")) {}
             assertThat(result)
                 .isNotNull()
                 .isInstanceOf(ReturnNode::class.java)
@@ -380,7 +380,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldParseAssignmentStatement() {
-            val result = parseStatement(tokenize("x = 5;"))
+            val result = parseStatement(tokenize("x = 5;")) {}
             assertThat(result)
                 .isNotNull()
                 .isInstanceOf(StatementNode.InstructionNode.AssignmentNode::class.java)
@@ -388,7 +388,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldParseFunctionCallStatement() {
-            val result = parseStatement(tokenize("foo();"))
+            val result = parseStatement(tokenize("foo();")) {}
             assertThat(result)
                 .isNotNull()
                 .isInstanceOf(StatementNode.InstructionNode.FunctionCallNode::class.java)
@@ -396,7 +396,7 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldAttachErrorWhenSemicolonMissing() {
-            val result = parseStatement(tokenize("var x = 5"))
+            val result = parseStatement(tokenize("var x = 5")) {}
             assertThat(result).isNotNull()
             assertThat(result?.errors)
                 .isNotEmpty()
@@ -407,13 +407,13 @@ class StatementParserTest : ParsingTest() {
 
         @Test
         fun shouldReturnNullForEmptyInput() {
-            val result = parseStatement(tokenize(""))
+            val result = parseStatement(tokenize("")) {}
             assertThat(result).isNull()
         }
 
         @Test
         fun shouldParseTypeDeclarationStatement() {
-            val result = parseStatement(tokenize("type MyType = i64;"))
+            val result = parseStatement(tokenize("type MyType = i64;")) {}
             assertThat(result)
                 .isNotNull()
                 .isInstanceOf(StatementNode.NamedTypeDeclarationNode::class.java)
@@ -430,7 +430,7 @@ class StatementParserTest : ParsingTest() {
             "bar(1, 2);",
         ])
         fun shouldProduceANodeForAllValidStatements(input: String) {
-            val result = parseStatement(tokenize(input))
+            val result = parseStatement(tokenize(input)) {}
             assertThat(result)
                 .`as`("'$input' should parse into a non-null statement node")
                 .isNotNull()
