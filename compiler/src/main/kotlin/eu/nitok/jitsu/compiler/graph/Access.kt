@@ -37,7 +37,7 @@ sealed interface Access<T : Accessible<T>>{
         }
     }
     sealed interface TypeAccess : Access<TypeDefinition> {
-        fun resolve(messages: CompilerMessages): TypeDefinition
+        fun resolve(messages: CompilerMessages): TypeDefinition?
     }
 }
 

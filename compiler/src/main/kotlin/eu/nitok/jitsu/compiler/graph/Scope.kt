@@ -37,10 +37,10 @@ class Scope(
             *imports.mapNotNull { it.target?.exportScope?.variables }.toTypedArray()
         ) { a, _ -> a }//shadowing
 
-    fun resolveType(reference: Located<String>, messages: CompilerMessages): TypeDefinition {
+    fun resolveType(reference: Located<String>, messages: CompilerMessages): TypeDefinition? {
         return types[reference.value] ?: parent?.resolveType(reference, messages) ?: run {
             messages.error("Type with name '${reference.value}' does not exist", reference.location)
-            TypeDefinition.ParameterizedType.Alias(reference, listOf(), Type.Undefined)
+            null
         }
     }
 

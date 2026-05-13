@@ -14,7 +14,7 @@ sealed interface Type : Element {
     fun acceptsInstanceOf(type: Type): ReasonedBoolean {
         return if (type is Undefined) ReasonedBoolean.True("While UNDEFINED cannot be assigned to anything, the error lies in the definition of the type not its usage");
         else if (type is Union) {
-            val optionAssignability = type.options.map { mapAssignabilityBoolean(accepts(it), it, this) }
+            val optionAssignability = type.options.map { mapAssignabilityBoolean(acceptsInstanceOf(it), it, this) }
             if (optionAssignability.all { boolean -> boolean.value }) ReasonedBoolean.True(
                 "Each type in the union is assignable to $this",
                 *optionAssignability.toTypedArray()
@@ -252,13 +252,8 @@ sealed interface Type : Element {
         @Transient override val restore = JitsuModule::getType
         @Transient override val getSymbolId: JitsuModule.(TypeDefinition) -> SymbolID = JitsuModule::getSymbolID
         override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type {
-            var target = target
-            if (target == null) {
-                val resolved = resolve(messages)
-                target = resolved
-                setResolvedTarget(resolved)
-            }
-            val resolvedType = when (target) {
+            val resolvedType = when (val target = target) {
+                null -> Undefined
                 is TypeDefinition.DirectTypeDefinition -> target.resolveType(messages, generics)
                 is TypeDefinition.TypeParameter -> generics[reference.value] ?: Undefined
 
@@ -322,10 +317,10 @@ sealed interface Type : Element {
         @Transient
         override val children: List<Element> = genericParameters.map { it.value }
 
-        override fun resolve(messages: CompilerMessages): TypeDefinition {
+        override fun resolve(messages: CompilerMessages): TypeDefinition? {
             target?.let { return it }
             val resolveType = scope.resolveType(reference, messages)
-            setResolvedTarget(resolveType)
+            if(resolveType != null) setResolvedTarget(resolveType)
             return resolveType
         }
 
