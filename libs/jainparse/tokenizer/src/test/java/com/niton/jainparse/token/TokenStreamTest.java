@@ -1,7 +1,9 @@
 package com.niton.jainparse.token;
 
+import com.niton.jainparse.api.Location;
 import com.niton.jainparse.token.Tokenizer.AssignedToken;
 import org.assertj.core.api.SoftAssertionsProvider.ThrowingRunnable;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -9,20 +11,344 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static com.niton.jainparse.api.Location.*;
+import static com.niton.jainparse.api.Location.range;
+import static com.niton.jainparse.token.DefaultToken.*;
 import static java.util.stream.IntStream.range;
 import static org.assertj.core.api.Assertions.*;
 
 class TokenStreamTest {
+
+    @Nested
+    class PositionTracking {
+        @Test
+        void nextTracksPositionInSingleLine(){
+            var token1 = new AssignedToken<>("abc", LETTERS);
+            var token2 = new AssignedToken<>("2", NUMBER);
+            var token3 = new AssignedToken<>("def", LETTERS);
+            var stream = new ListTokenStream<>(List.of(token1, token2, token3));
+            assertThat(stream.currentLocation()).isEqualTo(Location.oneChar(1,1));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,3));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,4));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,4));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,5));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,7));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,8));
+        }
+
+        @Test
+        void nextTracksPositionInNLines(){
+            var token1 = new AssignedToken<>("abc", LETTERS);
+            var token2 = new AssignedToken<>("\n\n\n\n", NEW_LINE);
+            var token3 = new AssignedToken<>("defg", LETTERS);
+            var token4 = new AssignedToken<>("123", NUMBER);
+            var stream = new ListTokenStream<>(List.of(token1, token2, token3, token4));
+            assertThat(stream.currentLocation()).isEqualTo(Location.oneChar(1,1));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,3));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,4));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(4,1));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,1));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,4));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,5));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,7));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,8));
+        }
+
+        @Test
+        void nextTracksPositionWithMultilineToken(){
+            var token1 = new AssignedToken<>("abc", LETTERS);
+            var token2 = new AssignedToken<>("   \n   \n  \nline before end\n", WHITESPACE);
+            var token3 = new AssignedToken<>("defg", LETTERS);
+            var token4 = new AssignedToken<>("123", NUMBER);
+            var stream = new ListTokenStream<>(List.of(token1, token2, token3, token4));
+            assertThat(stream.currentLocation()).isEqualTo(Location.oneChar(1,1));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,3));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,4));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .as("the marker should be at the end of 'line before end'")
+                .isEqualTo(oneChar(4,16));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,1));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,4));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,5));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,7));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,8));
+        }
+
+        @Test
+        void nextTracksPositionWithMultipleMultilineToken(){
+            var stream = new ListTokenStream<>(List.of(
+	            new AssignedToken<>("abc", LETTERS),
+                new AssignedToken<>("   \n", WHITESPACE),
+                new AssignedToken<>("   \n", WHITESPACE),
+	            new AssignedToken<>("  \nline before end\n", WHITESPACE),
+	            new AssignedToken<>("defg", LETTERS),
+	            new AssignedToken<>("123", NUMBER)
+            ));
+            assertThat(stream.currentLocation()).isEqualTo(Location.oneChar(1,1));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,3));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,4));
+            stream.next();
+            stream.next();
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .as("the marker should be at the end of 'line before end'")
+                .isEqualTo(oneChar(4,16));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,1));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,4));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,5));
+            stream.next();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,7));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,8));
+        }
+
+
+        @Test
+        void skipTracksPositionInSingleLine(){
+            var token1 = new AssignedToken<>("abc", LETTERS);
+            var token2 = new AssignedToken<>("2", NUMBER);
+            var token3 = new AssignedToken<>("def", LETTERS);
+            var stream = new ListTokenStream<>(List.of(token1, token2, token3));
+            assertThat(stream.currentLocation()).isEqualTo(Location.oneChar(1,1));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,3));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,4));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,4));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,5));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,7));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,8));
+        }
+
+        @Test
+        void skipTracksPositionInNLines(){
+            var token1 = new AssignedToken<>("abc", LETTERS);
+            var token2 = new AssignedToken<>("\n\n\n\n", NEW_LINE);
+            var token3 = new AssignedToken<>("defg", LETTERS);
+            var token4 = new AssignedToken<>("123", NUMBER);
+            var stream = new ListTokenStream<>(List.of(token1, token2, token3, token4));
+            assertThat(stream.currentLocation()).isEqualTo(Location.oneChar(1,1));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,3));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,4));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(4,1));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,1));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,4));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,5));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,7));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,8));
+        }
+
+        @Test
+        void skipTracksPositionWithMultilineToken(){
+            var token1 = new AssignedToken<>("abc", LETTERS);
+            var token2 = new AssignedToken<>("   \n   \n  \nline before end\n", WHITESPACE);
+            var token3 = new AssignedToken<>("defg", LETTERS);
+            var token4 = new AssignedToken<>("123", NUMBER);
+            var stream = new ListTokenStream<>(List.of(token1, token2, token3, token4));
+            assertThat(stream.currentLocation()).isEqualTo(Location.oneChar(1,1));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,3));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,4));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .as("the marker should be at the end of 'line before end'")
+                .isEqualTo(oneChar(4,16));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,1));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,4));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,5));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,7));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,8));
+        }
+
+        @Test
+        void skipTracksPositionWithMultipleMultilineToken(){
+            var stream = new ListTokenStream<>(List.of(
+                new AssignedToken<>("abc", LETTERS),
+                new AssignedToken<>("   \n", WHITESPACE),
+                new AssignedToken<>("   \n", WHITESPACE),
+                new AssignedToken<>("  \nline before end\n", WHITESPACE),
+                new AssignedToken<>("defg", LETTERS),
+                new AssignedToken<>("123", NUMBER)
+            ));
+            assertThat(stream.currentLocation()).isEqualTo(Location.oneChar(1,1));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,3));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,4));
+            stream.skip();
+            stream.skip();
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .as("the marker should be at the end of 'line before end'")
+                .isEqualTo(oneChar(4,16));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,1));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,4));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,5));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,7));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,8));
+        }
+
+        @Test
+        void skipNTracksPositionWithMultipleMultilineToken(){
+            var stream = new ListTokenStream<>(List.of(
+                new AssignedToken<>("abc", LETTERS),
+                new AssignedToken<>("   \n", WHITESPACE),
+                new AssignedToken<>("   \n", WHITESPACE),
+                new AssignedToken<>("  \nline before end\n", WHITESPACE),
+                new AssignedToken<>("defg", LETTERS),
+                new AssignedToken<>("123", NUMBER)
+            ));
+            assertThat(stream.currentLocation()).isEqualTo(Location.oneChar(1,1));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,3));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,4));
+            stream.skip(3);
+            assertThat(stream.lastConsumedLocation())
+                .as("the marker should be at the end of 'line before end'")
+                .isEqualTo(oneChar(4,16));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,1));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,4));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,5));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,7));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,8));
+        }
+        @Test
+        void skipNTracksPositionWithMultipleMultilineTokens(){
+            var stream = new ListTokenStream<>(List.of(
+                new AssignedToken<>("abc", LETTERS),
+                new AssignedToken<>("   \n", WHITESPACE),
+                new AssignedToken<>("   \n", WHITESPACE),
+                new AssignedToken<>("  \nline before end\n", WHITESPACE),
+                new AssignedToken<>("defg", LETTERS),
+                new AssignedToken<>("123", NUMBER)
+            ));
+            assertThat(stream.currentLocation()).isEqualTo(Location.oneChar(1,1));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,3));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(1,4));
+            stream.skip(4);
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,4));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,5));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(5,7));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(5,8));
+        }
+        @Test
+        void skipNTracksPositionWithTokenEndingInNewline(){
+            var stream = new ListTokenStream<>(List.of(
+                new AssignedToken<>("   \n", WHITESPACE),
+                new AssignedToken<>("abc", LETTERS)
+            ));
+            assertThat(stream.currentLocation()).isEqualTo(Location.oneChar(1,1));
+            stream.skip();
+            assertThat(stream.lastConsumedLocation())
+                .isEqualTo(oneChar(1,4));
+            assertThat(stream.currentLocation())
+                .isEqualTo(oneChar(2,1));
+        }
+    }
     @Test
+
     void nextReturnsCorrect() {
-        var token = new AssignedToken<>("Some text", DefaultToken.LETTERS);
+        var token = new AssignedToken<>("Some text", LETTERS);
         TokenStream stream = new ListTokenStream(List.of(token));
         assertThat(stream.next()).isEqualTo(token);
     }
 
     @Test
     void nextOverflowException1() {
-        var token = new AssignedToken<>("Some text", DefaultToken.LETTERS);
+        var token = new AssignedToken<>("Some text", LETTERS);
         TokenStream stream = new ListTokenStream(List.of(token));
         stream.next();
 
@@ -38,9 +364,9 @@ class TokenStreamTest {
 
     @Test
     void nextOrder() {
-        var token1 = new AssignedToken<>("1", DefaultToken.NUMBER);
-        var token2 = new AssignedToken<>("2", DefaultToken.NUMBER);
-        var token3 = new AssignedToken<>("3", DefaultToken.NUMBER);
+        var token1 = new AssignedToken<>("1", NUMBER);
+        var token2 = new AssignedToken<>("2", NUMBER);
+        var token3 = new AssignedToken<>("3", NUMBER);
         var stream = new ListTokenStream<>(List.of(token1, token2, token3));
 
         assertThat(stream.next()).isEqualTo(token1);
@@ -50,11 +376,11 @@ class TokenStreamTest {
 
     @Test
     void nextShouldIncreaseIndex() {
-        var token1 = new AssignedToken<>("1", DefaultToken.NUMBER);
-        var token2 = new AssignedToken<>("2", DefaultToken.NUMBER);
-        var token3 = new AssignedToken<>("3", DefaultToken.NUMBER);
-        var token4 = new AssignedToken<>("4", DefaultToken.NUMBER);
-        var token5 = new AssignedToken<>("5", DefaultToken.NUMBER);
+        var token1 = new AssignedToken<>("1", NUMBER);
+        var token2 = new AssignedToken<>("2", NUMBER);
+        var token3 = new AssignedToken<>("3", NUMBER);
+        var token4 = new AssignedToken<>("4", NUMBER);
+        var token5 = new AssignedToken<>("5", NUMBER);
         var stream = new ListTokenStream<>(List.of(token1, token2, token3, token4, token5));
         assertThat(stream.index()).isZero();
         stream.next();
@@ -66,7 +392,7 @@ class TokenStreamTest {
 
     @Test
     void nextAffectsIndex() {
-        var token1 = new AssignedToken<>("1", DefaultToken.NUMBER);
+        var token1 = new AssignedToken<>("1", NUMBER);
         var stream = new ListTokenStream<>(List.of(token1, token1));
         assertThat(stream.index()).isZero();
         stream.next();
@@ -197,28 +523,28 @@ class TokenStreamTest {
     @Test
     void getReturnsCorrectIndex() {
         var stream = new ListTokenStream<>(List.of(
-                new AssignedToken<>("1", DefaultToken.NUMBER),
-                new AssignedToken<>("2", DefaultToken.NUMBER)
+                new AssignedToken<>("1", NUMBER),
+                new AssignedToken<>("2", NUMBER)
         ));
         assertThat(stream.get(0))
                 .usingRecursiveComparison()
                 .isEqualTo(new AssignedToken<>(
                         "1",
-                        DefaultToken.NUMBER
+                        NUMBER
                 ));
         assertThat(stream.get(1))
                 .usingRecursiveComparison()
                 .isEqualTo(new AssignedToken<>(
                         "2",
-                        DefaultToken.NUMBER
+                        NUMBER
                 ));
     }
 
     @Test
     void getDoesNotChangeLevel() {
         var stream = new ListTokenStream<>(List.of(
-                new AssignedToken<>("1", DefaultToken.NUMBER),
-                new AssignedToken<>("2", DefaultToken.NUMBER)
+                new AssignedToken<>("1", NUMBER),
+                new AssignedToken<>("2", NUMBER)
         ));
         assertThat(stream.level()).isZero();
         stream.get(1);
@@ -228,8 +554,8 @@ class TokenStreamTest {
     @Test
     void getDoesNotChangeIndex() {
         var stream = new ListTokenStream<>(List.of(
-                new AssignedToken<>("1", DefaultToken.NUMBER),
-                new AssignedToken<>("2", DefaultToken.NUMBER)
+                new AssignedToken<>("1", NUMBER),
+                new AssignedToken<>("2", NUMBER)
         ));
         assertThat(stream.index()).isZero();
         stream.get(1);
@@ -239,8 +565,8 @@ class TokenStreamTest {
     @Test
     void getFailsOutOfBounds() {
         var stream = new ListTokenStream<>(List.of(
-                new AssignedToken<>("1", DefaultToken.NUMBER),
-                new AssignedToken<>("2", DefaultToken.NUMBER)
+                new AssignedToken<>("1", NUMBER),
+                new AssignedToken<>("2", NUMBER)
         ));
         assertThatCode(() -> stream.get(2)).isInstanceOf(IndexOutOfBoundsException.class);
         assertThatCode(() -> stream.get(-1)).isInstanceOf(IndexOutOfBoundsException.class);
@@ -249,8 +575,8 @@ class TokenStreamTest {
     @Test
     void size() {
         var stream = new ListTokenStream<>(List.of(
-                new AssignedToken<>("1", DefaultToken.NUMBER),
-                new AssignedToken<>("2", DefaultToken.NUMBER)
+                new AssignedToken<>("1", NUMBER),
+                new AssignedToken<>("2", NUMBER)
         ));
         assertThat(stream.size()).isEqualTo(2);
 

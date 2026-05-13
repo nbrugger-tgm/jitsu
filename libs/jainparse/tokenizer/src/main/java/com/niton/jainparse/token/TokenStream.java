@@ -12,6 +12,16 @@ public interface TokenStream<T extends Enum<T> & Tokenable> {
         return nextOptional().orElseThrow();
     }
 
+    default void skip() {
+        next();
+    }
+
+    default void skip(int n) {
+        for (int i = 0; i < n; i++) {
+            skip();
+        }
+    }
+
     /**
      * Retrieves the next token from the token stream wrapped in an Optional object and moves the stream forward.
      *
@@ -51,13 +61,6 @@ public interface TokenStream<T extends Enum<T> & Tokenable> {
     String getPreviousTokens(int count);
 
     boolean hasNext();
-
-    /**
-     * @param startIndex inclusive will also be the starting index of the new stream
-     * @param endIndex  exclusive
-     * @return a new TokenStream with the given range. The new stream will be independent from the old one.
-     */
-    TokenStream<T> subStream(int startIndex, int endIndex);
 
     int getLine();
     int getColumn();

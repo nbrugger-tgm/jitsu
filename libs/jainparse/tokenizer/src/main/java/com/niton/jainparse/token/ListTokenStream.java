@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.util.*;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.stream.Collectors;
@@ -18,7 +19,8 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
     private final LinkedList<Integer> levelIndexes = new LinkedList<>();
     private final LinkedList<Integer> levelLines = new LinkedList<>();
     private final LinkedList<Integer> levelColumns = new LinkedList<>();
-    private final LinkedList<Integer> levelLastLineColumns = new LinkedList<>();
+    private final LinkedList<Integer> levelLastColumns = new LinkedList<>();
+    private final LinkedList<Integer> levelLastLines = new LinkedList<>();
     private final List<AssignedToken<T>> tokens;
     @Getter
     @Setter
@@ -28,14 +30,15 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
      * null means not cached yet -> set to null when index changes
      */
     @Nullable
-    private AssignedToken<T> currentCache;
+    private AssignedToken<T> nextTokenCache;
 
     public ListTokenStream(List<AssignedToken<T>> tokens) {
         this.tokens = tokens;
         levelIndexes.push(0);
         levelLines.push(1);
         levelColumns.push(1);
-        levelLastLineColumns.push(0);
+        levelLastColumns.push(0);
+        levelLastLines.push(1);
     }
 
     /**
@@ -44,21 +47,120 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
     @Override
     public Optional<AssignedToken<T>> nextOptional() {
         try {
-            var tkn = currentCache != null ? currentCache : tokens.get(index());
-            currentCache = null;
-            if (tkn.getValue().contains("\n")) {
-                levelLines.set(0, levelLines.get(0) + 1);
-                levelLastLineColumns.set(0, levelColumns.get(0));
-                levelColumns.set(0, 1);
-            } else {
-                levelColumns.set(0, levelColumns.get(0) + tkn.getValue().length());
-            }
-            levelIndexes.set(0, index() + 1);
-            return Optional.of(tkn);
+            return Optional.of(next());
         } catch (IndexOutOfBoundsException e) {
             return Optional.empty();
         }
     }
+
+	public @NotNull AssignedToken<T> next() throws IndexOutOfBoundsException {
+		return nextOffset(0);
+	}
+
+	/**
+     * in the context of {@link #lastConsumedLocation()}, skipped tokens are also 'consumed'
+     *
+	 * @param offset 0: read the next token, n>0: skip n tokens before reading
+	 */
+	private @NotNull AssignedToken<T> nextOffset(int offset) {
+        final var nextTokenIndex = index();
+        var tkn = nextTokenCache != null ? nextTokenCache : tokens.get(nextTokenIndex + offset);
+        nextTokenCache = null;
+		var newLines = newlineCount(tkn.getValue());
+		for (int i = 0; i < offset; i++) {
+			newLines += newlineCount(tokens.get(nextTokenIndex + i).getValue());
+		}
+		if (newLines > 0) {
+            @SuppressWarnings("DataFlowIssue") //we know there are newlines so null cannot happen
+            var consumedInLastLine = offset == 0 ? findLenghtOfLastLine(tkn.getValue()) : findLengthOfLastLine(nextTokenIndex, nextTokenIndex + offset);
+
+            if (consumedInLastLine == 0) {
+			    if(newLines == 1 && offset == 0) {
+                    //This is just an optimization branch - the else works in every scenario (but uses slightly expensive findLengthOfLine
+                    setLastConsumedPosition(getColumn()+ tkn.getValue().lastIndexOf('\n'), getLine());
+                } else {
+			        var lengthOfLineBeforeLastLine = findLengthOfLine(nextTokenIndex, nextTokenIndex + offset, 1);
+			        setLastConsumedPosition(lengthOfLineBeforeLastLine+1, getLine() + newLines - 1);
+			    }
+            }
+            setCurrentPosition(consumedInLastLine+1, getLine()+newLines);
+		} else {
+            levelColumns.set(0, getColumn()+ tkn.getValue().length());
+        }
+		levelIndexes.set(0, nextTokenIndex + offset + 1);
+		return tkn;
+	}
+
+	private int findLengthOfLastLine(int from, int to) {
+		return findLengthOfLine(from, to, 0);
+	}
+
+    private void setLastConsumedPosition(int column, int line) {
+        levelLastColumns.set(0, column);
+        levelLastLines.set(0, line);
+    }
+    private void setCurrentPosition(int column, int line) {
+        levelLines.set(0, line);
+        levelColumns.set(0, column);
+    }
+
+    /**
+     * Finds the length of the 'offset' to last line in the given range
+     * <p><b>Example</b>: given the following text in the range
+     * <pre>
+     *     123
+     *     1234
+     *
+     *     12
+     * </pre>
+     * <ul>
+     *     <li>{@code findLengthOfLine(offset=0) => 2} 0 means last line which is "12" so 2 chars</li>
+     *     <li>{@code findLengthOfLine(offset=1) => 0} 1 means 1st to last line which is "" so 0 chars</li>
+     *     <li>{@code findLengthOfLine(offset=2) => 4} 2 means 2nd to last line which is "1234" so 4 chars</li>
+     * </ul>
+     *
+     * </p>
+     * @param fromToken (inclusive) the lower-index token, start of the search area
+     * @param toToken (inclusive) the higher-index token, end of the search area
+     * @param offset ignore this many lines from the back the range
+     * @return lenght of last line in the given token range
+     */
+    private int findLengthOfLine(int fromToken, int toToken, int offset) {
+        int lastLineLen = 0;
+        for (int i = toToken; i >= fromToken; i--) {
+            var token = tokens.get(i);
+            var value = token.getValue();
+
+            var lastNewline = value.length();
+            while(offset > 0 && (lastNewline = value.lastIndexOf('\n', lastNewline - 1)) != -1)
+                offset --;
+            if(lastNewline == -1) continue;
+            /*offset used up*/
+            value = value.substring(0, lastNewline);
+
+            var tokenLastLineLength = findLenghtOfLastLine(value);
+            if(tokenLastLineLength == null) {
+                lastLineLen += value.length();
+            } else {
+                lastLineLen += tokenLastLineLength;
+                break;
+            }
+        }
+        return lastLineLen;
+    }
+
+    private @Nullable Integer findLenghtOfLastLine(String text) {
+        var linebreak = text.lastIndexOf('\n');
+        if(linebreak == -1) return null;
+        return text.length() - (linebreak + 1);
+    }
+
+    @Override
+	public void skip(int n) {
+		if (n == 0) return;
+		if (n < 0) throw new IllegalArgumentException("Cannot skip negative amounts");
+		nextOffset(n - 1);
+	}
 
     /**
      * @return the index of the token you are at
@@ -76,14 +178,20 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
         levelIndexes.push(index());
         levelColumns.push(getColumn());
         levelLines.push(getLine());
-        levelLastLineColumns.push(getLastLineColumn());
+        levelLastColumns.push(getLastConsumedColumn());
+        levelLastLines.push(getLastConsumedLine());
         if (levelIndexes.size() >= recursionLevelLimit) {
             throw new IllegalStateException("Max Recursions reached (" + recursionLevelLimit + ") [" + index() + "]");
         }
     }
 
-    private Integer getLastLineColumn() {
-        return levelLastLineColumns.get(0);
+
+    private Integer getLastConsumedColumn() {
+        return levelLastColumns.peek();
+    }
+
+    private Integer getLastConsumedLine() {
+        return levelLastLines.peek();
     }
 
     /**
@@ -94,11 +202,9 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
         if(levelIndexes.size() == 1) {
             throw new IndexOutOfBoundsException("No stack frame to commit");
         }
-        int val = levelIndexes.pop();
-        index(val);
-        levelColumns.set(0, levelColumns.pop());
-        levelLines.set(0, levelLines.pop());
-        levelLastLineColumns.set(0, levelLastLineColumns.pop());
+        index(levelIndexes.pop());
+        setCurrentPosition(levelColumns.pop(), levelLines.pop());
+        setLastConsumedPosition(levelLastColumns.pop(), levelLastLines.pop());
     }
 
     /**
@@ -119,8 +225,9 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
         levelIndexes.pop();
         levelColumns.pop();
         levelLines.pop();
-        levelLastLineColumns.pop();
-        currentCache = null;
+        levelLastColumns.pop();
+        levelLastLines.pop();
+        nextTokenCache = null;
     }
 
     AssignedToken<T> get(int index) {
@@ -139,13 +246,13 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
 
     @Override
     public Optional<AssignedToken<T>> peekOptional() {
-        if(currentCache == null) {
+        if(nextTokenCache == null) {
             if(!hasNext()) {
                 return Optional.empty();
             }
-            currentCache = tokens.get(index());
+            nextTokenCache = tokens.get(index());
         }
-        return Optional.of(currentCache);
+        return Optional.of(nextTokenCache);
     }
 
     @Override
@@ -181,15 +288,6 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
     }
 
     @Override
-    public TokenStream<T> subStream(int startIndex, int endIndex) {
-        if (startIndex > endIndex)
-            throw new IllegalArgumentException("Start index must be smaller than end index");
-        var subStream = new ListTokenStream<>(tokens.subList(0, endIndex));
-        subStream.index(startIndex);
-        return subStream;
-    }
-
-    @Override
     public int getLine() {
         return levelLines.get(0);
     }
@@ -206,8 +304,10 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
 
     @Override
     public Location lastConsumedLocation() {
-        if(getColumn() == 0) {
-            return Location.oneChar(getLine()-1, getLastLineColumn());
+        if(getColumn() == 1) {
+            var line = getLine();
+            if(line == 1) throw new IllegalStateException("Nothing was consumed yet");
+            return Location.oneChar(getLastConsumedLine(), getLastConsumedColumn());
         }
         return Location.oneChar(getLine(), getColumn()-1);
     }
@@ -228,5 +328,18 @@ class ListTokenStream<T extends Enum<T> & Tokenable> implements TokenStream<T> {
         toSplit.setValue(toSplit.getValue().substring(i));
         tokens.add(index()-1, split);
         return split;
+    }
+
+    private static int lastIndexOf(String string, char c, int skip) {
+        var i = string.length();
+        while((i = string.lastIndexOf(c, i-1)) != -1 && skip > 0) skip --;
+        return i;
+    }
+
+    private static int newlineCount(String s) {
+        var count = 0;
+        var i = -1;
+        while((i = s.indexOf('\n', i+1)) != -1) count ++;
+        return count;
     }
 }

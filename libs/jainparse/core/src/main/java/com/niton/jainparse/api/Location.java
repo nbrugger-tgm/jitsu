@@ -1,5 +1,8 @@
 package com.niton.jainparse.api;
 
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,32 +33,7 @@ public interface Location {
 
     @NotNull
     static Location of(int startLine, int startColumn, int endLine, int endColumn) {
-        return new Location() {
-            @Override
-            public int getFromLine() {
-                return startLine;
-            }
-
-            @Override
-            public int getFromColumn() {
-                return startColumn;
-            }
-
-            @Override
-            public int getToLine() {
-                return endLine;
-            }
-
-            @Override
-            public int getToColumn() {
-                return endColumn;
-            }
-
-            @Override
-            public String toString() {
-                return format();
-            }
-        };
+        return new Default(startLine, startColumn, endLine, endColumn);
     }
 
     @NotNull
@@ -144,5 +122,19 @@ public interface Location {
 
     default Location fromChar() {
         return Location.oneChar(getFromLine(), getFromColumn());
+    }
+}
+@RequiredArgsConstructor
+@Getter
+@EqualsAndHashCode
+final class Default implements Location {
+    private final int fromLine;
+    private final int fromColumn;
+    private final int toLine;
+    private final int toColumn;
+
+    @Override
+    public String toString() {
+        return format();
     }
 }
