@@ -107,6 +107,17 @@ data class Location(val start: Position, val end: Position) : Locatable, Compara
         return Location(start, position)
     }
 
+    fun rangeTo(position: Locatable): Location {
+        return when(position) {
+            is Location -> rangeTo(position)
+            is Position -> rangeTo(position)
+        }
+    }
+
+    fun rangeTo(position: HasLocation): Location {
+        return rangeTo(position.location)
+    }
+
     fun rangeTo(location: Location): Location {
         return Location(start, location.end)
     }
