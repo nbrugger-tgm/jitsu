@@ -3,7 +3,9 @@ package eu.nitok.jitsu.backend.c
 import eu.nitok.jitsu.common.indent
 import eu.nitok.jitsu.compiler.bitcode.*
 import eu.nitok.jitsu.compiler.transpile.Backend
+import java.nio.file.OpenOption
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 
 class CBackend : Backend {
@@ -14,25 +16,36 @@ class CBackend : Backend {
     }
 
     private fun transpile(module: LoweredModule, dir: Path): Path {
-        val file = dir.resolve("${module.name}.c").createParentDirectories()
-        file.deleteIfExists()
-        file.createFile()
-        file.bufferedWriter().use { writer ->
-            val typeRegistry = TypeRegistry()
-            writer.write("#include \"../../stdlib.c\"\n")
+        val code = dir.resolve("${module.name}.c").createParentDirectories()
+        val headers = dir.resolve("${module.name}.h").createParentDirectories()
+        val publicHeaders = dir.resolve("${module.name}.public.h").createParentDirectories()
+        try { code.createFile() } catch (_: FileAlreadyExistsException) {}
+        try { headers.createFile() } catch (_: FileAlreadyExistsException) {}
+        try { publicHeaders.createFile() } catch (_: FileAlreadyExistsException) {}
 
-            val functions = module.functions
-                .filter { it.body is LoweredBody.Implementation }
-                .map { fn ->
-                    transpileFunction(typeRegistry, fn)
-                }
+        val typeRegistry = TypeRegistry()
+        val functions = module.functions
+            .filter { it.body is LoweredBody.Implementation }
+            .map { fn ->
+                transpileFunction(typeRegistry, fn)
+            }
 
+        headers.bufferedWriter().use { writer ->
             writer.write(typeRegistry.typeDefs+"\n\n")
             writer.write(functions.joinToString("\n"){it.def}+"\n\n")
+        }
+        //TODO filter exported members
+        publicHeaders.bufferedWriter().use { writer ->
+            writer.write(typeRegistry.typeDefs+"\n\n")
+            writer.write(functions.joinToString("\n"){it.def}+"\n\n")
+        }
+        code.bufferedWriter().use { writer ->
+            writer.write("#include \"${headers.relativeTo(code.parent)}\"")
             writer.write(functions.joinToString("\n"){it.impl})
             writer.flush()
         }
-        return file
+
+        return code
     }
     private data class CFunc(val def: String, val impl: String)
     private fun transpileFunction(

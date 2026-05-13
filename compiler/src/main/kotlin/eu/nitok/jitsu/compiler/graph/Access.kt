@@ -55,7 +55,11 @@ abstract class AccessImpl<T: Accessible<T>>: Access<T>, ScopeAware, ModuleAware 
         this.scope = parent
     }
     internal fun restore(messages: CompilerMessages) {
-        val symbol = targetId ?: throw IllegalStateException("Cannot restore without symbol ID")
+        val symbol = targetId
+        if(symbol == null) {
+            messages.error("This element was not resolved prior to serialisation, erroneous programms shouldn't be serialized", this.reference)
+            return
+        }
         if(target != null) throw IllegalStateException("Cannot restore twice")
         target = if(symbol.module == null) module.restore(symbol.index)
         else scope.restore(reference.map { symbol }, messages, restore)

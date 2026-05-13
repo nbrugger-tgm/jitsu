@@ -12,7 +12,6 @@ import eu.nitok.jitsu.parser.parseJitsuFile
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.TextDocumentService
-import java.io.File
 import java.net.URI
 import java.util.concurrent.CompletableFuture
 
@@ -127,11 +126,12 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
     override fun definition(params: DefinitionParams): CompletableFuture<Either<MutableList<out Location>, MutableList<out LocationLink>>> {
         return CompletableFuture.supplyAsync {
             val referencePos = location(params.position, params.textDocument.uri)
-            val graph = graphs[params.textDocument.uri]?.value?.let {
-                it.sequence().filterIsInstance<Access<*>>()
-                    .find { it.reference.location.contains(referencePos) }
-            }?.target?.name?.location?.let { range(it, params.textDocument.uri) }
-            Either.forLeft(listOfNotNull(graph).toMutableList())
+            val document = graphs[params.textDocument.uri]?.value
+            val reference = document?.sequence()
+                ?.filterIsInstance<Access<*>>()
+                    ?.find { it.reference.location.contains(referencePos) }
+            val declaration = reference?.target?.name?.location?.let { range(it, params.textDocument.uri) }
+            Either.forLeft(listOfNotNull(declaration).toMutableList())
         }
     }
 

@@ -35,7 +35,10 @@ class JitsuLanguageServer : LanguageServer, LanguageClientAware{
         result.capabilities.diagnosticProvider.isWorkspaceDiagnostics = false;
 
         result.capabilities.definitionProvider = Either.forLeft(true)
-        result.capabilities.referencesProvider = Either.forLeft(true);
+        result.capabilities.referencesProvider = Either.forLeft(true)
+        result.capabilities.workspace = WorkspaceServerCapabilities()
+        result.capabilities.workspace.workspaceFolders = WorkspaceFoldersOptions()
+        result.capabilities.workspace.workspaceFolders.supported = false;
         return CompletableFuture.completedFuture(result)
     }
 

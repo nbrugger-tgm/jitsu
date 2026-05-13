@@ -1,10 +1,10 @@
 package eu.nitok.jitsu.parser.parsers
 
 import com.niton.jainparse.token.DefaultToken
-import eu.nitok.jitsu.parser.ast.*
 import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.parser.*
+import eu.nitok.jitsu.parser.ast.*
 
 
 /**
@@ -14,13 +14,24 @@ import eu.nitok.jitsu.parser.*
  *
  * @return The parsed statement node, or null if no valid statement starts at the current position.
  */
-internal fun parseStatement(tokens: Tokens): StatementNode? {
-    return parseFunction(tokens) ?: parseClass(tokens)?: parseExecutableStatement(tokens) {
-        parseVariableDeclaration(it) ?: parseReturnStatement(it) ?: parseTypeDeclaration(tokens)
+internal fun parseStatement(tokens: Tokens, error: (CompilerMessage)->Unit): StatementNode? {
+    val attributes = parseAttributes(tokens)
+    val statement = parseFunction(tokens, attributes) ?: parseClass(tokens, attributes) ?: parseSemicolonDelimited(tokens) {
+        parseVariableDeclaration(it) ?: parseReturnStatement(it) ?: parseTypeDeclaration(tokens, attributes)
         ?: parseIdentifierBased(it) { tokens, id ->
             parseAssignment(tokens, id) ?: parseFunctionCall(tokens, id)
         }
     }
+    if (attributes.isNotEmpty()) {
+        if (statement == null) error(CompilerMessage(
+            "Dangling Attributes, attributes must be above a function, typedefinition or variable",
+            attributes.first().location.rangeTo(attributes.last())
+        )) else if (statement !is CanHaveAttributes) error(CompilerMessage(
+            "Statement type does not allow attributes (functions, type definition",
+            attributes.first().location.rangeTo(attributes.last())
+        ))
+    }
+    return statement
 }
 
 /**
@@ -47,16 +58,15 @@ internal fun parseAssignment(tokens: Tokens, kw: IdentifierNode): StatementNode.
  * Parses multiple statements from the token stream until exhausted or an unrecoverable error.
  *
  * @param statements Accumulator list for parsed statements.
- * @param containerNode Error callback for invalid input between statements.
  */
 internal fun parseStatements(
     tokens: Tokens,
     statements: MutableList<StatementNode>,
-    containerNode: (CompilerMessage) -> Unit
+    error: (CompilerMessage) -> Unit
 ) {
     while (tokens.hasNext()) {
         tokens.skipWhitespace()
-        when (val x = parseStatement(tokens)) {
+        when (val x = parseStatement(tokens, error)) {
             is StatementNode -> statements.add(x)
             null -> {
                 tokens.skipWhitespace()
@@ -70,14 +80,14 @@ internal fun parseStatements(
                     break
                 }
                 tokens.skip(DefaultToken.SEMICOLON)
-                containerNode(CompilerMessage("Expected a statement", invalid))
+                error(CompilerMessage("Expected a statement", invalid))
             }
         }
     }
 }
 
 
-private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> StatementNode?): StatementNode? {
+private fun parseSemicolonDelimited(tokens: Tokens, statmentFn: (Tokens) -> StatementNode?): StatementNode? {
     val res = statmentFn(tokens) ?: return null
     val endOfStatementPos = tokens.position.toLocation()
     tokens.skipWhitespace()
@@ -85,8 +95,8 @@ private fun parseExecutableStatement(tokens: Tokens, statmentFn: (Tokens) -> Sta
     if (semicolon.map { it.type }.orElse(null) != DefaultToken.SEMICOLON) {
         res.error(CompilerMessage("Expect semicolon at end of statement!", endOfStatementPos))
     } else {
+        tokens.skip()
     }
-    tokens.skip()
     return res
 }
 
@@ -145,7 +155,8 @@ internal fun parseVariableDeclaration(tokens: Tokens): StatementNode.Instruction
     val name = parseIdentifier(tokens)
     if (name == null) {
         messages.error("Expected variable name", tokens.position.toLocation())
-        val invalid = tokens.skipUntil(DefaultToken.SEMICOLON, DefaultToken.NEW_LINE, DefaultToken.EQUAL, DefaultToken.COLON)
+        val invalid =
+            tokens.skipUntil(DefaultToken.SEMICOLON, DefaultToken.NEW_LINE, DefaultToken.EQUAL, DefaultToken.COLON)
     } else {
         tokens.skipWhitespace()
     }

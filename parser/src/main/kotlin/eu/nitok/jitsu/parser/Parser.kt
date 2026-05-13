@@ -128,6 +128,7 @@ internal fun <T> Tokens.enclosedRepetition(
     subject: String,
     elementName: String,
     invalidObjectPlaceholder: T? = null,
+    doNotSkip: Set<DefaultToken> = setOf(SEMICOLON, NEW_LINE),
     parseElement: (Tokens) -> T?
 ): EnclosedRepetition<T>? {
     val openKw = attempt(start)?.location ?: return null;
@@ -147,7 +148,7 @@ internal fun <T> Tokens.enclosedRepetition(
                     break
                 }
                 skip(WHITESPACE)
-                val invalid = skipUntil(end, delimitter, NEW_LINE, SEMICOLON)
+                val invalid = skipUntil(end, delimitter, *doNotSkip.toTypedArray())
                 messages.error(CompilerMessage("Expected a $elementName", invalid))
                 val next = peekOptional().getOrNull()?.type
                 if (invalidObjectPlaceholder != null && (next == end || next == delimitter))
@@ -218,8 +219,8 @@ internal inline fun <T> Tokens.nullableRange(action: ParserFn<T?>): Located<T>? 
 
 internal fun Tokens.attempt(vararg tokens: DefaultToken): Located<AssignedToken<DefaultToken>>? {
     val next = peekOptional().getOrNull() ?: return null;
-    if (tokens.contains(next.type)) {
-        return range { this.next() }
+    if (next.type in tokens) {
+        return range { skip(); next }
     }
     return null;
 }

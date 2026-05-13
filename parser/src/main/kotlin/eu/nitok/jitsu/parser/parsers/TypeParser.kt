@@ -2,19 +2,14 @@ package eu.nitok.jitsu.parser.parsers
 
 import com.niton.jainparse.token.DefaultToken
 import com.niton.jainparse.token.DefaultToken.PIPE
-import com.niton.jainparse.token.TokenStream
-import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.parser.ast.IdentifierNode
-import eu.nitok.jitsu.parser.ast.StatementNode
-import eu.nitok.jitsu.parser.ast.TypeNode
-import eu.nitok.jitsu.parser.ast.TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode
-import eu.nitok.jitsu.parser.ast.withMessages
+import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.CompilerMessage.Hint
-import eu.nitok.jitsu.common.BitSize
-import eu.nitok.jitsu.parser.*
+import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.locating.locatedAt
-import eu.nitok.jitsu.parser.ast.ExpressionNode
+import eu.nitok.jitsu.parser.*
+import eu.nitok.jitsu.parser.ast.*
+import eu.nitok.jitsu.parser.ast.TypeNode.StructuralInterfaceTypeNode.StructuralFieldNode
 import kotlin.jvm.optionals.getOrNull
 
 
@@ -76,8 +71,8 @@ internal fun parseArrayType(
  * general syntax:
  * type <identifier> = <any type>
  */
-internal fun parseTypeDeclaration(tokens: Tokens): StatementNode.NamedTypeDeclarationNode? {
-    return parseTypeAlias(tokens)
+internal fun parseTypeDeclaration(tokens: Tokens, attributes: List<AttributeNode>): StatementNode.NamedTypeDeclarationNode? {
+    return parseTypeAlias(tokens, attributes)
 }
 
 /**
@@ -100,7 +95,7 @@ internal fun parseTypeParameterDefinition(tokens: Tokens, messages: CompilerMess
     }?.elements
 }
 
-private fun parseTypeAlias(tokens: Tokens): StatementNode.NamedTypeDeclarationNode.TypeAliasNode? {
+private fun parseTypeAlias(tokens: Tokens, attributes: List<AttributeNode>): StatementNode.NamedTypeDeclarationNode.TypeAliasNode? {
     val alias = tokens.keyword("type") ?: return null
     tokens.skipWhitespace()
     val messages = CompilerMessages()
@@ -125,7 +120,7 @@ private fun parseTypeAlias(tokens: Tokens): StatementNode.NamedTypeDeclarationNo
         type,
         alias.rangeTo(tokens.lastConsumedLocation),
         alias,
-        listOf()
+        attributes
     ).withMessages(messages)
 }
 
@@ -138,12 +133,16 @@ private fun parseTypeAlias(tokens: Tokens): StatementNode.NamedTypeDeclarationNo
 internal fun parseExplicitType(
     tokens: Tokens,
     messages: CompilerMessages,
-    lenient: Boolean = true
+    lenient: Boolean = true,
+    explicitTypeRequiredMessage: String? = null
 ): TypeNode? {
     if (tokens.attempt(DefaultToken.COLON) == null) {
         if(!lenient) return null;
-        val type = parseType(tokens) ?: return null
-        messages.error("Expected a type definition starting with a ':'", type.location)
+        val type = parseType(tokens) ?: run {
+            if(explicitTypeRequiredMessage != null) messages.error(explicitTypeRequiredMessage, tokens.position)
+            return null
+        }
+        messages.error("Expected type definition to starting with a ':'", type.location)
         return type
     }
     tokens.skipWhitespace()
