@@ -26,7 +26,7 @@ data class CompilerMessages(
     fun error(boolean: ReasonedBoolean, location: HasLocation) = error(boolean, location.location)
 
     fun add(messages: CompilerMessages) {
-        messages.warnings.addAll(warnings)
-        messages.errors.addAll(errors)
+        warnings.addAll(messages.warnings)
+        errors.addAll(messages.errors)
     }
 }

@@ -38,33 +38,39 @@ abstract class JitsuCompile @Inject constructor() : DefaultTask() {
 
     @TaskAction
     @OptIn(ExperimentalSerializationApi::class)
-    fun parse() {
-        val rootModule = parse(moduleName.get())
+    fun compile() {
+        val (moduleAst, parseErrors) = parse(moduleName.get())
         val dependencies = dependencies.asSequence()
             .map { json.decodeFromStream<JitsuModule>(it.inputStream()) }
             .toList()
+
+
         dependencies.forEach { restoreJitsuModule(it) }
-        val graph = buildJitsuModule(rootModule, dependencies)
+        val graph = buildJitsuModule(moduleAst, dependencies)
+        val errors = graph.messages.errors + parseErrors
+        graph.messages.warnings.forEach {
+            logger.warn(it.format("w"))
+        }
+        if(errors.isNotEmpty()) {
+            errors.forEach { error ->
+                logger.warn(error.format("e"))
+            }
+            throw GradleException("Jitsu compilation failed")
+        }
         val moduleCache = targetFile.get().asFile
         moduleCache.createNewFile()
         moduleCache.writeText(json.encodeToString(graph))
         logger.info("Store module cache in $moduleCache")
     }
 
-    protected fun parse(moduleName: String): JitsuModuleAst {
+    protected fun parse(moduleName: String): Pair<JitsuModuleAst, List<CompilerMessage>> {
         val sourceFiles = sources.files.map { it.toPath() }.toSet()
         val ast = parseJitsuModule(sourceFiles, moduleName)
         val allAstElements = ast.allModules.flatMap { it.files }.flatMap {file -> file.sequence() }.toList()
         val allErrors = allAstElements.flatMap { it.errors }
-        allErrors.forEach { error ->
-            logger.error(error.format("ERROR"))
-        }
-        if(allErrors.isNotEmpty()) {
-            throw GradleException("Jitsu compilation failed")
-        }
         allAstElements.flatMap { it.warnings }.forEach {
             logger.warn(it.format("warn"))
         }
-        return ast
+        return ast to allErrors
     }
 }
