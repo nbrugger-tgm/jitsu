@@ -8,6 +8,7 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import java.net.URI
 
 @Serializable(with = Locatable.Serializer::class)
 sealed interface Locatable {
@@ -28,7 +29,7 @@ sealed interface Locatable {
      */
     fun mark(note: String): String;
     fun toLocation(): Location
-
+    val file: URI;
 
     object Serializer : KSerializer<Locatable> {
         override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("jitsu.Location", PrimitiveKind.STRING)

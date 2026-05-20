@@ -1,91 +1,38 @@
 import capabilities.documentSymbols
+import capabilities.findDefinition
+import capabilities.graphDiagnostic
 import capabilities.syntaxDiagnostic
 import capabilities.syntaxHighlight
 import eu.nitok.jitsu.common.locating.Position
 import eu.nitok.jitsu.common.sequence
-import eu.nitok.jitsu.compiler.graph.Access
 import eu.nitok.jitsu.compiler.graph.Accessible
-import eu.nitok.jitsu.compiler.graph.JitsuModule
-import eu.nitok.jitsu.compiler.graph.buildJitsuModule
-import eu.nitok.jitsu.parser.ast.SourceFileNode
-import eu.nitok.jitsu.parser.parseJitsuFile
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.TextDocumentService
-import java.net.URI
+import workspace.Workspaces
 import java.util.concurrent.CompletableFuture
 
-class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
-    private val rawTexts: MutableMap<String, String> = mutableMapOf();
-    private val asts = mutableMapOf<String, Lazy<SourceFileNode>>()
-    private val graphs = mutableMapOf<String, Lazy<JitsuModule>>()
-    override fun didOpen(params: DidOpenTextDocumentParams?) {
-        params?.textDocument?.let {
-            rawTexts[it.uri] = it.text
-            updateFile(it.uri)
-        }
+class JitsuFileService(val workspaces: Workspaces, val log: (Any) -> Unit) : TextDocumentService {
+
+    override fun didOpen(params: DidOpenTextDocumentParams) {
+        log("didOpen($params)")
+        workspaces.getDocument(params.textDocument.uri).setContent(params.textDocument.text)
     }
 
-    private fun updateFile(uri: String) {
-        val text = rawTexts[uri] ?: return
-        asts[uri] = lazy {
-            customLogger.println("parsing $uri")
-            val startMs = System.currentTimeMillis()
-            val ast = parseJitsuFile(text, URI(uri))
-            val endMs = System.currentTimeMillis()
-            val parsingTime = endMs - startMs
-            customLogger.println("parsed in ${parsingTime}ms")
-            customLogger.println("Per char: ${parsingTime / text.length}ms")
-            customLogger.println("Per line: ${parsingTime / text.split("\n").size}ms")
-            graphs[uri] = lazy {
-                customLogger.println("build graph for $uri")
-                buildJitsuModule(ast)
-            }
-            server.client?.refreshDiagnostics()
-            server.client?.refreshSemanticTokens()
-            return@lazy ast
+    override fun didChange(params: DidChangeTextDocumentParams) {
+        val document = workspaces.getDocument(params.textDocument.uri)
+        if (params.contentChanges.size == 1 && params.contentChanges[0].range == null) {
+            log("Full text sync: ${document.uri}")
+            document.setContent(params.contentChanges[0].text)
+            return
         }
-        graphs[uri] = lazy { buildJitsuModule(asts[uri]!!.value) }
+        TODO("incremental sync not supported")
     }
 
-    override fun didChange(params: DidChangeTextDocumentParams?) {
-        val url = params?.textDocument?.uri ?: return
-        if (params.contentChanges.size == 1) {
-            customLogger.println("changed to ${params.contentChanges[0].text}")
-            rawTexts[url] = params.contentChanges[0].text
-        } else {
-            val oldText = (rawTexts[url]?.split("\n") ?: return).toMutableList()
-            val shift: MutableMap<Int, Int> = mutableMapOf();
-            params.contentChanges.forEach() {
-                val lineIndex = it.range.start.line
-                if (lineIndex != it.range.end.line) throw UnsupportedOperationException("multiline changes are not supported")
-                val oldLen = it.range.end.character - it.range.start.character
-                var line = oldText[lineIndex]
-                val thisShift = shift[lineIndex] ?: 0;
-                line = line.substring(
-                    0,
-                    it.range.start.character + thisShift
-                ) + it.text + line.substring(it.range.end.character + thisShift)
-                oldText[lineIndex] = line
-                val delta = it.text.length - oldLen
-                shift[lineIndex] = (shift[lineIndex] ?: 0) + delta;
-            }
-            rawTexts[url] = oldText.joinToString("\n")
-            customLogger.println("changed to ${rawTexts[url]}")
-        }
-        updateFile(url)
+    override fun didClose(params: DidCloseTextDocumentParams) {
     }
 
-    override fun didClose(params: DidCloseTextDocumentParams?) {
-        if (params != null) {
-            updateFile(params.textDocument.uri)
-        }
-    }
-
-    override fun didSave(params: DidSaveTextDocumentParams?) {
-        if (params != null) {
-            updateFile(params.textDocument.uri)
-        }
+    override fun didSave(params: DidSaveTextDocumentParams) {
     }
 
     override fun documentHighlight(params: DocumentHighlightParams?): CompletableFuture<MutableList<out DocumentHighlight>> {
@@ -94,26 +41,26 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
     }
 
 
-    override fun documentSymbol(params: DocumentSymbolParams?): CompletableFuture<MutableList<Either<SymbolInformation, DocumentSymbol>>> {
-        val graph = graphs[params?.textDocument?.uri]?.value ?: return CompletableFuture.completedFuture(mutableListOf());
+    override fun documentSymbol(params: DocumentSymbolParams): CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> {
+        val graph = workspaces.getDocument(params.textDocument.uri).graph ?: return CompletableFuture.completedFuture(
+            mutableListOf()
+        );
 
 
-        val either = graph.documentSymbols()
-            .map<DocumentSymbol, Either<SymbolInformation, DocumentSymbol>> {
+        return graph.thenApply {
+            it.documentSymbols().map<DocumentSymbol, Either<SymbolInformation, DocumentSymbol>> {
                 Either.forRight(it)
             }
-        return CompletableFuture.completedFuture(either.toMutableList())
+        }
     }
 
 
-    override fun semanticTokensFull(params: SemanticTokensParams?): CompletableFuture<SemanticTokens> {
-        val ast = asts[params?.textDocument?.uri]?.value
-            ?:// return CompletableFuture.failedFuture(NullPointerException("no ast"))
-            return CompletableFuture.completedFuture(SemanticTokens(listOf()))
-        val tokens = syntaxHighlight(ast)
-        customLogger.println("tokens: $tokens")
-        customLogger.flush()
-        return CompletableFuture.completedFuture(SemanticTokens(tokens))//syntax highlighting
+    override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> {
+        val ast = workspaces.getDocument(params.textDocument.uri).ast
+
+        return ast.thenApply {
+            SemanticTokens(syntaxHighlight(it))
+        }
     }
 
     private fun color(it: Position, write: DocumentHighlightKind): ColorInformation {
@@ -124,60 +71,47 @@ class JitsuFileService(val server: JitsuLanguageServer) : TextDocumentService {
     }
 
     override fun definition(params: DefinitionParams): CompletableFuture<Either<MutableList<out Location>, MutableList<out LocationLink>>> {
-        return CompletableFuture.supplyAsync {
-            val referencePos = location(params.position, params.textDocument.uri)
-            val document = graphs[params.textDocument.uri]?.value
-            val reference = document?.sequence()
-                ?.filterIsInstance<Access<*>>()
-                    ?.find { it.reference.location.contains(referencePos) }
-            val declaration = reference?.target?.name?.location?.let { range(it, params.textDocument.uri) }
-            Either.forLeft(listOfNotNull(declaration).toMutableList())
-        }
+        val referencePos = location(params.position, params.textDocument.uri)
+        val document = workspaces.getDocument(params.textDocument.uri).graph
+        return document.thenApply { it.findDefinition(referencePos) }
     }
 
     override fun references(params: ReferenceParams): CompletableFuture<List<Location?>?>? {
-        return CompletableFuture.supplyAsync {
-            val definitionPos = location(params.position, params.textDocument.uri)
-            val graph = graphs[params.textDocument.uri]?.value
-            val definition = graph?.sequence()
-                ?.filterIsInstance<Accessible<*>>()
-                ?.find { it.name?.location?.contains(definitionPos)?:false }
-            definition?.accessToSelf?.map {
-                it.reference.location.let { range(it, params.textDocument.uri) }
-            }?:emptyList()
+        val definitionPos = location(params.position, params.textDocument.uri)
+        val graph = workspaces.getDocument(params.textDocument.uri).graph
+        val definition = graph.thenApply {
+            it.sequence()
+                .filterIsInstance<Accessible<*>>()
+                .find { it.name?.location?.contains(definitionPos) ?: false }
+        }
+        return definition.thenApply {
+            it?.accessToSelf?.map {
+                it.reference.location.let { location(it) }
+            } ?: emptyList()
         }
     }
 
-    override fun diagnostic(params: DocumentDiagnosticParams?): CompletableFuture<DocumentDiagnosticReport> {
-        val ast = params?.textDocument?.uri?.let { asts[it] }?.value
-        val graph = params?.textDocument?.uri?.let { graphs[it] }?.value
-        return CompletableFuture.completedFuture(
+    override fun diagnostic(params: DocumentDiagnosticParams): CompletableFuture<DocumentDiagnosticReport> {
+        log("file diagnostic($params)")
+        val document = workspaces.getDocument(params.textDocument.uri)
+        val ast = document.ast
+        val graph = document.graph
+        return ast.thenCombine(graph) { ast, graph ->
             DocumentDiagnosticReport(
                 RelatedFullDocumentDiagnosticReport(
-                    (ast?.statements?.flatMap { syntaxDiagnostic(it) }
-                        ?: listOf()) + (graph?.let { syntaxDiagnostic(it) } ?: listOf())
-                )
-            )
-        )
+                    syntaxDiagnostic(ast) + graphDiagnostic(graph)
+                ).also {
+                    it.resultId = workspaces.diagnosticsId.toString()
+                }
+            ).also { log("file diagnostic response: $it") }
+        }
     }
 
     override fun colorPresentation(params: ColorPresentationParams?): CompletableFuture<MutableList<ColorPresentation>> {
-        return CompletableFuture.completedFuture(
-            mutableListOf(
-                ColorPresentation(
-                    "lol2",
-                    TextEdit(Range(Position(0, 0), Position(0, 0)), "lol")
-                )
-            )
-        )
+        return CompletableFuture.completedFuture(mutableListOf())
     }
 
     override fun documentColor(params: DocumentColorParams?): CompletableFuture<MutableList<ColorInformation>> {
         return CompletableFuture.completedFuture(mutableListOf())//css like color editor
     }
-}
-
-private var i: Long = 0;
-internal fun getArtificalId(): Long {
-    return i++;
 }

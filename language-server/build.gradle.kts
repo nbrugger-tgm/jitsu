@@ -14,5 +14,5 @@ application {
 }
 
 tasks.run.configure {
-    args("tcp")
+    args("--tcp")
 }

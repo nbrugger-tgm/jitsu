@@ -39,7 +39,7 @@ data class Location(val start: Position, val end: Position) : Locatable, Compara
         Position(startLine, startCol, file),
         Position(endLine, endCol, file)
     )
-
+    override val file: URI get() = start.file
     override fun format(): String = "${start.format()}-${end.format()}"
 
     override fun absoluteFormat(): String = "${start.absoluteFormat()}-${end.format()}"

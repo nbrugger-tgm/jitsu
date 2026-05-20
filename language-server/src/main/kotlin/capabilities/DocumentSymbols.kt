@@ -1,15 +1,29 @@
 package capabilities
 
-
 import eu.nitok.jitsu.common.mapTree
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.compiler.graph.TypeDefinition.DirectTypeDefinition.Enum
+import eu.nitok.jitsu.compiler.graph.TypeDefinition.DirectTypeDefinition.TypeParameter
 import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.*
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
 import range
 
+/**
+ * Calculates the document symbol of a file, symbols are everything that can be accessed by name:
+ * - typedefs
+ * - variables
+ * - constants
+ * - functions
+ * - fields
+ */
+fun JitsuFile.documentSymbols(): List<DocumentSymbol> {
+    return this.mapTree { node, children ->
+        if (node !is Accessible<*>) return@mapTree children;
+        node.documentSymbols(children)
+    }.toList()
+}
 
 private fun TypeDefinition.documentSymbols(children: Iterable<DocumentSymbol>): List<DocumentSymbol> = listOf(
     DocumentSymbol(
@@ -60,13 +74,6 @@ private fun Type.resolveTypeKind(): SymbolKind {
         is Type.StructuralInterface -> SymbolKind.Interface
         is Enum ->  SymbolKind.Enum
     }
-}
-
-fun JitsuModule.documentSymbols(): List<DocumentSymbol> {
-    return this.mapTree { node, children ->
-        if (node !is Accessible<*>) return@mapTree children;
-        node.documentSymbols(children)
-    }.toList()
 }
 
 private fun <T: Accessible<T>> Accessible<T>.documentSymbols(children: Iterable<DocumentSymbol>): Iterable<DocumentSymbol> {

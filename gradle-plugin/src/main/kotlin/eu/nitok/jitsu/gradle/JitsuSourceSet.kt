@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.gradle
 
+import eu.nitok.jitsu.gradle.tasks.CreateModuleInfo
 import eu.nitok.jitsu.gradle.tasks.JitsuCompile
 import eu.nitok.jitsu.gradle.tasks.JitsuTranspile
 import org.gradle.api.Named
@@ -12,6 +13,7 @@ class JitsuSourceSet(
     val sourceDirectory: SourceDirectorySet,
     val compileTask: Provider<JitsuCompile>,
     val transpileTasks: List<Provider<JitsuTranspile>>,
+    val moduleInfoTask: Provider<CreateModuleInfo>,
     val classpath: Provider<out Configuration>,
     val dependencyScope: Provider<out Configuration>,
 ) : Named {

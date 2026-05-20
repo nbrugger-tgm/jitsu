@@ -1,18 +1,15 @@
 package capabilities
 
 import capabilities.SemanticTokenTypes.*
-import customLogger
-import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.common.flatMap
-import eu.nitok.jitsu.parser.ast.AstNode
+import eu.nitok.jitsu.common.locating.Location
+import eu.nitok.jitsu.parser.ast.*
 import eu.nitok.jitsu.parser.ast.ExpressionNode.*
-import eu.nitok.jitsu.parser.ast.SourceFileNode
 import eu.nitok.jitsu.parser.ast.StatementNode.Declaration.FunctionDeclarationNode
 import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.*
 import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.SwitchNode.CaseNode
 import eu.nitok.jitsu.parser.ast.StatementNode.NamedTypeDeclarationNode
 import eu.nitok.jitsu.parser.ast.StatementNode.NamedTypeDeclarationNode.EnumDeclarationNode
-import eu.nitok.jitsu.parser.ast.TypeNode
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -117,7 +114,6 @@ private fun modifyerBitflag(vararg modifiers: SemanticTokenModifiers): Int {
 internal fun syntaxHighlight(statements: SourceFileNode): List<Int> {
     return decode(statements.statements.flatMap {
         val semanticTokens = it.flatMap { it.syntaxTokens() }
-        customLogger.println(semanticTokens)
         semanticTokens
     })
 }

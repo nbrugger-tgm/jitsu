@@ -3,6 +3,7 @@
  */
 package eu.nitok.jitsu.gradle
 
+import eu.nitok.jitsu.gradle.tasks.CreateModuleInfo
 import eu.nitok.jitsu.gradle.tasks.JitsuCompile
 import eu.nitok.jitsu.gradle.tasks.JitsuTranspile
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -45,12 +46,17 @@ class JitsuBasePlugin: Plugin<Project> {
         project.tasks.register("transpileJitsu") {
             it.dependsOn(main.map { it.transpileTasks })
         }
+        project.tasks.register("createJitsuModuleInfo") {
+            it.dependsOn(extension.sourceSets.map { it.moduleInfoTask })
+        }
     }
 
     internal fun Project.registerJitsuSourceSet(string: String, extension: JitsuExtension, consumable: Boolean): Provider<JitsuSourceSet> {
         val sourceDirectory: SourceDirectorySet = objects.sourceDirectorySet(string, "$string Jitsu source")
         sourceDirectory.filter.include("**/*.jit")
         sourceDirectory.srcDir("src/${string}/jitsu")
+
+        val sourceSetName = if(string == "main") extension.moduleName else extension.moduleName.map { "$it.$string" }
 
         val dependencies = configurations.dependencyScope("jitsu${string.capitalized()}")
         val classpath = configurations.resolvable("${string}JitsuClasspath") {
@@ -61,14 +67,19 @@ class JitsuBasePlugin: Plugin<Project> {
         val compileTask = tasks.register("compile${string.capitalized()}Jitsu", JitsuCompile::class.java) {
             it.dependencies.from(classpath)
             it.sources.setFrom(sourceDirectory)
-            it.moduleName.set(extension.moduleName)
+            it.moduleName.set(sourceSetName)
             it.targetFile.set(project.layout.buildDirectory.file("modules/$string.jim"))
         }
         val transpileCTask = tasks.register("transpile${string.capitalized()}JitsuToC", JitsuTranspile::class.java) {
-            it.dependencies.setFrom(compileTask.get())
-            it.moduleFile.set(files().from(compileTask.get()).singleFile)
+            it.dependencies.setFrom(classpath)
+            it.moduleFile.set(layout.file(compileTask.map { it.outputs.files.singleFile }))
 //            it.backend.set(CBackend())
             it.targetDirectory.set(project.layout.buildDirectory.dir("generated/jitsu-c"))
+        }
+
+        val moduleInfoTask = tasks.register("createJitsu${string.capitalized()}ModuleInfo", CreateModuleInfo::class.java) {
+            it.moduleName.set(sourceSetName)
+            it.moduleDir.set(sourceDirectory.sourceDirectories.singleFile)
         }
         if(consumable) {
             val elements = configurations.consumable("${string}JitsuElements") {
@@ -88,6 +99,7 @@ class JitsuBasePlugin: Plugin<Project> {
                 sourceDirectory = sourceDirectory,
                 compileTask = compileTask,
                 transpileTasks = listOf(transpileCTask),
+                moduleInfoTask = moduleInfoTask,
                 classpath = classpath,
                 dependencyScope = dependencies
             )

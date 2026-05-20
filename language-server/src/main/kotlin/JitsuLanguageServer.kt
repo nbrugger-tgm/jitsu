@@ -1,66 +1,100 @@
-import capabilities.SemanticTokenModifiers
-import capabilities.SemanticTokenTypes
+import capabilities.capabilities
 import eu.nitok.jitsu.compiler.JitsuCompilerInfo
 import org.eclipse.lsp4j.*
-import org.eclipse.lsp4j.jsonrpc.messages.Either
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.*
+import workspace.WorkspaceDetector
+import workspace.Workspaces
+import java.io.PrintStream
 import java.util.concurrent.CompletableFuture
 
-class JitsuLanguageServer : LanguageServer, LanguageClientAware{
+class JitsuLanguageServer(private val log: PrintStream, val clientId: Long, val exitHook: () -> Unit) : LanguageServer,
+    LanguageClientAware {
+
+    fun log(text: Any) {
+        log.println("[client/$clientId]: $text")
+    }
+
+    internal var client: LanguageClient? = null
+    val settings = JitsuLanguageServerSettings.loadSystemSettings()
+    val session = run {
+        val workspaces = Workspaces()
+        Session(
+            fileService = JitsuFileService(workspaces, this::log),
+            workspaceService = JitsuWorkspaceService(workspaces, this::log, { client!! }, settings),
+        )
+    }
+
+
     override fun initialize(params: InitializeParams?): CompletableFuture<InitializeResult> {
-        if(params == null) CompletableFuture.failedFuture<InitializeResult>(NullPointerException("required params"))
+        if (params == null) CompletableFuture.failedFuture<InitializeResult>(NullPointerException("required params"))
+
         val result = InitializeResult()
         result.serverInfo = ServerInfo()
         result.serverInfo.name = JitsuCompilerInfo.name
         result.serverInfo.version = JitsuCompilerInfo.version
 
-        result.capabilities = ServerCapabilities()
-        result.capabilities.experimental = false;
-        result.capabilities.semanticTokensProvider = SemanticTokensWithRegistrationOptions();
-        result.capabilities.semanticTokensProvider.full = Either.forLeft(true);
-        result.capabilities.semanticTokensProvider.legend = SemanticTokensLegend(
-            SemanticTokenTypes.entries.sortedBy { it.ordinal }.map { it.id },
-            SemanticTokenModifiers.entries.sortedBy { it.ordinal }.map { it.id },
-        )
-        result.capabilities.colorProvider = Either.forLeft(true);
-        result.capabilities.documentSymbolProvider = Either.forLeft(true);
-//        result.capabilities.completionProvider = CompletionOptions()
-//        result.capabilities.completionProvider.completionItem = CompletionItemOptions()
-//        result.capabilities.completionProvider.completionItem.labelDetailsSupport = true;
-//        result.capabilities.completionProvider.resolveProvider = true;
-        result.capabilities.documentHighlightProvider = Either.forLeft(true);
-        result.capabilities.textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full);
-        result.capabilities.diagnosticProvider = DiagnosticRegistrationOptions();
-        result.capabilities.diagnosticProvider.isInterFileDependencies = true;
-        result.capabilities.diagnosticProvider.isWorkspaceDiagnostics = false;
+        result.capabilities = capabilities
+        session.initialized = true
 
-        result.capabilities.definitionProvider = Either.forLeft(true)
-        result.capabilities.referencesProvider = Either.forLeft(true)
-        result.capabilities.workspace = WorkspaceServerCapabilities()
-        result.capabilities.workspace.workspaceFolders = WorkspaceFoldersOptions()
-        result.capabilities.workspace.workspaceFolders.supported = false;
-        return CompletableFuture.completedFuture(result)
+        return WorkspaceDetector.loadWorkspaces(params?.workspaceFolders?:listOf(), client!!, settings).thenAccept {
+            session.workspaceService.workspaces.addAll(it)
+        }.thenApply {
+            result
+        }
     }
 
+    override fun initialized(params: InitializedParams?) {
+        client?.registerCapability(
+            RegistrationParams(
+                listOf(
+            Registration().also {
+                it.id = "watcher"
+                it.method = "workspace/didChangeWatchedFiles"
+                it.registerOptions = mapOf(
+                    "watchers" to listOf(
+                        mapOf(
+                            "globPattern" to "**/{*.jit,module-info*(.*).json,*.gradle,*.gradle.kts}"
+                        )
+                    )
+                )
+            }
+        )))
+    }
 
     override fun setTrace(params: SetTraceParams?) {
+        log("setTrace ${params.toString()}")
     }
+
     override fun shutdown(): CompletableFuture<Any> {
-        return CompletableFuture.completedFuture("success")
+        if (!session.initialized) return CompletableFuture.failedFuture(
+            ResponseErrorException(
+                ResponseError(
+                    ResponseErrorCode.InvalidRequest,
+                    "the server was already shutdown or isn't initialized yet",
+                    null
+                )
+            )
+        )
+        session.initialized = false
+        return CompletableFuture.completedFuture(null)
     }
 
     override fun exit() {
+        log("Received EXIT request")
+        exitHook()
     }
 
     override fun getTextDocumentService(): TextDocumentService {
-        return JitsuFileService(this)
+        return session.fileService
     }
 
     override fun getWorkspaceService(): WorkspaceService {
-        return JitsuWorkspaceService()
+        return session.workspaceService
     }
 
-    internal var client: LanguageClient? = null
 
     override fun connect(client: LanguageClient?) {
         this.client = client;

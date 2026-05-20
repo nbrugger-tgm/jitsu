@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "jitsu.module-info.schema.json",
+  "title": "Module",
+  "description": "Meta information about a JITSU module",
+  "type": "object",
+  "properties": {
+    "sourceRoot": {
+      "description": "A path to the root directory of the sourcefile",
+      "type": "string",
+      "format": "",
+      "default": "./src/main/jitsu"
+    },
+    "name": {
+      "description": "The name of the module that will be used in imports",
+      "type": "string"
+    }
+  },
+  "required": ["name"]
+}

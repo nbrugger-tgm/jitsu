@@ -17,7 +17,7 @@ import kotlin.io.path.name
 import kotlin.io.path.readText
 
 @Serializable(with = Position.Serializer::class)
-data class Position(val line: Int, val column: Int, var file: URI) : Locatable {
+data class Position(val line: Int, val column: Int, override var file: URI) : Locatable {
     override fun format() = "$line:$column"
 
     override fun absoluteFormat(): String {
