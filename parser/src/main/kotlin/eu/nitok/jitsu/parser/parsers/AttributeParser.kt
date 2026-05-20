@@ -64,7 +64,7 @@ private fun parseAttributeUseParameter(tokens: Tokens): AttributeNode.AttributeV
     return AttributeNode.AttributeValueNode(property, value).withMessages(messages)
 }
 
-internal fun parseAttributeDeclaration(tokens: Tokens): AttributeDeclarationNode? {
+internal fun parseAttributeDeclaration(tokens: Tokens, attributes: List<AttributeNode>): AttributeDeclarationNode? {
     val kw = tokens.keyword("attribute") ?: return null
     val messages = CompilerMessages()
     tokens.skipWhitespace()
@@ -76,7 +76,8 @@ internal fun parseAttributeDeclaration(tokens: Tokens): AttributeDeclarationNode
         emptyList(),
         kw,
         null,
-        null
+        null,
+        attributes
     ).withMessages(messages)
     tokens.skipWhitespace()
     val properties = mutableListOf<AttributeDeclarationNode.AttributeProperty>()
@@ -92,7 +93,7 @@ internal fun parseAttributeDeclaration(tokens: Tokens): AttributeDeclarationNode
         tokens.position,
         CompilerMessage.Hint("Attribute body started here", bodyStart)
     )
-    return AttributeDeclarationNode(name, properties, kw, bodyStart.location, bodyEnd?.location).withMessages(messages)
+    return AttributeDeclarationNode(name, properties, kw, bodyStart.location, bodyEnd?.location, attributes).withMessages(messages)
 }
 
 private fun parseAttributeProperty(tokens: Tokens): AttributeDeclarationNode.AttributeProperty? {

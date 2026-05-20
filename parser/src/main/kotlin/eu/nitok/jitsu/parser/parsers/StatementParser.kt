@@ -16,7 +16,7 @@ import eu.nitok.jitsu.parser.ast.*
  */
 internal fun parseStatement(tokens: Tokens, error: (CompilerMessage)->Unit): StatementNode? {
     val attributes = parseAttributes(tokens)
-    val statement = parseFunction(tokens, attributes) ?: parseClass(tokens, attributes) ?: parseSemicolonDelimited(tokens) {
+    val statement = parseFunction(tokens, attributes) ?: parseClass(tokens, attributes) ?: parseAttributeDeclaration(tokens, attributes) ?: parseSemicolonDelimited(tokens) {
         parseVariableDeclaration(it) ?: parseReturnStatement(it) ?: parseTypeDeclaration(tokens, attributes)
         ?: parseIdentifierBased(it) { tokens, id ->
             parseAssignment(tokens, id) ?: parseFunctionCall(tokens, id)

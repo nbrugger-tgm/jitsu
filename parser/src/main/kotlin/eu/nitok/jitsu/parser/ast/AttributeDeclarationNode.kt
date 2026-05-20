@@ -1,6 +1,5 @@
 package eu.nitok.jitsu.parser.ast
 
-import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.common.locating.Location
 
 data class AttributeDeclarationNode(
@@ -9,7 +8,8 @@ data class AttributeDeclarationNode(
     val kwLocation: Location,
     val openKwLocation: Location?,
     val closeKwLocation: Location?,
-) : AstNodeImpl() {
+    override val attributes: List<AttributeNode>,
+) : AstNodeImpl(), StatementNode.Declaration, CanHaveAttributes {
     data class AttributeProperty(
         val name: IdentifierNode?,
         val type: TypeNode?
@@ -23,5 +23,5 @@ data class AttributeDeclarationNode(
     }
 
     override val location: Location get() = kwLocation.rangeTo(closeKwLocation?:properties.lastOrNull()?.location?:openKwLocation?:name?.location?:kwLocation)
-    override val children: List<AstNode> get() = properties
+    override val children: List<AstNode> get() = properties + attributes
 }
