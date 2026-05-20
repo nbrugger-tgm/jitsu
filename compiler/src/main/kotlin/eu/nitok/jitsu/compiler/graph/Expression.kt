@@ -4,10 +4,7 @@ import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.common.ReasonedBoolean
-import eu.nitok.jitsu.compiler.graph.Access
-import eu.nitok.jitsu.compiler.graph.AccessImpl
-import eu.nitok.jitsu.compiler.graph.Accessor
-import eu.nitok.jitsu.compiler.model.BiOperator
+import eu.nitok.jitsu.compiler.graph.behaviour.ScopeAware
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -33,7 +30,8 @@ sealed interface Expression : Element {
     }
 
     @Serializable
-    class VariableReference(override val reference: Located<String>) : AccessImpl<Variable>(), Expression, Access.VariableAccess, ScopeAware {
+    class VariableReference(override val reference: Located<String>) : AccessImpl<Variable>(), Expression, Access.VariableAccess,
+        ScopeAware {
         @Transient override val restore = JitsuModule::getVariable
         @Transient override val getSymbolId: JitsuModule.(Variable) -> SymbolID = JitsuModule::getSymbolID
 
@@ -68,7 +66,7 @@ sealed interface Expression : Element {
             typeHint: Type?
         ): Type.Array {
             val type = (if (elements.isEmpty()) {
-                if (typeHint is Type.Array) typeHint.elementType else {
+                if (typeHint is Type.Array) typeHint.elementType else if(typeHint != null)TODO("VOODO") else {
                     messages.error("Cannot infer type of empty array", this.location)
                     Type.Undefined
                 }

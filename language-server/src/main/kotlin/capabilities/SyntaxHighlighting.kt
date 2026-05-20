@@ -216,7 +216,28 @@ private fun AstNode.syntaxTokens(): List<SemanticToken> {
             this.mutableKw?.let { token(KEYWORD, it) },
             token(PROPERTY, name.location)
         )
-
-        else -> listOf()
+        is AttributeDeclarationNode -> listOfNotNull(
+            name?.location?.let { token(CLASS, it) },
+            token(KEYWORD, kwLocation)
+        )
+        is AttributeDeclarationNode.AttributeProperty -> listOf()
+        is AttributeNode -> listOfNotNull(name?.location?.let { token(MACRO, it) })
+        is AttributeNode.AttributeValueNode -> listOf(token(PROPERTY, name.location))
+        is ArrayLiteralNode -> listOf()
+        is IndexAccessNode -> listOf()
+        is StringLiteralNode -> listOf()
+        is IdentifierNode -> listOf(token(VARIABLE, location))
+        is SourceFileNode -> listOf()
+        is FunctionDeclarationNode.FunctionBodyNode -> listOf()
+        is StatementNode.Declaration.ImportNode -> listOf(token(KEYWORD, kw), token(NAMESPACE, moduleReference.location))
+        is AssignmentNode -> listOf()
+        is NamedTypeDeclarationNode.ClassDeclarationNode.MethodNode -> listOfNotNull(mutableKw?.let { token(KEYWORD, it) })
+        is TypeNode.ArrayTypeNode -> listOf()
+        is TypeNode.BooleanTypeNode -> listOf(token(KEYWORD, location))
+        is TypeNode.FunctionTypeSignatureNode -> listOf()
+        is TypeNode.NullTypeNode -> listOf(token(KEYWORD, location))
+        is TypeNode.StructuralInterfaceTypeNode -> listOf()
+        is TypeNode.UnionTypeNode -> listOf()
+        is TypeNode.ValueTypeNode -> listOf()
     }
 }

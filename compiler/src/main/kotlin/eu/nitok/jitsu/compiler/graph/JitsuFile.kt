@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.compiler.graph
 
+import eu.nitok.jitsu.compiler.graph.behaviour.ScopeProvider
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import java.net.URI

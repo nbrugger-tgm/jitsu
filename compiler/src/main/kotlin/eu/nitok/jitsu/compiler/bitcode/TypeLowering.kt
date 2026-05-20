@@ -29,7 +29,7 @@ object TypeLowering {
             is GraphType.Union -> lowerUnion(type)
             is GraphType.StructuralInterface -> lowerStruct(type)
 
-            is GraphType.TypeReference -> lower(type.resolvedCache)
+            is GraphType.TypeReference -> lower(type.typeCache)
 
             is GraphType.Null -> TODO("null not yet supported") // null represented as null pointer
             is GraphType.Value -> lower(type.value.type)
@@ -37,6 +37,7 @@ object TypeLowering {
             is GraphType.Undefined -> error("Cannot lower undefined type")
             
             is TypeDefinition.DirectTypeDefinition.Enum -> lowerEnum(type)
+            is TypeDefinition.DirectTypeDefinition.TypeParameter -> throw IllegalStateException("Generics should already be resolved when lowering")
         }
     }
 

@@ -15,8 +15,9 @@ import eu.nitok.jitsu.compiler.graph.Type.Array
 import eu.nitok.jitsu.compiler.graph.Type.Boolean
 import eu.nitok.jitsu.compiler.graph.Type.Float
 import eu.nitok.jitsu.compiler.graph.Type.Int
+import eu.nitok.jitsu.compiler.graph.TypeDefinition.DirectTypeDefinition.TypeParameter
 import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.Struct.Field
-import eu.nitok.jitsu.compiler.graph.TypeDefinition.TypeParameter
+import eu.nitok.jitsu.compiler.graph.behaviour.Finalizable
 import eu.nitok.jitsu.parser.ast.*
 import eu.nitok.jitsu.parser.ast.StatementNode.*
 import eu.nitok.jitsu.parser.ast.StatementNode.Declaration.FunctionDeclarationNode
@@ -42,6 +43,9 @@ fun restoreJitsuModule(module: JitsuModule, dependencies: List<JitsuModule> = li
     populateBackReferences(module, module.messages, moduleLookup)
     module.sequence().forEach {
         if (it is AccessImpl<*>) it.restore(module.messages)
+    }
+    module.sequence().forEach {
+        if (it is Finalizable) it.finalize(module.messages)
     }
 }
 
@@ -92,9 +96,10 @@ private fun GraphBuilder.buildGraph(moduleAst: JitsuModuleAst, dependencies: Lis
     //backreferences
     populateBackReferences(module, messages, moduleLookup)
     module.sequence().forEach {
-        if (it is Access.TypeAccess) {
-            it.resolve(messages)
-        }
+        if (it is Access.TypeAccess) it.resolve(messages)
+    }
+    module.sequence().forEach {
+        if (it is Finalizable) it.finalize(module.messages)
     }
 
     val repository = AnalysisRepository()
@@ -192,6 +197,8 @@ private fun GraphBuilder.processStatements(
                 )
                 else imports[statement.moduleReference.value] = Import(statement.moduleReference)
             }
+
+            is AttributeDeclarationNode -> {}
         }
     }
     return Statements(functions, variables, constants, types, imports.values.toList())
@@ -203,7 +210,7 @@ private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.Cla
             Field(
                 field.name.located,
                 field.mutableKw != null,
-                resolveType(field.type)
+                rawType(field.type)
             )
         }
         return TypeDefinition.ParameterizedType.Class(
@@ -258,7 +265,7 @@ private fun GraphBuilder.buildInstructionGraph(statement: InstructionNode): Inst
 }
 
 fun buildGraph(statement: VariableDeclarationNode): VariableDeclaration {
-    val explicitType = statement.type?.let { resolveType(it) }
+    val explicitType = statement.type?.let { rawType(it) }
     val initialValue = statement.value?.let { node -> buildExpressionGraph(node) }
     val variableDeclaration = VariableDeclaration(
         false,
@@ -274,7 +281,7 @@ fun buildGraph(statement: NamedTypeDeclarationNode.TypeAliasNode): TypeDefinitio
         TypeDefinition.ParameterizedType.Alias(
             it.located,
             statement.typeParameters.map { buildTypeParameterGraph(it) },
-            resolveType(statement.type)
+            rawType(statement.type)
         )
     }
 }
@@ -290,9 +297,9 @@ private fun buildGraph(
 private fun buildGraph(
     it: TypeNode.FunctionTypeSignatureNode
 ) = FunctionTypeSignature(
-    it.returnType?.let { resolveType(it) },
+    it.returnType?.let { rawType(it) },
     it.parameters.map {
-        val type = resolveType(it.type);
+        val type = rawType(it.type);
         FunctionTypeSignature.Parameter(it.name.located, type, false)
     }
 )
@@ -308,7 +315,7 @@ private fun buildTypeParameterGraph(node: IdentifierNode): TypeParameter = TypeP
 private fun buildGraph(
     array: TypeNode.ArrayTypeNode
 ) = Array(
-    resolveType(array.type),
+    rawType(array.type),
     array.fixedSize?.value?.toInt()
 )
 
@@ -364,7 +371,7 @@ fun resolveVariableReference(
 private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNode): Function {
     val name = functionNode.name
     val parameters = functionNode.parameters.map {
-        val type = resolveType(it.type)
+        val type = rawType(it.type)
         Function.Parameter(
             it.name.located, type,
             it.defaultValue?.let { buildExpressionGraph(it) }
@@ -386,7 +393,7 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
     }
     return Function(
         name?.located,
-        functionNode.returnType?.let { Located(resolveType(it), it.location) },
+        functionNode.returnType?.let { Located(rawType(it), it.location) },
         parameters,
         functionBody,
         functionNode.name?.location ?: functionNode.keywordLocation
@@ -549,11 +556,11 @@ private fun resolveIntConstant(
 
 val IdentifierNode.located: Located<String> get() = Located<String>(value, location)
 
-fun resolveType(type: TypeNode?): Type {
+fun rawType(type: TypeNode?): Type {
     if (type == null) return Undefined
     return when (type) {
         is TypeNode.ArrayTypeNode -> Array(
-            resolveType(type.type),
+            rawType(type.type),
             type.fixedSize?.value?.toInt()
         )
 
@@ -562,7 +569,7 @@ fun resolveType(type: TypeNode?): Type {
         is TypeNode.IntTypeNode -> Int(type.bitSize)
         is TypeNode.NameTypeNode -> TypeReference(type.name.located, type.genericTypes.map {
             Located(
-                resolveType(it),
+                rawType(it),
                 it.location
             )
         })
@@ -571,11 +578,11 @@ fun resolveType(type: TypeNode?): Type {
             Field(
                 it.name.located,
                 false,
-                resolveType(it.type)
+                rawType(it.type)
             )
         }.associateBy { it.name.value })
 
-        is TypeNode.UnionTypeNode -> Union(type.types.map { resolveType(it) })
+        is TypeNode.UnionTypeNode -> Union(type.types.map { rawType(it) })
         is TypeNode.ValueTypeNode -> TODO()
         is TypeNode.UIntTypeNode -> UInt(type.bitSize)
         is TypeNode.BooleanTypeNode -> Boolean

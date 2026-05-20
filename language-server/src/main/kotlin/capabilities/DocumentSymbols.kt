@@ -44,7 +44,7 @@ private fun TypeDefinition.additionalInfo(): String?{
 }
 private fun Type.additionalInfo(): String?{
     return when(this) {
-        is Type.TypeReference -> if(resolvedCache != this) resolvedCache.additionalInfo() else target.toString()
+        is Type.TypeReference -> if(typeCache != this) typeCache.additionalInfo() else target.toString()
         else -> toString()
     }
 }
@@ -54,7 +54,7 @@ private fun TypeDefinition.symbolKind() = when (this) {
     is Alias -> type.resolveTypeKind()
     is Struct -> SymbolKind.Struct
     is Class -> SymbolKind.Class
-    is TypeDefinition.TypeParameter -> SymbolKind.TypeParameter
+    is TypeParameter -> SymbolKind.TypeParameter
 }
 
 private fun Type.resolveTypeKind(): SymbolKind {
@@ -73,6 +73,7 @@ private fun Type.resolveTypeKind(): SymbolKind {
         is Type.Union -> SymbolKind.Enum
         is Type.StructuralInterface -> SymbolKind.Interface
         is Enum ->  SymbolKind.Enum
+        is TypeParameter -> SymbolKind.TypeParameter
     }
 }
 
@@ -115,7 +116,7 @@ private fun <T: Accessible<T>> Accessible<T>.documentSymbols(children: Iterable<
     }
 }
 
-fun Function.documentSymbols(children: Iterable<DocumentSymbol>): DocumentSymbol? {
+private fun Function.documentSymbols(children: Iterable<DocumentSymbol>): DocumentSymbol? {
     return if (name != null) DocumentSymbol(
         name!!.value,
         SymbolKind.Function,
@@ -123,7 +124,7 @@ fun Function.documentSymbols(children: Iterable<DocumentSymbol>): DocumentSymbol
         range(name!!.location),
         "(${
             parameters.joinToString(", ") { it.toString() }
-        }) ${if (returnType != null) " -> $returnType" else ""}",
+        }) ${if (returnType != null) " -> ${returnType?.value}" else ""}",
         children.toList()
     ) else null
 }

@@ -1,18 +1,33 @@
 package eu.nitok.jitsu.compiler.graph
 
-import eu.nitok.jitsu.common.*
+import eu.nitok.jitsu.common.BitSize
+import eu.nitok.jitsu.common.CompilerMessage
+import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.common.locating.Located
+import eu.nitok.jitsu.compiler.graph.behaviour.Finalizable
+import eu.nitok.jitsu.compiler.graph.behaviour.ScopeAware
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import java.util.Collections.emptyList
 
+typealias ResolveGenericFn = (TypeDefinition.DirectTypeDefinition.TypeParameter, messages: CompilerMessages) -> Type;
+
 @Serializable
 sealed interface Type : Element {
-    fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type
+    /**
+     * Reduces the type to its "raw" form by resolving all [references][TypeReference] from the graph and substituting GenericTypes/Type parameters when required
+     *
+     * _Implementation Note_: If no generics are being substituted the result can be cached
+     *
+     * @param resolveGeneric substitution function for [generics][TypeDefinition.DirectTypeDefinition.TypeParameter]. If null no substitution will happen, if set the type returned by the function will be used
+     */
+    fun rawType(messages: CompilerMessages, resolveGeneric: ResolveGenericFn? = null): Type
 
     fun acceptsInstanceOf(type: Type): ReasonedBoolean {
-        return if (type is Undefined) ReasonedBoolean.True("While UNDEFINED cannot be assigned to anything, the error lies in the definition of the type not its usage");
+        return if (type is Undefined)
+            ReasonedBoolean.True("While UNDEFINED cannot be assigned to anything, the error lies in the definition of the type not its usage");
         else if (type is Union) {
             val optionAssignability = type.options.map { mapAssignabilityBoolean(acceptsInstanceOf(it), it, this) }
             if (optionAssignability.all { boolean -> boolean.value }) ReasonedBoolean.True(
@@ -27,8 +42,8 @@ sealed interface Type : Element {
                     *(optionAssignability.filter { !it.value } + assignWholeUnion).toTypedArray()
                 )
             }
-        } else if(type is TypeReference) {
-            acceptsInstanceOf(type.resolvedCache)
+        } else if (type is TypeReference) {
+            acceptsInstanceOf(type.typeCache)
         } else {
             val reason = accepts(type)
             if (!reason.value) ReasonedBoolean.False("$type not assignable to $this", reason)
@@ -36,7 +51,7 @@ sealed interface Type : Element {
         }
     }
 
-    fun mapAssignabilityBoolean(boolean: ReasonedBoolean, from: Type, to: Type): ReasonedBoolean {
+    private fun mapAssignabilityBoolean(boolean: ReasonedBoolean, from: Type, to: Type): ReasonedBoolean {
         return if (boolean.value) ReasonedBoolean.True("$from is assignable to $to", boolean)
         else ReasonedBoolean.False("$from is not assignable to $to", boolean)
     }
@@ -49,7 +64,7 @@ sealed interface Type : Element {
 
     @Serializable
     data class Int(override val size: BitSize) : Primitive {
-        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun rawType(messages: CompilerMessages, resolveGeneric: ResolveGenericFn?): Type = this
         override fun toString(): String {
             return "i${size.bits}"
         }
@@ -73,7 +88,7 @@ sealed interface Type : Element {
 
     @Serializable
     data class UInt(override val size: BitSize) : Primitive {
-        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun rawType(messages: CompilerMessages, resolveGeneric: ResolveGenericFn?): Type = this
         override fun toString(): String {
             return "u${size.bits}"
         }
@@ -94,7 +109,7 @@ sealed interface Type : Element {
 
     @Serializable
     data class Float(override val size: BitSize = BitSize.BIT_32) : Primitive {
-        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun rawType(messages: CompilerMessages, resolveGeneric: ResolveGenericFn?): Type = this
         override fun toString(): String {
             return "f${size.bits}"
         }
@@ -114,7 +129,7 @@ sealed interface Type : Element {
 
     @Serializable
     data class Value(val value: Constant<@Contextual Any>) : Type {
-        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun rawType(messages: CompilerMessages, resolveGeneric: ResolveGenericFn?): Type = this
         override fun accepts(type: Type): ReasonedBoolean {
             return if (type is Value && value == type.value) ReasonedBoolean.True("$value is the same as ${type.value}")
             else if (type is Value) ReasonedBoolean.True("$value is not the same as ${type.value}")
@@ -130,7 +145,7 @@ sealed interface Type : Element {
 
     @Serializable
     data object Null : Type {
-        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun rawType(messages: CompilerMessages, resolveGeneric: ResolveGenericFn?): Type = this
         override fun toString(): String {
             return "null"
         }
@@ -150,7 +165,7 @@ sealed interface Type : Element {
      */
     @Serializable
     data object Undefined : Type {
-        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun rawType(messages: CompilerMessages, resolveGeneric: ResolveGenericFn?): Type = this
         override fun accepts(type: Type): ReasonedBoolean {
             return ReasonedBoolean.True("While the UNDEFINED type does not accept any types, the error is to be treated at the source (the type definition) an not its usage")
         }
@@ -166,15 +181,15 @@ sealed interface Type : Element {
         val dimensions: kotlin.Int = 1
     ) : Type {
 
-        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type {
-            return Array(elementType.resolveType(messages, generics), size, dimensions)
+        override fun rawType(messages: CompilerMessages, resolveGeneric: ResolveGenericFn?): Type {
+            return Array(elementType.rawType(messages, resolveGeneric), size, dimensions)
         }
 
         override fun accepts(type: Type): ReasonedBoolean {
             if (type !is Array) return ReasonedBoolean.False("$type is not an array and can therefore not be assigned to an array")
             val elementsAccept = this.elementType.acceptsInstanceOf(type.elementType)
             return if (elementsAccept.value) {
-                if(this.size != null && type.size != this.size) {
+                if (this.size != null && type.size != this.size) {
                     ReasonedBoolean.False("$this and $type have differing fixed sizes")
                 } else ReasonedBoolean.True("$type is an array with an assignable element type", elementsAccept)
             } else {
@@ -199,7 +214,7 @@ sealed interface Type : Element {
             return "boolean"
         }
 
-        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type = this
+        override fun rawType(messages: CompilerMessages, resolveGeneric: ResolveGenericFn?): Type = this
 
         override fun accepts(type: Type): ReasonedBoolean {
             return if (type is Boolean) {
@@ -217,10 +232,10 @@ sealed interface Type : Element {
 
     @Serializable
     data class FunctionTypeSignature(val returnType: Type?, val parameters: List<Parameter>) : Type {
-        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type {
+        override fun rawType(messages: CompilerMessages, resolveGeneric: ResolveGenericFn?): Type {
             return FunctionTypeSignature(
-                returnType?.resolveType(messages, generics),
-                parameters.map { it.copy(type = it.type.resolveType(messages, generics)) })
+                returnType?.rawType(messages, resolveGeneric),
+                parameters.map { it.copy(type = it.type.rawType(messages, resolveGeneric)) })
         }
 
         override fun accepts(type: Type): ReasonedBoolean {
@@ -248,70 +263,52 @@ sealed interface Type : Element {
     data class TypeReference(
         override val reference: Located<String>,
         val genericParameters: List<Located<Type>>
-    ) : AccessImpl<TypeDefinition>(), Type, Access.TypeAccess, ScopeAware {
-        @Transient override val restore = JitsuModule::getType
-        @Transient override val getSymbolId: JitsuModule.(TypeDefinition) -> SymbolID = JitsuModule::getSymbolID
-        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type {
-            val resolvedType = when (val target = target) {
-                null -> Undefined
-                is TypeDefinition.DirectTypeDefinition -> target.resolveType(messages, generics)
-                is TypeDefinition.TypeParameter -> generics[reference.value] ?: Undefined
+    ) : AccessImpl<TypeDefinition>(), Type, Access.TypeAccess, ScopeAware, Finalizable {
+        @Transient
+        override val restore = JitsuModule::getType
+        @Transient
+        override val getSymbolId: JitsuModule.(TypeDefinition) -> SymbolID = JitsuModule::getSymbolID
 
-                is TypeDefinition.ParameterizedType -> {
-                    val resolvedGenerics = genericParameters.mapIndexedNotNull { index, type ->
-                        val resolved = type.value.resolveType(messages, generics)
-                        val targetGenericName = target.generics.getOrNull(index)?.name?.value
-                        if (targetGenericName == null) {
-                            messages.error(
-                                "Generic parameter $resolved ($index) does not exist in the definition of $target",
-                                type.location,
-                                if (!target.generics.isEmpty())
-                                    CompilerMessage.Hint(
-                                        "Generics of target type are defined here",
-                                        target.generics.first().name.location.rangeTo(target.generics.last().name.location)
-                                    )
-                                else
-                                    CompilerMessage.Hint(
-                                        "Target type has no generics defined",
-                                        target.name.location
-                                    )
-                            )
-                            null
-                        } else resolved to targetGenericName
-                    }.associateBy({ it.second }, { it.first })
-                    target.toType(messages, resolvedGenerics)
-                }
+        override fun rawType(messages: CompilerMessages, resolveGeneric: ResolveGenericFn?): Type {
+            return when (val target = target) {
+                null -> Undefined
+                is TypeDefinition.DirectTypeDefinition -> target.rawType(messages, resolveGeneric)
+                is TypeDefinition.ParameterizedType -> resolveParameterized(messages, target, resolveGeneric)
             }
-            resolvedCache = resolvedType
-            return resolvedType
         }
 
-        lateinit var resolvedCache: Type
+        private fun resolveParameterized(
+            messages: CompilerMessages,
+            target: TypeDefinition.ParameterizedType,
+            resolveGeneric: ResolveGenericFn?
+        ): Type {
+            val resolvedGenerics = genericParameters.mapIndexedNotNull { index, type ->
+                val resolved = type.value.rawType(messages, resolveGeneric)
+                val targetGenericName = target.generics.getOrNull(index)?.name?.value
+                if (targetGenericName == null) {
+                    messages.error(
+                        "Generic parameter $resolved ($index) does not exist in the definition of $target",
+                        type.location,
+                        if (!target.generics.isEmpty())
+                            CompilerMessage.Hint(
+                                "Generics of target type are defined here",
+                                target.generics.first().name.location.rangeTo(target.generics.last().name.location)
+                            )
+                        else
+                            CompilerMessage.Hint(
+                                "Target type has no generics defined",
+                                target.name.location
+                            )
+                    )
+                    null
+                } else resolved to targetGenericName
+            }.associateBy({ it.second }, { it.first })
+            return target.toType(messages, resolvedGenerics)
+        }
+
+        @Transient lateinit var typeCache: Type
         override fun accepts(type: Type): ReasonedBoolean {
-            if (!this::resolvedCache.isInitialized) throw Error("Type reference $this cannot be used in type checking. Resolve it first")
-            if (resolvedCache == this) {
-                if (type is TypeReference) {
-                    if (type.reference.value != this.reference.value) {
-                        return ReasonedBoolean.False("${type.reference.value} is not guaranteed to match ${this.reference.value}")
-                    }
-                    if (type.genericParameters.size != this.genericParameters.size) {
-                        return ReasonedBoolean.False("Type references have different number of generic parameters")
-                    }
-                    for ((i, value) in this.genericParameters.mapIndexed { i, b -> i to b }) {
-                        if (type.genericParameters.size <= i) {
-                            return ReasonedBoolean.False("$type does not have generic parameter $i")
-                        }
-                        val accepts = type.genericParameters[i].value.acceptsInstanceOf(value.value)
-                        if (!accepts.value) {
-                            return ReasonedBoolean.False("$i of $type is not assignable to $value", accepts)
-                        }
-                    }
-                    return ReasonedBoolean.True("$type references the same type as $this")
-                } else {
-                    return ReasonedBoolean.False("$type is not assignable to $this")
-                }
-            }
-            return resolvedCache.accepts(type)
+            return this.typeCache.acceptsInstanceOf(type)
         }
 
         @Transient
@@ -320,7 +317,9 @@ sealed interface Type : Element {
         override fun resolve(messages: CompilerMessages): TypeDefinition? {
             target?.let { return it }
             val resolveType = scope.resolveType(reference, messages)
-            if(resolveType != null) setResolvedTarget(resolveType)
+            if (resolveType != null) {
+                setResolvedTarget(resolveType)
+            }
             return resolveType
         }
 
@@ -331,15 +330,19 @@ sealed interface Type : Element {
                 separator = ", "
             ) { it.value.toString() } else ""
         }
+
+        override fun finalize(messages: CompilerMessages) {
+            typeCache = rawType(messages)
+        }
     }
 
     @Serializable
     class Union(var options: List<Type>) : Type {
-        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type {
-            val resolvedOptions = options.map { it.resolveType(messages, generics) }
+        override fun rawType(messages: CompilerMessages, resolveGeneric: ResolveGenericFn?): Type {
+            val resolvedOptions = options.map { it.rawType(messages, resolveGeneric) }
                 .flatMap { type -> if (type is Union) type.options else listOf(type) }
                 .distinct()
-            return if(resolvedOptions.size>1) Union(resolvedOptions)
+            return if (resolvedOptions.size > 1) Union(resolvedOptions)
             else resolvedOptions.single()
         }
 
@@ -364,12 +367,19 @@ sealed interface Type : Element {
 
     @Serializable
     data class StructuralInterface(val fields: Map<String, TypeDefinition.ParameterizedType.Struct.Field>) : Type {
-        override fun resolveType(messages: CompilerMessages, generics: Map<String, Type>): Type {
-            return StructuralInterface(fields.mapValues { (_, b) -> b.copy(type = b.type.resolveType(messages, generics)) })
+        override fun rawType(messages: CompilerMessages, resolveGeneric: ResolveGenericFn?): Type {
+            return StructuralInterface(fields.mapValues { (_, b) ->
+                b.copy(
+                    type = b.type.rawType(
+                        messages,
+                        resolveGeneric
+                    )
+                )
+            })
         }
 
         override fun accepts(type: Type): ReasonedBoolean {
-            return ReasonedBoolean.False("structural inferface assignability not implemented yet")
+            return ReasonedBoolean.False("structural interface assignability not implemented yet")
         }
 
         override val children: List<Element> get() = fields.values.toList()

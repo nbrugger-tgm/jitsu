@@ -6,6 +6,7 @@ import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.common.locating.locatedAt
+import eu.nitok.jitsu.compiler.graph.behaviour.FunctionAware
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlin.math.min

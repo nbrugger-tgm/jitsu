@@ -2,6 +2,7 @@ package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.locating.Located
+import eu.nitok.jitsu.compiler.graph.behaviour.ScopeAware
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 

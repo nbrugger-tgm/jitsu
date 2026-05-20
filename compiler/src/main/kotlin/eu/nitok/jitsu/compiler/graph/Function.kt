@@ -3,6 +3,8 @@ package eu.nitok.jitsu.compiler.graph
 import eu.nitok.jitsu.common.locating.Locatable
 import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.compiler.analysis.FunctionSummary
+import eu.nitok.jitsu.compiler.graph.behaviour.FunctionAware
+import eu.nitok.jitsu.compiler.graph.behaviour.ScopeProvider
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 

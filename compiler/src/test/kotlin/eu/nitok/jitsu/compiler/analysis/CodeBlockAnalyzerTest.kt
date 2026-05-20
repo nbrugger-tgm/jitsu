@@ -8,6 +8,7 @@ import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.Function
 import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.locating.Located
+import eu.nitok.jitsu.compiler.graph.behaviour.ScopeAware
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test

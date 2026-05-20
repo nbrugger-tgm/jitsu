@@ -139,7 +139,7 @@ class CodeBlockAnalyzer(
     }
 
     private fun processVariableDeclaration(decl: VariableDeclaration) {
-        val expression: ExpressionResult? = decl.initialValue?.let { analyzeExpression(it, decl.declaredType) }
+        val expression: ExpressionResult? = decl.initialValue?.let { analyzeExpression(it, decl.declaredType?.rawType(messages)) }
         decl.implicitType = expression?.type
         val narrowedType: Type? = when {
             expression != null -> expression.type
@@ -347,7 +347,7 @@ class CodeBlockAnalyzer(
             .flatMap { it.paramDeps }
             .toSet()
         val returnType = call.calculateType(typeContext, messages) ?: run {
-            messages.error("Expected value but $call calls void function", call.location)
+            if(target != null) messages.error("Expected value but ${call.reference.value} is a void function", call.location)
             Type.Undefined
         }
         val targetDeterminsitic =

@@ -39,9 +39,13 @@ private sealed interface SignatureMatch {
     }
 }
 
+/**
+ * Structural equality indicated that the types are the same and at runtime could be assigned without any conversion
+ */
 private fun structuralyEqual(expected: Type, value: Type, messages: CompilerMessages): Boolean {
-    val expectedRaw = expected.resolveType(messages = messages, mapOf())
-    val valueRaw = value.resolveType(messages = messages, mapOf())
+    //TODO this raw type should be cached since it is just the non substituted raw type
+    val expectedRaw = expected.rawType(messages = messages) {generic, _ -> generic }
+    val valueRaw = value.rawType(messages = messages) { generic, _ -> generic }
     return expectedRaw == valueRaw
 }
 private fun Type.FunctionTypeSignature.matches(argumentTypes: Array<Located<Type>>): SignatureMatch {
