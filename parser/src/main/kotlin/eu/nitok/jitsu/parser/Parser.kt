@@ -37,40 +37,6 @@ fun parseJitsuModule(module: Path, name: String?): JitsuModuleAst {
     return JitsuModuleAst(name ?: module.name, sourceAsts, subModules.map { parseJitsuModule(it, null) }.toList())
 }
 
-fun parseJitsuModule(moduleFiles: Set<Path>, name: String): JitsuModuleAst {
-    val commonRoot = moduleFiles.reduce { acc, paths ->
-        var common = acc
-        while (!paths.startsWith(common)) {
-            common = acc.parent
-        }
-        common
-    }
-
-    val filesByModule = moduleFiles.groupBy({ it.parent }) { parseJitsuFile(it.readText(), it.toUri()) }
-
-    fun findSubModules(path: Path): List<JitsuModuleAst> {
-        val subModulesWithFiles = filesByModule.entries.asSequence()
-            .filter { it.key.parent.isSameFileAs(path) }
-            .map { JitsuModuleAst(it.key.name, it.value, findSubModules(it.key)) }
-            .toList()
-        val subModulesWithoutFiles = filesByModule.entries.asSequence()
-            .filter { it.key.parent.startsWith(path) }
-            .map {
-                var emptyModule = it.key
-                while(!it.key.parent.isSameFileAs(path)) {
-                    emptyModule = it.key.parent
-                }
-                emptyModule
-            }
-            .filter { filesByModule[it]?.isEmpty()?: true }
-            .map { JitsuModuleAst(it.name, emptyList(), findSubModules(it)) }
-            .toList()
-        return subModulesWithFiles + subModulesWithoutFiles
-    }
-
-    return JitsuModuleAst(name, filesByModule[commonRoot]?:listOf(), findSubModules(commonRoot))
-}
-
 fun parseJitsuFile(txt: String, uri: URI): SourceFileNode {
     val tokenSource = TokenSource(StringReader(txt), tokenizer);
     val tokens = FileTokenStream(uri, TokenStream.of(tokenSource))

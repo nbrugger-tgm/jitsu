@@ -8,7 +8,7 @@ import eu.nitok.jitsu.compiler.graph.buildJitsuModule
 import eu.nitok.jitsu.compiler.graph.restoreJitsuModule
 import eu.nitok.jitsu.gradle.json
 import eu.nitok.jitsu.parser.ast.JitsuModuleAst
-import eu.nitok.jitsu.parser.parseJitsuModule
+import eu.nitok.jitsu.parser.parseJitsuFile
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.decodeFromStream
@@ -18,12 +18,15 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
+import java.nio.file.Path
 import javax.inject.Inject
+import kotlin.io.path.readText
 
 @CacheableTask
 abstract class JitsuCompile @Inject constructor() : DefaultTask() {
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
+    @get:SkipWhenEmpty
     abstract val sources: ConfigurableFileCollection
 
     @get:OutputFile
@@ -51,7 +54,7 @@ abstract class JitsuCompile @Inject constructor() : DefaultTask() {
         graph.messages.warnings.forEach {
             logger.warn(it.format("w"))
         }
-        if(errors.isNotEmpty()) {
+        if (errors.isNotEmpty()) {
             errors.forEach { error ->
                 logger.warn(error.format("e"))
             }
@@ -62,15 +65,38 @@ abstract class JitsuCompile @Inject constructor() : DefaultTask() {
         moduleCache.writeText(json.encodeToString(graph))
         logger.info("Store module cache in $moduleCache")
     }
-
+    class ModuleDirectory(var name: String, var subModules: MutableList<ModuleDirectory>, var files: MutableList<Path>)
     protected fun parse(moduleName: String): Pair<JitsuModuleAst, List<CompilerMessage>> {
-        val sourceFiles = sources.files.map { it.toPath() }.toSet()
-        val ast = parseJitsuModule(sourceFiles, moduleName)
-        val allAstElements = ast.allModules.flatMap { it.files }.flatMap {file -> file.sequence() }.toList()
+        val rootMod = getSourceModules(moduleName)
+        fun parse(folder: ModuleDirectory):JitsuModuleAst = JitsuModuleAst(
+            folder.name,
+            folder.files.map { parseJitsuFile(it.readText(), it.toUri()) },
+            folder.subModules.map { parse(it) }
+        )
+        val ast = parse(rootMod)
+        val allAstElements = ast.allModules.flatMap { it.files }.flatMap { file -> file.sequence() }.toList()
         val allErrors = allAstElements.flatMap { it.errors }
         allAstElements.flatMap { it.warnings }.forEach {
             logger.warn(it.format("warn"))
         }
         return ast to allErrors
+    }
+
+    private fun getSourceModules(moduleName: String): ModuleDirectory {
+        val rootMod = ModuleDirectory(moduleName, mutableListOf(), mutableListOf())
+        run {
+            val mods = mutableMapOf<String, ModuleDirectory>()
+            sources.asFileTree.visit {
+                if (it.isDirectory) {
+                    val mod = mods.getOrPut(it.path) {
+                        ModuleDirectory(it.name, mutableListOf(), mutableListOf())
+                    }
+                    (mods[it.relativePath.parent.pathString] ?: rootMod).subModules.add(mod)
+                } else {
+                    (mods[it.relativePath.parent.pathString] ?: rootMod).files.add(it.file.toPath())
+                }
+            }
+        }
+        return rootMod
     }
 }

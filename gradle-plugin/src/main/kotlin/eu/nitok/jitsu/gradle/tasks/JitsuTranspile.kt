@@ -25,6 +25,7 @@ abstract class JitsuTranspile @Inject constructor() : DefaultTask() {
 
     @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
+    @get:SkipWhenEmpty
     abstract val moduleFile: RegularFileProperty
 
     @get:OutputDirectory
