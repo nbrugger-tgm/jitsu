@@ -1,11 +1,11 @@
 package capabilities
 
 import eu.nitok.jitsu.common.mapTree
-import eu.nitok.jitsu.compiler.graph.*
-import eu.nitok.jitsu.compiler.graph.Function
-import eu.nitok.jitsu.compiler.graph.TypeDefinition.DirectTypeDefinition.Enum
-import eu.nitok.jitsu.compiler.graph.TypeDefinition.DirectTypeDefinition.TypeParameter
-import eu.nitok.jitsu.compiler.graph.TypeDefinition.ParameterizedType.*
+import eu.nitok.jitsu.compiler.graph.api.*
+import eu.nitok.jitsu.compiler.graph.api.Function
+import eu.nitok.jitsu.compiler.graph.api.TypeDefinition.DirectTypeDefinition.Enum
+import eu.nitok.jitsu.compiler.graph.api.TypeDefinition.DirectTypeDefinition.TypeParameter
+import eu.nitok.jitsu.compiler.graph.api.TypeDefinition.ParameterizedType.*
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
 import range
@@ -44,14 +44,14 @@ private fun TypeDefinition.additionalInfo(): String?{
 }
 private fun Type.additionalInfo(): String?{
     return when(this) {
-        is Type.TypeReference -> if(typeCache != this) typeCache.additionalInfo() else target.toString()
+        is Type.TypeReference -> if(rawType != this) rawType.additionalInfo() else target.toString()
         else -> toString()
     }
 }
 private fun TypeDefinition.symbolKind() = when (this) {
     is Enum -> SymbolKind.Enum
     is Interface -> SymbolKind.Interface
-    is Alias -> type.resolveTypeKind()
+    is Alias  -> type.resolveTypeKind()
     is Struct -> SymbolKind.Struct
     is Class -> SymbolKind.Class
     is TypeParameter -> SymbolKind.TypeParameter
@@ -62,14 +62,13 @@ private fun Type.resolveTypeKind(): SymbolKind {
         is Type.Float,
         is Type.Int,
         is Type.UInt -> SymbolKind.Number
-
         is Type.Value -> SymbolKind.Constant
         is Type.Array -> SymbolKind.Array
-        Type.Boolean -> SymbolKind.Boolean
+        is Type.Boolean -> SymbolKind.Boolean
         is Type.FunctionTypeSignature -> SymbolKind.Function
-        Type.Null -> SymbolKind.Null
+        is Type.Null -> SymbolKind.Null
         is Type.TypeReference -> target?.symbolKind()?: SymbolKind.Null
-        Type.Undefined -> SymbolKind.Null
+        is Type.Undefined -> SymbolKind.Null
         is Type.Union -> SymbolKind.Enum
         is Type.StructuralInterface -> SymbolKind.Interface
         is Enum ->  SymbolKind.Enum

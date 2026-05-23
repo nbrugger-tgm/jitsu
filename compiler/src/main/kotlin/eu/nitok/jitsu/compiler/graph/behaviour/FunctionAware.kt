@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.compiler.graph.behaviour
 
-import eu.nitok.jitsu.compiler.graph.Function
+import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 
-interface FunctionAware {
-    fun setEnclosingFunction(parent: Function)
+internal interface FunctionAware {
+    fun setEnclosingFunction(parent: FunctionElement)
 }

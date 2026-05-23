@@ -2,20 +2,18 @@ package eu.nitok.jitsu.compiler.bitcode
 
 import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.common.locating.Located
-import eu.nitok.jitsu.common.locating.Position
 import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.common.sequence
-import eu.nitok.jitsu.compiler.analysis.AbstractValue
-import eu.nitok.jitsu.compiler.analysis.FunctionSummary
+import eu.nitok.jitsu.compiler.analysis.AbstractValueElement
+import eu.nitok.jitsu.compiler.analysis.FunctionSummaryElement
 import eu.nitok.jitsu.compiler.analysis.OwnershipState
-import eu.nitok.jitsu.compiler.analysis.ReturnSummary
-import eu.nitok.jitsu.compiler.analysis.VariableSummary
-import eu.nitok.jitsu.compiler.graph.Function
-import eu.nitok.jitsu.compiler.graph.JitsuFile
-import eu.nitok.jitsu.compiler.graph.JitsuModule
-import eu.nitok.jitsu.compiler.graph.Type
-import eu.nitok.jitsu.compiler.graph.VariableDeclaration
+import eu.nitok.jitsu.compiler.analysis.ReturnSummaryElement
+import eu.nitok.jitsu.compiler.analysis.VariableSummaryElement
+import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
+import eu.nitok.jitsu.compiler.graph.elements.JitsuFile
+import eu.nitok.jitsu.compiler.graph.elements.types.Type
+import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
 import eu.nitok.jitsu.compiler.graph.buildJitsuModule
 import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
@@ -39,23 +37,23 @@ class VariableRegistryTest {
         return graph.files[0]
     }
 
-    private fun firstFunction(source: String): Function =
-        buildFile(source).sequence().filterIsInstance<Function>().first()
+    private fun firstFunction(source: String): FunctionElement =
+        buildFile(source).sequence().filterIsInstance<FunctionElement>().first()
 
-    private fun functionNamed(source: String, name: String): Function =
-        buildFile(source).sequence().filterIsInstance<Function>().first { it.name?.value == name }
+    private fun functionNamed(source: String, name: String): FunctionElement =
+        buildFile(source).sequence().filterIsInstance<FunctionElement>().first { it.name?.value == name }
 
-    /** Attach a [FunctionSummary] to the function via reflection (field is `internal set`). */
-    private fun Function.withSummary(summary: FunctionSummary): Function {
-        val field = Function::class.java.getDeclaredField("summary")
+    /** Attach a [FunctionSummaryElement] to the function via reflection (field is `internal set`). */
+    private fun FunctionElement.withSummary(summary: FunctionSummaryElement): FunctionElement {
+        val field = FunctionElement::class.java.getDeclaredField("summary")
         field.isAccessible = true
         field.set(this, summary)
         return this
     }
 
-    private fun minimalSummary(variableSummary: Map<String, VariableSummary> = emptyMap()) =
-        FunctionSummary(
-            returnSummary = ReturnSummary(deterministic = ReasonedBoolean.True("test")),
+    private fun minimalSummary(variableSummary: Map<String, VariableSummaryElement> = emptyMap()) =
+        FunctionSummaryElement(
+            returnSummary = ReturnSummaryElement(deterministic = ReasonedBoolean.True("test")),
             noSideEffects = ReasonedBoolean.True("test"),
             variableSummary = variableSummary
         )
@@ -67,9 +65,9 @@ class VariableRegistryTest {
         minimalSummary(names.associateWith { variableSummary(OwnershipState.BORROWS) })
 
     private fun variableSummary(ownershipState: OwnershipState) =
-        VariableSummary(
+        VariableSummaryElement(
             ownershipState = ownershipState,
-            compileTimeValue = AbstractValue.Unknown
+            compileTimeValue = AbstractValueElement.Unknown
         )
 
     private fun variableDecl(name: String, type: Type): VariableDeclaration =
@@ -80,8 +78,8 @@ class VariableRegistryTest {
             initialValue = null
         )
 
-    private fun parameter(name: String, type: Type): Function.Parameter =
-        Function.Parameter(
+    private fun parameter(name: String, type: Type): FunctionElement.Parameter =
+        FunctionElement.Parameter(
             name = loc(name),
             declaredType = type,
             initialValue = null
@@ -222,11 +220,11 @@ class VariableRegistryTest {
         @Test
         fun `registry tracks variable declared in function body`() {
             val file = buildFile("fn f(): i32 { var x: i32 = 5; return x; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as Function.Body.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "x" }
 
             val entry = lowering.variableRegistry.getEntry(varDecl)
@@ -245,11 +243,11 @@ class VariableRegistryTest {
                 }
                 """.trimIndent()
             )
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val decls = (fn.body as Function.Body.Implementation).block.instructions
+            val decls = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
                 .filterIsInstance<VariableDeclaration>()
 
             val declA = decls.first { it.name.value == "a" }
@@ -265,7 +263,7 @@ class VariableRegistryTest {
             lowering.lower()
 
             // variablesToFree must be a subset of all registered entries
-            val allEntries = (fn.body as Function.Body.Implementation).block.instructions
+            val allEntries = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
                 .filterIsInstance<VariableDeclaration>()
                 .map { lowering.variableRegistry.getEntry(it) }
             val toFree = lowering.variableRegistry.variablesToFree
@@ -275,11 +273,11 @@ class VariableRegistryTest {
         @Test
         fun `registry getLowLevelType for array variable returns JitsuArray`() {
             val file = buildFile("fn f() { var arr: i32[] = [1, 2]; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as Function.Body.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "arr" }
 
             assertThat(lowering.variableRegistry.getLowLevelType(varDecl))

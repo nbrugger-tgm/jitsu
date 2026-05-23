@@ -5,10 +5,21 @@ import eu.nitok.jitsu.common.locating.Position
 import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.compiler.graph.*
-import eu.nitok.jitsu.compiler.graph.Function
+import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.locating.Located
+import eu.nitok.jitsu.compiler.graph.elements.CodeBlockElement
+import eu.nitok.jitsu.compiler.graph.api.Expression
+import eu.nitok.jitsu.compiler.graph.api.Instruction
+import eu.nitok.jitsu.compiler.graph.behaviour.ModuleAware
+import eu.nitok.jitsu.compiler.graph.elements.types.Type
 import eu.nitok.jitsu.compiler.graph.behaviour.ScopeAware
+import eu.nitok.jitsu.compiler.graph.elements.JitsuModule
+import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
+import eu.nitok.jitsu.compiler.graph.elements.expressions.Constant
+import eu.nitok.jitsu.compiler.graph.elements.expressions.VariableReference
+import eu.nitok.jitsu.compiler.graph.elements.instructions.FunctionCall
+import eu.nitok.jitsu.compiler.graph.elements.instructions.Return
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -21,7 +32,7 @@ class CodeBlockAnalyzerTest {
     private val i8 = Type.Int(BitSize.BIT_8)
     private val i32 = Type.Int(BitSize.BIT_32)
     private val messages = CompilerMessages()
-    private val noOracle: (Function) -> FunctionSummary? = { null }
+    private val noOracle: (FunctionElement) -> FunctionSummaryElement? = { null }
     private var module = JitsuModule("test", listOf(), listOf())
 
     private fun <T> T.modularized():T {
@@ -34,24 +45,24 @@ class CodeBlockAnalyzerTest {
     private fun buildFunction(
         name: String? = "foo",
         returnType: Type? = null,
-        parameters: List<Function.Parameter> = emptyList(),
+        parameters: List<FunctionElement.Parameter> = emptyList(),
         instructions: List<Instruction> = emptyList()
-    ): Function = Function(
+    ): FunctionElement = FunctionElement(
         name = name?.let { loc(it) },
         returnType = returnType?.let { loc(it) },
         parameters = parameters,
-        body = Function.Body.Implementation(CodeBlock(instructions)),
+        body = FunctionElement.BodyElement.Implementation(CodeBlockElement(instructions)),
         dummyLocation
     ).modularized()
 
-    private fun param(name: String, type: Type): Function.Parameter =
-        Function.Parameter(loc(name), type, null).modularized()
+    private fun param(name: String, type: Type): FunctionElement.Parameter =
+        FunctionElement.Parameter(loc(name), type, null).modularized()
 
     private fun constInt(value: Long): Constant.IntConstant =
         Constant.IntConstant(value, dummyLocation).modularized()
 
-    private fun varRef(name: String): Expression.VariableReference =
-        Expression.VariableReference(loc(name)).modularized()
+    private fun varRef(name: String): VariableReference =
+        VariableReference(loc(name)).modularized()
 
     private fun varDecl(
         name: String,
@@ -65,12 +76,12 @@ class CodeBlockAnalyzerTest {
         initialValue = initialValue
     ).modularized()
 
-    private fun ret(value: Expression? = null): Instruction.Return =
-        Instruction.Return(value, dummyLocation).modularized()
+    private fun ret(value: Expression? = null): Return =
+        Return(value, dummyLocation).modularized()
 
     private fun analyze(
-        fn: Function,
-        oracle: (Function) -> FunctionSummary? = noOracle
+        fn: FunctionElement,
+        oracle: (FunctionElement) -> FunctionSummaryElement? = noOracle
     ): CodeBlockAnalyzer.AnalysisResult =
         CodeBlockAnalyzer(fn, oracle, messages).analyze()
 
@@ -121,7 +132,7 @@ class CodeBlockAnalyzerTest {
             val result = analyze(fn)
             val returnSummary = result.functionSummary.returnSummary
             assertThat(returnSummary).isNotNull()
-            assertThat(returnSummary!!.compileTimeValue).isEqualTo(AbstractValue.Const("5", i8))
+            assertThat(returnSummary!!.compileTimeValue).isEqualTo(AbstractValueElement.Const("5", i8))
         }
 
         @Test
@@ -164,7 +175,7 @@ class CodeBlockAnalyzerTest {
             )
             val result = analyze(fn)
             assertThat(result.functionSummary.returnSummary!!.compileTimeValue)
-                .isEqualTo(AbstractValue.Unknown)
+                .isEqualTo(AbstractValueElement.Unknown)
         }
 
         @Test
@@ -202,7 +213,7 @@ class CodeBlockAnalyzerTest {
             val result = analyze(fn)
             val xSummary = result.functionSummary.variableSummary.entries
                 .first { it.key == "x" }.value
-            assertThat(xSummary.compileTimeValue).isEqualTo(AbstractValue.Const("5", i8))
+            assertThat(xSummary.compileTimeValue).isEqualTo(AbstractValueElement.Const("5", i8))
         }
 
         @Test
@@ -232,8 +243,8 @@ class CodeBlockAnalyzerTest {
     @Nested
     inner class PureCallee {
 
-        private val pureSummary = FunctionSummary(
-            returnSummary = ReturnSummary(deterministic = ReasonedBoolean.True("pure")),
+        private val pureSummary = FunctionSummaryElement(
+            returnSummary = ReturnSummaryElement(deterministic = ReasonedBoolean.True("pure")),
             noSideEffects = ReasonedBoolean.True("pure"),
             variableSummary = mapOf()
         )
@@ -245,13 +256,13 @@ class CodeBlockAnalyzerTest {
             val ref = varRef("x")
             ref.setResolvedTarget(xParam)
 
-            val callInstr = Instruction.FunctionCall(loc("bar"), listOf(ref), dummyLocation).modularized()
+            val callInstr = FunctionCall(loc("bar"), listOf(ref), dummyLocation).modularized()
             callInstr.setResolvedTarget(calleeFunc)
 
             val fn = buildFunction(
                 returnType = i32,
                 parameters = listOf(xParam),
-                instructions = listOf(Instruction.Return(callInstr, dummyLocation))
+                instructions = listOf(Return(callInstr, dummyLocation))
             )
             val result = analyze(fn) { if (it == calleeFunc) pureSummary else null }
             assertThat(result.functionSummary.returnSummary!!.deterministic.value).isTrue()
@@ -264,13 +275,13 @@ class CodeBlockAnalyzerTest {
             val ref = varRef("x")
             ref.setResolvedTarget(xParam)
 
-            val callInstr = Instruction.FunctionCall(loc("bar"), listOf(ref), dummyLocation).modularized()
+            val callInstr = FunctionCall(loc("bar"), listOf(ref), dummyLocation).modularized()
             callInstr.setResolvedTarget(calleeFunc)
 
             val fn = buildFunction(
                 returnType = i32,
                 parameters = listOf(xParam),
-                instructions = listOf(Instruction.Return(callInstr, dummyLocation))
+                instructions = listOf(Return(callInstr, dummyLocation))
             )
             val result = analyze(fn) { if (it == calleeFunc) pureSummary else null }
             assertThat(result.functionSummary.noSideEffects.value).isTrue()
@@ -279,7 +290,7 @@ class CodeBlockAnalyzerTest {
         @Test
         fun `callee name appears in callees list`() {
             val calleeFunc = buildFunction("bar", i32)
-            val callInstr = Instruction.FunctionCall(loc("bar"), emptyList(), dummyLocation).modularized()
+            val callInstr = FunctionCall(loc("bar"), emptyList(), dummyLocation).modularized()
             callInstr.setResolvedTarget(calleeFunc)
 
             val fn = buildFunction(instructions = listOf(callInstr))
@@ -294,8 +305,8 @@ class CodeBlockAnalyzerTest {
     @Nested
     inner class ImpureCallee {
 
-        private val impureSummary = FunctionSummary(
-            returnSummary = ReturnSummary(deterministic = ReasonedBoolean.True("det")),
+        private val impureSummary = FunctionSummaryElement(
+            returnSummary = ReturnSummaryElement(deterministic = ReasonedBoolean.True("det")),
             noSideEffects = ReasonedBoolean.False("side effects"),
             variableSummary = mapOf()
         )
@@ -303,7 +314,7 @@ class CodeBlockAnalyzerTest {
         @Test
         fun `calling impure callee taints function with side effects`() {
             val calleeFunc = buildFunction("bar")
-            val callInstr = Instruction.FunctionCall(loc("bar"), emptyList(), dummyLocation).modularized()
+            val callInstr = FunctionCall(loc("bar"), emptyList(), dummyLocation).modularized()
             callInstr.setResolvedTarget(calleeFunc)
 
             val fn = buildFunction(instructions = listOf(callInstr))
@@ -314,7 +325,7 @@ class CodeBlockAnalyzerTest {
         @Test
         fun `calling impure callee makes function impure`() {
             val calleeFunc = buildFunction("bar")
-            val callInstr = Instruction.FunctionCall(loc("bar"), emptyList(), dummyLocation).modularized()
+            val callInstr = FunctionCall(loc("bar"), emptyList(), dummyLocation).modularized()
             callInstr.setResolvedTarget(calleeFunc)
 
             val fn = buildFunction(instructions = listOf(callInstr))

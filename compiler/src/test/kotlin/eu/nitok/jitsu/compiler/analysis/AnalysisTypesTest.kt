@@ -2,7 +2,8 @@ package eu.nitok.jitsu.compiler.analysis
 
 import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.common.ReasonedBoolean
-import eu.nitok.jitsu.compiler.graph.Type
+import eu.nitok.jitsu.compiler.graph.api.analysis.ParameterMode
+import eu.nitok.jitsu.compiler.graph.elements.types.Type
 import kotlinx.serialization.json.Json
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
@@ -16,50 +17,50 @@ class AnalysisTypesTest {
     inner class AbstractValueJoinTest {
         @Test
         fun `NoValue join Const returns Const`() {
-            val result = AbstractValue.NoValue.join(AbstractValue.Const("5", valueType = i32))
-            assertThat(result).isEqualTo(AbstractValue.Const("5", valueType = i32))
+            val result = AbstractValueElement.NoValue.join(AbstractValueElement.Const("5", valueType = i32))
+            assertThat(result).isEqualTo(AbstractValueElement.Const("5", valueType = i32))
         }
 
         @Test
         fun `Const join NoValue returns Const`() {
-            val result = AbstractValue.Const("5", valueType = i32).join(AbstractValue.NoValue)
-            assertThat(result).isEqualTo(AbstractValue.Const("5", valueType = i32))
+            val result = AbstractValueElement.Const("5", valueType = i32).join(AbstractValueElement.NoValue)
+            assertThat(result).isEqualTo(AbstractValueElement.Const("5", valueType = i32))
         }
 
         @Test
         fun `same Const join same Const returns same Const`() {
-            val result = AbstractValue.Const("5", valueType = i32).join(AbstractValue.Const("5", valueType = i32))
-            assertThat(result).isEqualTo(AbstractValue.Const("5", valueType = i32))
+            val result = AbstractValueElement.Const("5", valueType = i32).join(AbstractValueElement.Const("5", valueType = i32))
+            assertThat(result).isEqualTo(AbstractValueElement.Const("5", valueType = i32))
         }
 
         @Test
         fun `different Consts join to Unknown`() {
-            val result = AbstractValue.Const("5", valueType = i32).join(AbstractValue.Const("3", valueType = i32))
-            assertThat(result).isEqualTo(AbstractValue.Unknown)
+            val result = AbstractValueElement.Const("5", valueType = i32).join(AbstractValueElement.Const("3", valueType = i32))
+            assertThat(result).isEqualTo(AbstractValueElement.Unknown)
         }
 
         @Test
         fun `Unknown join Const returns Unknown`() {
-            val result = AbstractValue.Unknown.join(AbstractValue.Const("5", valueType = i32))
-            assertThat(result).isEqualTo(AbstractValue.Unknown)
+            val result = AbstractValueElement.Unknown.join(AbstractValueElement.Const("5", valueType = i32))
+            assertThat(result).isEqualTo(AbstractValueElement.Unknown)
         }
 
         @Test
         fun `Const join Unknown returns Unknown`() {
-            val result = AbstractValue.Const("5", valueType = i32).join(AbstractValue.Unknown)
-            assertThat(result).isEqualTo(AbstractValue.Unknown)
+            val result = AbstractValueElement.Const("5", valueType = i32).join(AbstractValueElement.Unknown)
+            assertThat(result).isEqualTo(AbstractValueElement.Unknown)
         }
 
         @Test
         fun `NoValue join NoValue returns NoValue`() {
-            val result = AbstractValue.NoValue.join(AbstractValue.NoValue)
-            assertThat(result).isEqualTo(AbstractValue.NoValue)
+            val result = AbstractValueElement.NoValue.join(AbstractValueElement.NoValue)
+            assertThat(result).isEqualTo(AbstractValueElement.NoValue)
         }
 
         @Test
         fun `Unknown join Unknown returns Unknown`() {
-            val result = AbstractValue.Unknown.join(AbstractValue.Unknown)
-            assertThat(result).isEqualTo(AbstractValue.Unknown)
+            val result = AbstractValueElement.Unknown.join(AbstractValueElement.Unknown)
+            assertThat(result).isEqualTo(AbstractValueElement.Unknown)
         }
     }
 
@@ -68,19 +69,19 @@ class AnalysisTypesTest {
 
         @Test
         fun `optimistic seed has no side effects`() {
-            val summary = FunctionSummary.optimistic(listOf("x"))
+            val summary = FunctionSummaryElement.optimistic(listOf("x"))
             assertThat(summary.noSideEffects.value).isTrue()
         }
 
         @Test
         fun `optimistic seed is pure`() {
-            val summary = FunctionSummary.optimistic(listOf())
+            val summary = FunctionSummaryElement.optimistic(listOf())
             assertThat(summary.pure).isTrue()
         }
 
         @Test
         fun `optimistic seed has all params as BORROW`() {
-            val summary = FunctionSummary.optimistic(listOf("a", "b", "c"))
+            val summary = FunctionSummaryElement.optimistic(listOf("a", "b", "c"))
             assertThat(summary.parameterModes).containsExactlyInAnyOrderEntriesOf(
                 mapOf("a" to ParameterMode.BORROW, "b" to ParameterMode.BORROW, "c" to ParameterMode.BORROW)
             )
@@ -88,13 +89,13 @@ class AnalysisTypesTest {
 
         @Test
         fun `optimistic seed has no return summary`() {
-            val summary = FunctionSummary.optimistic(listOf("x"))
+            val summary = FunctionSummaryElement.optimistic(listOf("x"))
             assertThat(summary.returnSummary).isNull()
         }
 
         @Test
         fun `optimistic seed has no callees`() {
-            val summary = FunctionSummary.optimistic(listOf("x"))
+            val summary = FunctionSummaryElement.optimistic(listOf("x"))
             assertThat(summary.callees).isEmpty()
         }
     }
@@ -103,9 +104,9 @@ class AnalysisTypesTest {
     inner class FunctionSummaryRefineWithTest {
         @Test
         fun `refining deterministic with non-deterministic produces non-deterministic`() {
-            val optimistic = FunctionSummary.optimistic(listOf("x"))
+            val optimistic = FunctionSummaryElement.optimistic(listOf("x"))
             val nonDet = optimistic.copy(
-                returnSummary = ReturnSummary(
+                returnSummary = ReturnSummaryElement(
                     deterministic = ReasonedBoolean.False("callee is non-deterministic")
                 )
             )
@@ -115,7 +116,7 @@ class AnalysisTypesTest {
 
         @Test
         fun `refining with MOVE param produces MOVE`() {
-            val optimistic = FunctionSummary.optimistic(listOf("x"))
+            val optimistic = FunctionSummaryElement.optimistic(listOf("x"))
             val withMove = optimistic.copy(parameterModes = mapOf("x" to ParameterMode.MOVE))
             val refined = optimistic.refineWith(withMove)
             assertThat(refined.parameterModes["x"]).isEqualTo(ParameterMode.MOVE)
@@ -123,14 +124,14 @@ class AnalysisTypesTest {
 
         @Test
         fun `refining with parameter influence grows the set`() {
-            val a = FunctionSummary.optimistic(listOf("x", "y")).copy(
-                returnSummary = ReturnSummary(
+            val a = FunctionSummaryElement.optimistic(listOf("x", "y")).copy(
+                returnSummary = ReturnSummaryElement(
                     dependsOnParameters = setOf("x"),
                     deterministic = ReasonedBoolean.True("Optimistic")
                 )
             )
-            val b = FunctionSummary.optimistic(listOf("x", "y")).copy(
-                returnSummary = ReturnSummary(
+            val b = FunctionSummaryElement.optimistic(listOf("x", "y")).copy(
+                returnSummary = ReturnSummaryElement(
                     dependsOnParameters = setOf("y"),
                     deterministic = ReasonedBoolean.True("Optimistic")
                 )
@@ -141,7 +142,7 @@ class AnalysisTypesTest {
 
         @Test
         fun `refining side effects with impure produces impure`() {
-            val optimistic = FunctionSummary.optimistic(listOf())
+            val optimistic = FunctionSummaryElement.optimistic(listOf())
             val impure = optimistic.copy(
                 noSideEffects = ReasonedBoolean.False("callee has side effects"),
             )
@@ -152,8 +153,8 @@ class AnalysisTypesTest {
 
         @Test
         fun `double refinement is idempotent`() {
-            val a = FunctionSummary.optimistic(listOf("x")).copy(
-                returnSummary = ReturnSummary(
+            val a = FunctionSummaryElement.optimistic(listOf("x")).copy(
+                returnSummary = ReturnSummaryElement(
                     dependsOnParameters = setOf("x"),
                     deterministic = ReasonedBoolean.True("Optimistic")
                 ),
@@ -167,18 +168,18 @@ class AnalysisTypesTest {
 
         @Test
         fun `refining return summaries merges types`() {
-            val a = FunctionSummary.optimistic(listOf()).copy(
-                returnSummary = ReturnSummary(
+            val a = FunctionSummaryElement.optimistic(listOf()).copy(
+                returnSummary = ReturnSummaryElement(
                     possibleTypes = listOf(i32),
-                    compileTimeValue = AbstractValue.Const("5", valueType = i32),
+                    compileTimeValue = AbstractValueElement.Const("5", valueType = i32),
                     dependsOnParameters = emptySet(),
                     deterministic = ReasonedBoolean.True("optimistic")
                 )
             )
-            val b = FunctionSummary.optimistic(listOf()).copy(
-                returnSummary = ReturnSummary(
+            val b = FunctionSummaryElement.optimistic(listOf()).copy(
+                returnSummary = ReturnSummaryElement(
                     possibleTypes = listOf(Type.Boolean),
-                    compileTimeValue = AbstractValue.Const("true", valueType = Type.Boolean),
+                    compileTimeValue = AbstractValueElement.Const("true", valueType = Type.Boolean),
                     dependsOnParameters = emptySet(),
                     deterministic = ReasonedBoolean.True("optimistic")
                 )
@@ -186,7 +187,7 @@ class AnalysisTypesTest {
             val refined = a.refineWith(b)
             assertThat(refined.returnSummary).isNotNull
             assertThat(refined.returnSummary!!.possibleTypes).containsExactlyInAnyOrder(i32, Type.Boolean)
-            assertThat(refined.returnSummary!!.compileTimeValue).isEqualTo(AbstractValue.Unknown)
+            assertThat(refined.returnSummary!!.compileTimeValue).isEqualTo(AbstractValueElement.Unknown)
         }
     }
 
@@ -194,15 +195,15 @@ class AnalysisTypesTest {
     inner class StructuralEqualityTest {
         @Test
         fun `identical summaries are structurally equal`() {
-            val a = FunctionSummary.optimistic(listOf("x"))
-            val b = FunctionSummary.optimistic(listOf("x"))
+            val a = FunctionSummaryElement.optimistic(listOf("x"))
+            val b = FunctionSummaryElement.optimistic(listOf("x"))
             assertThat(a.structurallyEquals(b)).isTrue()
         }
 
         @Test
         fun `different determinism is not structurally equal`() {
-            val a = FunctionSummary.optimistic(listOf("x"))
-            val b = a.copy(returnSummary = ReturnSummary(
+            val a = FunctionSummaryElement.optimistic(listOf("x"))
+            val b = a.copy(returnSummary = ReturnSummaryElement(
                 deterministic = ReasonedBoolean.False("")
             ))
             assertThat(a.structurallyEquals(b)).isFalse()
@@ -236,21 +237,21 @@ class AnalysisTypesTest {
     inner class ReturnSummaryMergeTest {
         @Test
         fun `merging with same type keeps single entry`() {
-            val a = ReturnSummary(listOf(i32), AbstractValue.Const("5", valueType = i32), setOf("x"), ReasonedBoolean.True(""))
-            val b = ReturnSummary(listOf(i32), AbstractValue.Const("5", valueType = i32), setOf("y"), ReasonedBoolean.True(""))
+            val a = ReturnSummaryElement(listOf(i32), AbstractValueElement.Const("5", valueType = i32), setOf("x"), ReasonedBoolean.True(""))
+            val b = ReturnSummaryElement(listOf(i32), AbstractValueElement.Const("5", valueType = i32), setOf("y"), ReasonedBoolean.True(""))
             val merged = a.mergeWith(b)
             // distinct() means duplicate i32 is removed
             assertThat(merged.possibleTypes).containsExactly(i32)
-            assertThat(merged.compileTimeValue).isEqualTo(AbstractValue.Const("5", valueType = i32))
+            assertThat(merged.compileTimeValue).isEqualTo(AbstractValueElement.Const("5", valueType = i32))
             assertThat(merged.dependsOnParameters).containsExactlyInAnyOrder("x", "y")
         }
 
         @Test
         fun `merging with different const values produces Unknown`() {
-            val a = ReturnSummary(listOf(i32), AbstractValue.Const("5", valueType = i32), emptySet(), ReasonedBoolean.True(""))
-            val b = ReturnSummary(listOf(i32), AbstractValue.Const("3", valueType = i32), emptySet(), ReasonedBoolean.True(""))
+            val a = ReturnSummaryElement(listOf(i32), AbstractValueElement.Const("5", valueType = i32), emptySet(), ReasonedBoolean.True(""))
+            val b = ReturnSummaryElement(listOf(i32), AbstractValueElement.Const("3", valueType = i32), emptySet(), ReasonedBoolean.True(""))
             val merged = a.mergeWith(b)
-            assertThat(merged.compileTimeValue).isEqualTo(AbstractValue.Unknown)
+            assertThat(merged.compileTimeValue).isEqualTo(AbstractValueElement.Unknown)
         }
     }
 
@@ -261,52 +262,52 @@ class AnalysisTypesTest {
         @Test
         fun `AbstractValue round-trips through JSON`() {
             val values = listOf(
-                AbstractValue.NoValue,
-                AbstractValue.Const("42", valueType = i32),
-                AbstractValue.Unknown
+                AbstractValueElement.NoValue,
+                AbstractValueElement.Const("42", valueType = i32),
+                AbstractValueElement.Unknown
             )
             for (value in values) {
-                val serialized = json.encodeToString(AbstractValue.serializer(), value)
-                val deserialized = json.decodeFromString(AbstractValue.serializer(), serialized)
+                val serialized = json.encodeToString(AbstractValueElement.serializer(), value)
+                val deserialized = json.decodeFromString(AbstractValueElement.serializer(), serialized)
                 assertThat(deserialized).isEqualTo(value)
             }
         }
 
         @Test
         fun `ReturnSummary round-trips through JSON`() {
-            val summary = ReturnSummary(
+            val summary = ReturnSummaryElement(
                 possibleTypes = listOf(i32, Type.Boolean),
-                compileTimeValue = AbstractValue.Const("5", valueType = i32),
+                compileTimeValue = AbstractValueElement.Const("5", valueType = i32),
                 dependsOnParameters = setOf("x", "y"),
                 deterministic =  ReasonedBoolean.True("abc")
             )
-            val serialized = json.encodeToString(ReturnSummary.serializer(), summary)
-            val deserialized = json.decodeFromString(ReturnSummary.serializer(), serialized)
+            val serialized = json.encodeToString(ReturnSummaryElement.serializer(), summary)
+            val deserialized = json.decodeFromString(ReturnSummaryElement.serializer(), serialized)
             assertThat(deserialized).isEqualTo(summary)
         }
 
         @Test
         fun `VariableSummary round-trips through JSON`() {
-            val summary = VariableSummary(
+            val summary = VariableSummaryElement(
                 declaredType = i32,
                 narrowedType = i32,
                 effectivelyConstant = ReasonedBoolean.True("it is how it is"),
-                compileTimeValue = AbstractValue.Const("42", valueType = i32),
+                compileTimeValue = AbstractValueElement.Const("42", valueType = i32),
                 ownershipState = OwnershipState.OWNS
             )
-            val serialized = json.encodeToString(VariableSummary.serializer(), summary)
-            val deserialized = json.decodeFromString(VariableSummary.serializer(), serialized)
+            val serialized = json.encodeToString(VariableSummaryElement.serializer(), summary)
+            val deserialized = json.decodeFromString(VariableSummaryElement.serializer(), serialized)
             assertThat(deserialized.declaredType).isEqualTo(i32)
             assertThat(deserialized.narrowedType).isEqualTo(i32)
             assertThat(deserialized.effectivelyConstant.value).isTrue()
-            assertThat(deserialized.compileTimeValue).isEqualTo(AbstractValue.Const("42", valueType = i32))
+            assertThat(deserialized.compileTimeValue).isEqualTo(AbstractValueElement.Const("42", valueType = i32))
         }
 
         @Test
         fun `FunctionSummary round-trips through JSON - transient fields reset to defaults`() {
-            val summary = FunctionSummary.optimistic(listOf("x"))
-            val serialized = json.encodeToString(FunctionSummary.serializer(), summary)
-            val deserialized = json.decodeFromString(FunctionSummary.serializer(), serialized)
+            val summary = FunctionSummaryElement.optimistic(listOf("x"))
+            val serialized = json.encodeToString(FunctionSummaryElement.serializer(), summary)
+            val deserialized = json.decodeFromString(FunctionSummaryElement.serializer(), serialized)
             // Transient fields (ReasonedBoolean) reset to defaults
             assertThat(deserialized.noSideEffects.value).isTrue()
             assertThat(deserialized.parameterModes).containsExactlyInAnyOrderEntriesOf(mapOf("x" to ParameterMode.BORROW))

@@ -5,7 +5,7 @@ import capabilities.syntaxDiagnostic
 import capabilities.syntaxHighlight
 import eu.nitok.jitsu.common.locating.Position
 import eu.nitok.jitsu.common.sequence
-import eu.nitok.jitsu.compiler.graph.Accessible
+import eu.nitok.jitsu.compiler.graph.api.Accessible
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.TextDocumentService

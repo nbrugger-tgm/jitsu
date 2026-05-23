@@ -5,47 +5,59 @@ import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.common.ReasonedBoolean.False
 import eu.nitok.jitsu.common.ReasonedBoolean.True
-import eu.nitok.jitsu.compiler.graph.*
-import eu.nitok.jitsu.compiler.graph.Function
-import eu.nitok.jitsu.compiler.graph.Access
+import eu.nitok.jitsu.compiler.graph.api.*
+import eu.nitok.jitsu.compiler.graph.api.analysis.ParameterMode
+import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
+import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
+import eu.nitok.jitsu.compiler.graph.elements.ArrayLiteral
+import eu.nitok.jitsu.compiler.graph.elements.ConstantElement
+import eu.nitok.jitsu.compiler.graph.elements.ExpressionElement
+import eu.nitok.jitsu.compiler.graph.elements.VariableReference
+import eu.nitok.jitsu.compiler.graph.elements.FunctionCall
+import eu.nitok.jitsu.compiler.graph.elements.InstructionElement
+import eu.nitok.jitsu.compiler.graph.elements.Return
+import eu.nitok.jitsu.compiler.graph.elements.UndefinedExpression
+import eu.nitok.jitsu.compiler.graph.elements.VariableElement
+import eu.nitok.jitsu.compiler.graph.elements.types.TypeElement
+import eu.nitok.jitsu.compiler.graph.elements.types.Undefined
 
-class CodeBlockAnalyzer(
-    private val function: Function,
-    private val calleeOracle: (Function) -> FunctionSummary?,
+internal class CodeBlockAnalyzer(
+    private val function: FunctionElement,
+    private val calleeOracle: (FunctionElement) -> FunctionSummaryElement?,
     private val messages: CompilerMessages
 ) {
     data class AnalysisResult(
-        val functionSummary: FunctionSummary,
-        val useSiteInfos: Map<Expression.VariableReference, UseSiteInfo>
+        val functionSummary: FunctionSummaryElement,
+        val useSiteInfos: Map<VariableReference, UseSiteInfo>
     )
 
     private data class VariableState(
-        val declaredType: Type?,
-        var narrowedType: Type,
+        val declaredType: TypeElement?,
+        var narrowedType: TypeElement,
         var ownershipState: OwnershipState,
         var isConstant: Boolean,
-        var compileTimeValue: AbstractValue,
+        var compileTimeValue: AbstractValueElement,
         var paramDeps: Set<String>,
-        val variable: Variable,
+        val variable: VariableElement,
         val deterministic: ReasonedBoolean
     )
 
     private data class ExpressionResult(
-        val type: Type,
+        val type: TypeElement,
         val deterministic: ReasonedBoolean,
-        val constValue: AbstractValue,
+        val constValue: AbstractValueElement,
         val paramDeps: Set<String>
     )
 
     private val localVariables: MutableMap<String, VariableState> = mutableMapOf()
-    private val useSiteInfos: MutableMap<Expression.VariableReference, UseSiteInfo> = mutableMapOf()
+    private val useSiteInfos: MutableMap<VariableReference, UseSiteInfo> = mutableMapOf()
     private val returnPaths: MutableList<ReturnPathInfo> = mutableListOf()
-    private val callees: MutableList<Function> = mutableListOf()
+    private val callees: MutableList<FunctionElement> = mutableListOf()
     private var hasSideEffects: ReasonedBoolean = True("No side effects observed yet")
 
     private data class ReturnPathInfo(
-        val type: Type,
-        val compileTimeValue: AbstractValue,
+        val type: TypeElement,
+        val compileTimeValue: AbstractValueElement,
         val paramDeps: Set<String>,
         val deterministic: ReasonedBoolean
     )
@@ -53,23 +65,23 @@ class CodeBlockAnalyzer(
     fun analyze(): AnalysisResult {
         for (param in function.parameters) {
             localVariables[param.name.value] = VariableState(
-                declaredType = param.declaredType,
-                narrowedType = param.declaredType,
+                declaredType = param.declaredTypeElement,
+                narrowedType = param.declaredTypeElement,
                 ownershipState = OwnershipState.BORROWS,
                 isConstant = false,
-                compileTimeValue = AbstractValue.Unknown,
+                compileTimeValue = AbstractValueElement.Unknown,
                 paramDeps = setOf(param.name.value),
                 variable = param,
                 deterministic = True("Parameters are deterministic")
             )
         }
-        if (function.body is Function.Body.Implementation) {
-            for (instruction in function.body.block.instructions) {
+        if (function.body is FunctionElement.BodyElement.Implementation) {
+            for (instruction in function.body.codeBlock.instructionElements) {
                 processInstruction(instruction)
             }
         }
 
-        val parameterModes: Map<String, ParameterMode> = function.parameters.associate { param: Function.Parameter ->
+        val parameterModes: Map<String, ParameterMode> = function.parameters.associate { param: FunctionElement.Parameter ->
             val hasMoveAccess = (param.accessToSelf as List<*>)
                 .filterIsInstance<Access.VariableAccess>()
                 .any { access -> access.accessKind == Access.VariableAccess.AccessKind.MOVE }
@@ -78,7 +90,7 @@ class CodeBlockAnalyzer(
 
         val fnParams = function.parameters
 
-        val returnSummary: ReturnSummary? = if (returnPaths.isEmpty()) {
+        val returnSummary: ReturnSummaryElement? = if (returnPaths.isEmpty()) {
             null
         } else {
             returnPaths.reduce { acc, path ->
@@ -89,9 +101,9 @@ class CodeBlockAnalyzer(
                     deterministic = acc.deterministic.and(path.deterministic)
                 )
             }.let { merged ->
-                ReturnSummary(
-                    possibleTypes = returnPaths.map { rp -> rp.type }.distinct(),
-                    compileTimeValue = merged.compileTimeValue,
+                ReturnSummaryElement(
+                    possibleTypeElements = returnPaths.map { rp -> rp.type }.distinct(),
+                    compileTimeValueElement = merged.compileTimeValue,
                     dependsOnParameters = merged.paramDeps
                         .filter { dep -> fnParams.any { p -> p.name.value == dep } }//Why is this needed? what else besides parameters is in this stream
                         .toSet(),
@@ -100,7 +112,7 @@ class CodeBlockAnalyzer(
             }
         }
 
-        val variableSummaries = mutableMapOf<String, VariableSummary>()
+        val variableSummaries = mutableMapOf<String, VariableSummaryElement>()
 
         for (param in function.parameters) {
             val state = localVariables[param.name.value]
@@ -114,7 +126,7 @@ class CodeBlockAnalyzer(
                 variableSummaries[state.variable.name.value] = buildVariableSummary(state)
             }
         }
-        val functionSummary = FunctionSummary(
+        val functionSummary = FunctionSummaryElement(
             noSideEffects = hasSideEffects,
             parameterModes = parameterModes,
             returnSummary = returnSummary,
@@ -129,40 +141,40 @@ class CodeBlockAnalyzer(
         )
     }
 
-    private fun processInstruction(instruction: Instruction) {
+    private fun processInstruction(instruction: InstructionElement) {
         when (instruction) {
             is VariableDeclaration -> processVariableDeclaration(instruction)
-            is Instruction.FunctionCall -> processFunctionCall(instruction)
-            is Instruction.Return -> processReturn(instruction)
-            is Function -> TODO("nested functions not implemented yet")
+            is FunctionCall -> processFunctionCall(instruction)
+            is Return -> processReturn(instruction)
+            is FunctionElement -> TODO("nested functions not implemented yet")
         }
     }
 
     private fun processVariableDeclaration(decl: VariableDeclaration) {
-        val expression: ExpressionResult? = decl.initialValue?.let { analyzeExpression(it, decl.declaredType?.rawType(messages)) }
-        decl.implicitType = expression?.type
-        val narrowedType: Type? = when {
+        val expression: ExpressionResult? = decl.initialValueElement?.let { analyzeExpression(it, decl.declaredTypeElement?.rawTypeElement) }
+        decl.implicitTypeElement = expression?.type
+        val narrowedType: TypeElement? = when {
             expression != null -> expression.type
-            decl.declaredType != null -> decl.declaredType
+            decl.declaredType != null -> decl.declaredTypeElement
             else -> null
         }
         if (expression != null && decl.declaredType != null) {
             val assignedType = expression.type
-            val initialTypeValid = decl.declaredType.acceptsInstanceOf(assignedType)
+            val initialTypeValid = decl.declaredType.acceptsInstanceOf(assignedType.asType)
             if (!initialTypeValid.value) {
-                messages.error(initialTypeValid, decl.initialValue.location)
+                messages.error(initialTypeValid, decl.initialValueElement.location)
             }
         }
 
-        val isConstant = !decl.reassignable && expression?.constValue is AbstractValue.Const
+        val isConstant = !decl.reassignable && expression?.constValue is AbstractValueElement.Const
 
-        val compileTimeValue: AbstractValue = expression?.constValue ?: AbstractValue.NoValue
+        val compileTimeValue: AbstractValueElement = expression?.constValue ?: AbstractValueElement.NoValue
 
         val paramDeps: Set<String> = expression?.paramDeps ?: emptySet()
 
         localVariables[decl.name.value] = VariableState(
-            declaredType = decl.declaredType ?: narrowedType,
-            narrowedType = narrowedType ?: decl.declaredType ?: Type.Undefined,
+            declaredType = decl.declaredTypeElement ?: narrowedType,
+            narrowedType = narrowedType ?: decl.declaredTypeElement ?: Undefined,
             ownershipState = OwnershipState.OWNS,
             isConstant = isConstant,
             compileTimeValue = compileTimeValue,
@@ -172,8 +184,8 @@ class CodeBlockAnalyzer(
         )
     }
 
-    private fun processReturn(ret: Instruction.Return) {
-        val value = ret.value
+    private fun processReturn(ret: Return) {
+        val value = ret.valueExpression
 
         if (value == null) {
             if (function.returnType != null) {
@@ -186,10 +198,10 @@ class CodeBlockAnalyzer(
             return
         }
 
-        val exprResult = analyzeExpression(value, function.returnType?.value)
+        val exprResult = analyzeExpression(value, function.returnTypeElement?.value)
 
         if (function.returnType != null) {
-            val typeMatches = function.returnType.value.acceptsInstanceOf(exprResult.type)
+            val typeMatches = function.returnType.value.acceptsInstanceOf(exprResult.type.asType)
             if (!typeMatches.value) {
                 messages.error(
                     "Function expects return type ${function.returnType.value}: ${typeMatches.fullMessageChain()}",
@@ -217,68 +229,68 @@ class CodeBlockAnalyzer(
         )
     }
 
-    private fun analyzeExpression(expr: Expression, typeHint: Type?): ExpressionResult {
+    private fun analyzeExpression(expr: ExpressionElement, typeHint: TypeElement?): ExpressionResult {
         return when (expr) {
-            is Constant<*> -> analyzeConstant(expr)
-            is Expression.VariableReference -> analyzeVariableReference(expr)
-            is Instruction.FunctionCall -> analyzeFunctionCallExpression(expr)
-            is Expression.Undefined -> ExpressionResult(
-                type = Type.Undefined,
+            is ConstantElement<*> -> analyzeConstant(expr, typeHint)
+            is VariableReference -> analyzeVariableReference(expr, typeHint)
+            is FunctionCall -> analyzeFunctionCallExpression(expr, typeHint)
+            is UndefinedExpression -> ExpressionResult(
+                type = Undefined,
                 deterministic = False("Undefined expression"),
-                constValue = AbstractValue.Unknown,
+                constValue = AbstractValueElement.Unknown,
                 paramDeps = emptySet()
             )
 
-            is Expression.ArrayLiteral -> analyzeArrayLiteral(expr, typeHint)
+            is ArrayLiteral -> analyzeArrayLiteral(expr, typeHint)
         }
     }
 
-    private fun analyzeArrayLiteral(expr: Expression.ArrayLiteral, typeHint: Type?): ExpressionResult {
+    private fun analyzeArrayLiteral(expr: ArrayLiteral, typeHint: TypeElement?): ExpressionResult {
         val arrayType = expr.calculateType(typeContext, messages, typeHint)
-        val elementType = if (arrayType.elementType !is Type.Undefined) arrayType.elementType else null
-        val elements = expr.elements.asSequence().map { analyzeExpression(it, elementType) }.toList()
+        val elementType = if (arrayType.elementType !is Type.Undefined) arrayType.elementTypeElement else null
+        val elements = expr.elementExpressions.asSequence().map { analyzeExpression(it, elementType) }.toList()
         return ExpressionResult(
             type = arrayType,
             deterministic = elements.map { it.deterministic }.fold(
                 True("Empty array is deterministic") as ReasonedBoolean
             ) { acc, d -> acc.and(d) },
-            constValue = AbstractValue.Unknown,
+            constValue = AbstractValueElement.Unknown,
             paramDeps = elements.flatMap { it.paramDeps }.toSet()
         )
     }
 
-    private fun analyzeConstant(constant: Constant<*>): ExpressionResult {
-        val type = constant.type
+    private fun analyzeConstant(constant: ConstantElement<*>, typeHint: TypeElement?): ExpressionResult {
+        val type = constant.calculateType(typeContext, messages, typeHint)?: Undefined
         return ExpressionResult(
             type = type,
             deterministic = True("Constant values are deterministic"),
-            constValue = AbstractValue.Const(constant.literal, type),
+            constValue = AbstractValueElement.Const(constant.literal, type),
             paramDeps = emptySet()
         )
     }
 
-    private fun analyzeVariableReference(ref: Expression.VariableReference): ExpressionResult {
+    private fun analyzeVariableReference(ref: VariableReference, typeHint: TypeElement?): ExpressionResult {
         val varName = ref.reference.value
         val varState = localVariables[varName]
         if (varState == null) {
             //Todo: global variable access
             messages.error("Variable '$varName' not found", ref.location)
             useSiteInfos[ref] = UseSiteInfo(
-                narrowedType = Type.Undefined,
+                narrowedType = Undefined,
                 ownershipState = OwnershipState.BORROWS
             )
             return ExpressionResult(
-                type = Type.Undefined,
+                type = Undefined,
                 deterministic = True("Variable '$varName' not found"),
-                constValue = AbstractValue.NoValue,
+                constValue = AbstractValueElement.NoValue,
                 paramDeps = emptySet()
             )
         }
 
         ref.setResolvedTarget(varState.variable)
         ref.accessKind = Access.VariableAccess.AccessKind.BORROW
-        varState.variable.accessToSelf.add(ref)
-        val type = ref.calculateType(typeContext, messages) ?: Type.Undefined
+
+        val type = ref.calculateType(typeContext, messages, typeHint) ?: Undefined
 
         useSiteInfos[ref] = UseSiteInfo(
             narrowedType = type,
@@ -293,8 +305,8 @@ class CodeBlockAnalyzer(
         )
     }
 
-    private fun processFunctionCall(call: Instruction.FunctionCall): Function? {
-        val target = call.target ?: call.resolveTarget(typeContext, messages)
+    private fun processFunctionCall(call: FunctionCall): FunctionElement? {
+        val target = call.targetElement ?: call.resolveTarget(typeContext, messages)
         val targetSummary = target?.let { calleeOracle(it) }
         if (target != null) {
             call.setResolvedTarget(target)
@@ -322,11 +334,11 @@ class CodeBlockAnalyzer(
         return target
     }
 
-    private fun analyzeFunctionCallExpression(call: Instruction.FunctionCall): ExpressionResult {
+    private fun analyzeFunctionCallExpression(call: FunctionCall, typeHint: TypeElement?): ExpressionResult {
         val target = processFunctionCall(call)
         val targetSummary = target?.let { calleeOracle(it) }
-        val argumentExpressions = call.callParameters.mapIndexed { index, expression ->
-            if (target != null) analyzeExpression(expression, target.parameters.getOrNull(index)?.type)
+        val argumentExpressions = call.callParameterElements.mapIndexed { index, expression ->
+            if (target != null) analyzeExpression(expression, target.parameters.getOrNull(index)?.declaredTypeElement)
             else analyzeExpression(expression, null)
         }
 
@@ -346,9 +358,9 @@ class CodeBlockAnalyzer(
             .filterIndexed { index, _ -> outputInfluencingParams.contains(index) }
             .flatMap { it.paramDeps }
             .toSet()
-        val returnType = call.calculateType(typeContext, messages) ?: run {
+        val returnType = call.calculateType(typeContext, messages, typeHint) ?: run {
             if(target != null) messages.error("Expected value but ${call.reference.value} is a void function", call.location)
-            Type.Undefined
+            Undefined
         }
         val targetDeterminsitic =
             if (targetSummary?.returnSummary?.deterministic == null) True("Unresolved functions are assumed to be deterministic")
@@ -359,25 +371,25 @@ class CodeBlockAnalyzer(
         return ExpressionResult(
             type = returnType,
             deterministic = deterministic,
-            constValue = targetSummary?.returnSummary?.compileTimeValue ?: AbstractValue.Unknown,
+            constValue = targetSummary?.returnSummary?.compileTimeValueElement ?: AbstractValueElement.Unknown,
             paramDeps = allParamDeps
         )
     }
 
-    private val typeContext: Map<String, Type> get() = localVariables.mapValues { it.value.narrowedType }
+    private val typeContext: Map<String, TypeElement> get() = localVariables.mapValues { it.value.narrowedType }
 
-    private fun buildVariableSummary(state: VariableState): VariableSummary {
+    private fun buildVariableSummary(state: VariableState): VariableSummaryElement {
         val effectivelyConstant: ReasonedBoolean =
             if (state.isConstant) {//Cant is constant be turned into a ReasonedBoolean itself and therefore be more percise
                 True("Variable is not reassignable and its initializer is a compile-time constant")
             } else {
                 ReasonedBoolean.False("Variable is either reassignable or its initializer is not a compile-time constant")
             }
-        return VariableSummary(
-            declaredType = state.declaredType,
-            narrowedType = state.narrowedType,
+        return VariableSummaryElement(
+            declaredTypeElement = state.declaredType,
+            narrowedTypeElement = state.narrowedType,
             effectivelyConstant = effectivelyConstant,
-            compileTimeValue = state.compileTimeValue,
+            compileTimeValueElement = state.compileTimeValue,
             ownershipState = state.ownershipState
         )
     }

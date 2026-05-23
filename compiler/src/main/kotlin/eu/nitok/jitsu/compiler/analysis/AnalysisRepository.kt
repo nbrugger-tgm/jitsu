@@ -1,16 +1,16 @@
 package eu.nitok.jitsu.compiler.analysis
 
 import eu.nitok.jitsu.common.sequence
-import eu.nitok.jitsu.compiler.graph.*
-import eu.nitok.jitsu.compiler.graph.Function
+import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.compiler.graph.Access
+import eu.nitok.jitsu.compiler.graph.api.Access
+import eu.nitok.jitsu.compiler.graph.elements.VariableReference
 
-class AnalysisRepository {
-    private val functionSummaries: MutableMap<Function, FunctionSummary> = mutableMapOf()
-    private val useSiteInfos: MutableMap<Expression.VariableReference, UseSiteInfo> = mutableMapOf()
+internal class AnalysisRepository {
+    private val functionSummaries: MutableMap<FunctionElement, FunctionSummaryElement> = mutableMapOf()
+    private val useSiteInfos: MutableMap<VariableReference, UseSiteInfo> = mutableMapOf()
 
-    fun analyzeAll(functions: Collection<Function>, messages: CompilerMessages) {
+    fun analyzeAll(functions: Collection<FunctionElement>, messages: CompilerMessages) {
         val allFunctions = collectAllFunctions(functions)
         val callGraph = buildCallGraph(allFunctions)
         val sccs = computeSCCs(callGraph)
@@ -19,18 +19,18 @@ class AnalysisRepository {
         }
     }
 
-    fun getFunctionSummary(function: Function): FunctionSummary? = functionSummaries[function]
-    fun getUseSiteInfo(ref: Expression.VariableReference): UseSiteInfo? = useSiteInfos[ref]
+    fun getFunctionSummary(function: FunctionElement): FunctionSummaryElement? = functionSummaries[function]
+    fun getUseSiteInfo(ref: VariableReference): UseSiteInfo? = useSiteInfos[ref]
 
     /**
      * Flat maps all functions and their nested functions into a list
      */
-    private fun collectAllFunctions(rootFunctions: Collection<Function>): List<Function> {
-        val all = mutableListOf<Function>()
-        val seen = mutableSetOf<Function>()
+    private fun collectAllFunctions(rootFunctions: Collection<FunctionElement>): List<FunctionElement> {
+        val all = mutableListOf<FunctionElement>()
+        val seen = mutableSetOf<FunctionElement>()
         for (root in rootFunctions) {
             root.sequence().forEach { element ->
-                if (element is Function && seen.add(element)) {
+                if (element is FunctionElement && seen.add(element)) {
                     all.add(element)
                 }
             }
@@ -38,36 +38,31 @@ class AnalysisRepository {
         return all
     }
 
-    private fun buildCallGraph(functions: List<Function>): Map<Function, Set<Function>> {
+    private fun buildCallGraph(functions: List<FunctionElement>): Map<FunctionElement, Set<FunctionElement>> {
         val functionSet = functions.toSet()
         val functionsByName = functions.filter { it.name != null }.groupBy { it.name!!.value }
         return functions.associateWith { fn ->
             fn.accessFromSelf
                 .filterIsInstance<Access.FunctionAccess>()
                 .flatMap { access ->
-                    val resolved = access.target
-                    if (resolved != null) {
-                        listOf(resolved)
-                    } else {
                         //This stinks since it puts all methods with the matching name into the list,
                         // but that also includes wrong overloads (non matching param types)
                         functionsByName[access.reference.value] ?: emptyList()
-                    }
                 }
                 .filter { it in functionSet }
                 .toSet()
         }
     }
 
-    private fun computeSCCs(callGraph: Map<Function, Set<Function>>): List<Set<Function>> {
-        val index = mutableMapOf<Function, Int>()
-        val lowlink = mutableMapOf<Function, Int>()
-        val onStack = mutableSetOf<Function>()
-        val stack = mutableListOf<Function>()
-        val sccs = mutableListOf<Set<Function>>()
+    private fun computeSCCs(callGraph: Map<FunctionElement, Set<FunctionElement>>): List<Set<FunctionElement>> {
+        val index = mutableMapOf<FunctionElement, Int>()
+        val lowlink = mutableMapOf<FunctionElement, Int>()
+        val onStack = mutableSetOf<FunctionElement>()
+        val stack = mutableListOf<FunctionElement>()
+        val sccs = mutableListOf<Set<FunctionElement>>()
         var indexCounter = 0
 
-        fun strongConnect(v: Function) {
+        fun strongConnect(v: FunctionElement) {
             index[v] = indexCounter
             lowlink[v] = indexCounter
             indexCounter++
@@ -85,7 +80,7 @@ class AnalysisRepository {
             }
 
             if (lowlink[v] == index[v]) {
-                val scc = mutableSetOf<Function>()
+                val scc = mutableSetOf<FunctionElement>()
                 while (true) {
                     val w = stack.removeLast()
                     onStack.remove(w)
@@ -105,7 +100,7 @@ class AnalysisRepository {
         return sccs
     }
 
-    private fun solveSCC(scc: Set<Function>, callGraph: Map<Function, Set<Function>>, messages: CompilerMessages) {
+    private fun solveSCC(scc: Set<FunctionElement>, callGraph: Map<FunctionElement, Set<FunctionElement>>, messages: CompilerMessages) {
         val isSelfRecursive = scc.size == 1 && callGraph[scc.first()]?.contains(scc.first()) == true
 
         if (scc.size == 1 && !isSelfRecursive) {
@@ -116,7 +111,7 @@ class AnalysisRepository {
             useSiteInfos.putAll(result.useSiteInfos)
         } else {
             for (fn in scc) {
-                functionSummaries[fn] = FunctionSummary.optimistic(fn.parameters.map { it.name.value })
+                functionSummaries[fn] = FunctionSummaryElement.optimistic(fn.parameters.map { it.name.value })
             }
 
             val worklist = scc.toMutableSet()

@@ -2,8 +2,8 @@ package capabilities
 
 import eu.nitok.jitsu.common.locating.Position
 import eu.nitok.jitsu.common.sequence
-import eu.nitok.jitsu.compiler.graph.Access
-import eu.nitok.jitsu.compiler.graph.JitsuFile
+import eu.nitok.jitsu.compiler.graph.api.Access
+import eu.nitok.jitsu.compiler.graph.api.JitsuFile
 import location
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.LocationLink

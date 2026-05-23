@@ -4,10 +4,9 @@ import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.compiler.bitcode.LowLevelExpression.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelType.Companion.I32
-import eu.nitok.jitsu.compiler.graph.Function
-import eu.nitok.jitsu.compiler.graph.JitsuFile
-import eu.nitok.jitsu.compiler.graph.JitsuModule
-import eu.nitok.jitsu.compiler.graph.VariableDeclaration
+import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
+import eu.nitok.jitsu.compiler.graph.elements.JitsuFile
+import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
 import eu.nitok.jitsu.compiler.graph.buildJitsuModule
 import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
@@ -48,20 +47,20 @@ class MemoryManagementTest {
 
     private fun lower(source: String): List<LowLevelInstruction> {
         val file = buildFile(source)
-        val fn = file.sequence().filterIsInstance<Function>().first()
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first()
         return FunctionLowering({ it.name?.value ?: "anon" }, fn).lower()
     }
 
     private fun lowerNamed(source: String, name: String): List<LowLevelInstruction> {
         val file = buildFile(source)
-        val fn = file.sequence().filterIsInstance<Function>().first { it.name?.value == name }
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == name }
         return FunctionLowering({ it.name?.value ?: "anon" }, fn).lower()
     }
 
     /** Build and lower, then return both the instructions AND the FunctionLowering object. */
     private fun lowerWithContext(source: String): Pair<List<LowLevelInstruction>, FunctionLowering> {
         val file = buildFile(source)
-        val fn = file.sequence().filterIsInstance<Function>().first()
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first()
         val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
         return lowering.lower() to lowering
     }
@@ -297,11 +296,11 @@ class MemoryManagementTest {
         @Test
         fun `declared variable has requiresFree=true (OwnershipState OWNS)`() {
             val file = buildFile("fn f() { var x: i32 = 5; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as Function.Body.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "x" }
             val entry = lowering.variableRegistry.getEntry(varDecl)
             assertThat(entry.requiresFree).isTrue()
@@ -317,7 +316,7 @@ class MemoryManagementTest {
                 }
                 """.trimIndent()
             )
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
@@ -328,7 +327,7 @@ class MemoryManagementTest {
         @Test
         fun `variablesToFree is empty for a function with no variable declarations`() {
             val file = buildFile("fn f(x: i32): i32 { return x; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 

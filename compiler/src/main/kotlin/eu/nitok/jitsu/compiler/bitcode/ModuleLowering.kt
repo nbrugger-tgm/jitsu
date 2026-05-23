@@ -1,7 +1,9 @@
 package eu.nitok.jitsu.compiler.bitcode
 
-import eu.nitok.jitsu.compiler.graph.Function
-import eu.nitok.jitsu.compiler.graph.JitsuModule
+import eu.nitok.jitsu.compiler.graph.api.Function
+import eu.nitok.jitsu.compiler.graph.api.JitsuModule
+import java.util.*
+
 
 /**
  * Lowers an entire JitsuFile to a LoweredModule.
@@ -13,11 +15,21 @@ class ModuleLowering(private val module: JitsuModule) {
     private var nameCounter = 0
 
     fun lower(): LoweredModule {
-
-        // Second pass: lower all functions
-        val loweredFunctions = module.allModules
+        val allRequiredModules = Collections.newSetFromMap(IdentityHashMap<JitsuModule, Boolean>())
+        fun collectModules(mod: JitsuModule) {
+            if (allRequiredModules.add(mod)) {
+                mod.files.asSequence()
+                    .flatMap { it.imports }
+                    .mapNotNull { it.target }
+                    .forEach { collectModules(it) }
+            }
+        }
+        module.allModules.forEach { collectModules(it) }
+        val allFunctions = allRequiredModules.asSequence()
             .flatMap { it.files }
-            .flatMap { it.functions }
+            .flatMap { it.functions}
+
+        val loweredFunctions = allFunctions
             .map { fn -> lowerFunction(fn) }
             .toList()
 
@@ -52,7 +64,7 @@ class ModuleLowering(private val module: JitsuModule) {
                 val lowering = FunctionLowering(::getUniqueName, function)
                 LoweredBody.Implementation(lowering.lower())
             }
-            is Function.Body.Native -> LoweredBody.Native(b.nativeTarget)
+            is Function.Body.Native -> LoweredBody.Native("_jitsu_${function.name}_${function.parameters.joinToString("__") { it.type.toString().replace(Regex("\\W"), "_") }}")
             is Function.Body.Missing -> LoweredBody.Implementation(emptyList())
         }
 

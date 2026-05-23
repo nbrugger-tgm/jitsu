@@ -37,7 +37,7 @@ class TypeRegistry {
             is LowLevelType.LLFixedArray -> formatType("($variable[])", type.elementType)
             is LowLevelType.LLPointer<*> -> formatType("(*$variable)", type.pointeeType)
             is LowLevelType.LLStruct -> "struct ${getUniqueName(type)} $variable"
-            LowLevelType.LLBool -> "bool $variable"
+            is LowLevelType.LLBool -> "bool $variable"
             is LowLevelType.LLFloat -> "${formatFloat(type.size)} $variable"
             is LowLevelType.LLInt -> "${formatInt(type.size)} $variable"
             is LowLevelType.LLUInt -> "${formatUInt(type.size)} $variable"

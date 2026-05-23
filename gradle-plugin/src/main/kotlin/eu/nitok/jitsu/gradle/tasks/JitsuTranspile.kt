@@ -3,17 +3,11 @@ package eu.nitok.jitsu.gradle.tasks
 import eu.nitok.jitsu.backend.c.CBackend
 import eu.nitok.jitsu.common.format
 import eu.nitok.jitsu.compiler.bitcode.lower
-import eu.nitok.jitsu.compiler.graph.JitsuModule
-import eu.nitok.jitsu.compiler.graph.restoreJitsuModule
-import eu.nitok.jitsu.compiler.transpile.Backend
-import eu.nitok.jitsu.gradle.json
-import kotlinx.serialization.json.decodeFromStream
+import eu.nitok.jitsu.compiler.graph.api.JitsuModule
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.logging.Logger
-import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import javax.inject.Inject
 
@@ -33,22 +27,13 @@ abstract class JitsuTranspile @Inject constructor() : DefaultTask() {
 
     @TaskAction
     fun transpile() {
-        val restoredDependencies = dependencies.files.map {
-            val module = json.decodeFromStream<JitsuModule>(it.inputStream())
-            restoreJitsuModule(module, emptyList()/*TODO: transitive dependencies */)
-            module.messages.errors.forEach { error ->
-                logger.error(error.format("ERROR"))
-            }
-            module
-        }.toList()
-        val module = json.decodeFromStream<JitsuModule>(moduleFile.get().asFile.inputStream())
-        restoreJitsuModule(module, restoredDependencies)
+        val module = JitsuModule.readModule(moduleFile.get().asFile.toPath(), dependencies.files.map { it.toPath() })
         module.messages.errors.forEach { error ->
-            logger.error(error.format("ERROR"))
+            logger.error(error.format("e"))
         }
-        val modules = (restoredDependencies+module).map { file -> file.lower() }
+        val modules = module.lower()
         val files = CBackend().run {
-            transpile(modules, targetDirectory.get().asFile.toPath())
+            transpile(listOf(modules), targetDirectory.get().asFile.toPath())
         }
         logger.info("Transpiled to $files")
     }

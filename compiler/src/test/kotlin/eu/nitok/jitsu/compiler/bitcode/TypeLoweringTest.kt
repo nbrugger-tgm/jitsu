@@ -3,13 +3,12 @@ package eu.nitok.jitsu.compiler.bitcode
 import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.common.BitSize.BIT_64
 import eu.nitok.jitsu.common.locating.Located
-import eu.nitok.jitsu.common.locating.Position
 import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.common.locating.locatedAt
 import eu.nitok.jitsu.compiler.bitcode.LowLevelType.*
-import eu.nitok.jitsu.compiler.graph.Type
-import eu.nitok.jitsu.compiler.graph.Type.TypeReference
-import eu.nitok.jitsu.compiler.graph.TypeDefinition
+import eu.nitok.jitsu.compiler.graph.elements.types.Type
+import eu.nitok.jitsu.compiler.graph.elements.types.Type.TypeReference
+import eu.nitok.jitsu.compiler.graph.elements.types.Struct
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Disabled
@@ -30,8 +29,8 @@ class TypeLoweringTest {
     private val dummyLocation = Location(URI("memory://test.jit"), 1, 1, 1, 1)
     private fun locatedName(name: String): Located<String> = Located(name, dummyLocation)
 
-    private fun structField(name: String, type: Type): TypeDefinition.ParameterizedType.Struct.Field =
-        TypeDefinition.ParameterizedType.Struct.Field(locatedName(name), mutable = false, type = type)
+    private fun structField(name: String, type: Type): Struct.Field =
+        Struct.Field(locatedName(name), mutable = false, type = type)
 
     private fun structuralInterface(vararg fields: Pair<String, Type>): Type.StructuralInterface =
         Type.StructuralInterface(fields.associate { (name, type) -> name to structField(name, type) })

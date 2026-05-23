@@ -19,7 +19,7 @@ class SourceFile(
     var ast: CompletableFuture<out SourceFileNode> = parse(content)
         private set
     val graph get() = module!!.graph.thenApply {
-        it.files.firstOrNull { it.path.equals(uri.toString()) }?:throw IllegalStateException("Source file $uri does not exist (${it.files.map { it.path }}")
+        it.files.firstOrNull { it.uri == uri }?:throw IllegalStateException("Source file $uri does not exist (${it.files.map { it.uri }}")
     }
 
     var module: WorkspaceModule? = null

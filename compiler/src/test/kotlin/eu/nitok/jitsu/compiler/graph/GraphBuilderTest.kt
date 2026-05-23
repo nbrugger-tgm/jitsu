@@ -1,6 +1,15 @@
 package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.common.sequence
+import eu.nitok.jitsu.compiler.graph.api.Expression
+import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
+import eu.nitok.jitsu.compiler.graph.elements.JitsuFile
+import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
+import eu.nitok.jitsu.compiler.graph.elements.expressions.Constant
+import eu.nitok.jitsu.compiler.graph.elements.types.Type
+import eu.nitok.jitsu.compiler.graph.elements.expressions.VariableReference
+import eu.nitok.jitsu.compiler.graph.elements.instructions.FunctionCall
+import eu.nitok.jitsu.compiler.graph.elements.instructions.Return
 import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -35,13 +44,13 @@ class GraphBuilderTest {
         fun `creates JitsuFile with no functions when only type alias is present`() {
             val file = buildFile("type MyAlias = i32;")
             assertThat(file).isNotNull()
-            assertThat(file.sequence().filterIsInstance<Function>().toList()).isEmpty()
+            assertThat(file.sequence().filterIsInstance<FunctionElement>().toList()).isEmpty()
         }
 
         @Test
         fun `creates JitsuFile with single function`() {
             val file = buildFile("fn hello() { }")
-            val functions = file.sequence().filterIsInstance<Function>().toList()
+            val functions = file.sequence().filterIsInstance<FunctionElement>().toList()
             assertThat(functions).hasSize(1)
             assertThat(functions[0].name?.value).isEqualTo("hello")
         }
@@ -53,7 +62,7 @@ class GraphBuilderTest {
                 fn b(): i32 { return 2; }
                 fn c(): i32 { return 3; }
             """.trimIndent())
-            val functions = file.sequence().filterIsInstance<Function>().toList()
+            val functions = file.sequence().filterIsInstance<FunctionElement>().toList()
             assertThat(functions).hasSize(3)
             val names = functions.map { it.name?.value }
             assertThat(names).containsExactlyInAnyOrder("a", "b", "c")
@@ -77,9 +86,9 @@ class GraphBuilderTest {
 
         private fun firstReturnExpression(source: String): Expression? {
             val file = buildFile(source)
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = (fn.body as Function.Body.Implementation).block.instructions
-            return (body.filterIsInstance<Instruction.Return>().firstOrNull())?.value
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            return (body.filterIsInstance<Return>().firstOrNull())?.value
         }
 
         @Test
@@ -113,19 +122,19 @@ class GraphBuilderTest {
         @Test
         fun `resolves variable reference`() {
             val file = buildFile("fn f(x: i32): i32 { return x; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = (fn.body as Function.Body.Implementation).block.instructions
-            val returnExpr = body.filterIsInstance<Instruction.Return>().first().value
-            assertThat(returnExpr).isInstanceOf(Expression.VariableReference::class.java)
-            assertThat((returnExpr as Expression.VariableReference).reference.value).isEqualTo("x")
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            val returnExpr = body.filterIsInstance<Return>().first().value
+            assertThat(returnExpr).isInstanceOf(VariableReference::class.java)
+            assertThat((returnExpr as VariableReference).reference.value).isEqualTo("x")
         }
 
         @Test
         fun `resolves variable reference target to parameter declaration`() {
             val file = buildFile("fn f(x: i32): i32 { return x; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = (fn.body as Function.Body.Implementation).block.instructions
-            val returnExpr = body.filterIsInstance<Instruction.Return>().first().value as Expression.VariableReference
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            val returnExpr = body.filterIsInstance<Return>().first().value as VariableReference
             assertThat(returnExpr.target).isNotNull()
             assertThat(returnExpr.target).isEqualTo(fn.parameters.first { it.name.value == "x" })
         }
@@ -133,16 +142,16 @@ class GraphBuilderTest {
         @Test
         fun `resolves binary operation with operator`() {
             val expr = firstReturnExpression("fn plus(a: i32, b: i32): i32 { return a + b; }")
-            assertThat(expr).isInstanceOf(Instruction.FunctionCall::class.java)
+            assertThat(expr).isInstanceOf(FunctionCall::class.java)
         }
 
         @Test
         fun `resolves binary operation left and right operands`() {
-            val expr = firstReturnExpression("fn plus(a: i32, b: i32): i32 { return a + b; }") as Instruction.FunctionCall
-            assertThat(expr.callParameters[0]).isInstanceOf(Expression.VariableReference::class.java)
-            assertThat(expr.callParameters[1]).isInstanceOf(Expression.VariableReference::class.java)
-            assertThat((expr.callParameters[0] as Expression.VariableReference).reference.value).isEqualTo("a")
-            assertThat((expr.callParameters[1] as Expression.VariableReference).reference.value).isEqualTo("b")
+            val expr = firstReturnExpression("fn plus(a: i32, b: i32): i32 { return a + b; }") as FunctionCall
+            assertThat(expr.callParameters[0]).isInstanceOf(VariableReference::class.java)
+            assertThat(expr.callParameters[1]).isInstanceOf(VariableReference::class.java)
+            assertThat((expr.callParameters[0] as VariableReference).reference.value).isEqualTo("a")
+            assertThat((expr.callParameters[1] as VariableReference).reference.value).isEqualTo("b")
         }
 
         @Test
@@ -154,10 +163,10 @@ class GraphBuilderTest {
                     return result;
                 }
             """.trimIndent())
-            val main = file.sequence().filterIsInstance<Function>().first { it.name?.value == "main" }
-            val body = (main.body as Function.Body.Implementation).block.instructions
+            val main = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "main" }
+            val body = (main.body as FunctionElement.BodyElement.Implementation).block.instructions
             val varDecl = body.filterIsInstance<VariableDeclaration>().first { it.name.value == "result" }
-            assertThat(varDecl.initialValue).isInstanceOf(Instruction.FunctionCall::class.java)
+            assertThat(varDecl.initialValue).isInstanceOf(FunctionCall::class.java)
         }
 
         @Test
@@ -170,10 +179,10 @@ class GraphBuilderTest {
                     return result;
                 }
             """.trimIndent())
-            val main = file.sequence().filterIsInstance<Function>().first { it.name?.value == "main" }
-            val body = (main.body as Function.Body.Implementation).block.instructions
+            val main = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "main" }
+            val body = (main.body as FunctionElement.BodyElement.Implementation).block.instructions
             val varDecl = body.filterIsInstance<VariableDeclaration>().first { it.name.value == "result" }
-            val call = varDecl.initialValue as Instruction.FunctionCall
+            val call = varDecl.initialValue as FunctionCall
             assertThat(call.callParameters).hasSize(2)
         }
     }
@@ -184,7 +193,7 @@ class GraphBuilderTest {
 
         private fun returnType(source: String): Type? {
             val file = buildFile(source)
-            return file.sequence().filterIsInstance<Function>().first().returnType?.value
+            return file.sequence().filterIsInstance<FunctionElement>().first().returnType?.value
         }
 
         @Test
@@ -269,7 +278,7 @@ class GraphBuilderTest {
                 type MyType = i32 | u32;
                 fn f(): MyType { return 0; }
             """.trimIndent())
-            val fn = file.sequence().filterIsInstance<Function>().first { it.name?.value == "f" }
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "f" }
             val type = fn.returnType?.value
             assertThat(type).isInstanceOf(Type.TypeReference::class.java)
             assertThat((type as Type.TypeReference).reference.value).isEqualTo("MyType")
@@ -278,14 +287,14 @@ class GraphBuilderTest {
         @Test
         fun `function with no return type has null return type`() {
             val file = buildFile("fn noop() { }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             assertThat(fn.returnType).isNull()
         }
 
         @Test
         fun `parameter type resolves to correct type`() {
             val file = buildFile("fn f(x: i32): i32 { return x; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             val paramType = fn.parameters.first().declaredType
             assertThat(paramType).isInstanceOf(Type.Int::class.java)
             assertThat((paramType as Type.Int).size.bits).isEqualTo(32)
@@ -299,21 +308,21 @@ class GraphBuilderTest {
         @Test
         fun `creates Function with name`() {
             val file = buildFile("fn myFunction() { }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             assertThat(fn.name?.value).isEqualTo("myFunction")
         }
 
         @Test
         fun `creates Function with no parameters`() {
             val file = buildFile("fn noArgs(): i32 { return 0; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             assertThat(fn.parameters).isEmpty()
         }
 
         @Test
         fun `creates Function with single parameter`() {
             val file = buildFile("fn f(x: i32): i32 { return x; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             assertThat(fn.parameters).hasSize(1)
             assertThat(fn.parameters[0].name.value).isEqualTo("x")
         }
@@ -321,7 +330,7 @@ class GraphBuilderTest {
         @Test
         fun `creates Function with multiple parameters`() {
             val file = buildFile("fn plus(a: i32, b: i32): i32 { return a + b; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             assertThat(fn.parameters).hasSize(2)
             val paramNames = fn.parameters.map { it.name.value }
             assertThat(paramNames).containsExactly("a", "b")
@@ -330,7 +339,7 @@ class GraphBuilderTest {
         @Test
         fun `creates Function with parameter types`() {
             val file = buildFile("fn f(a: u32, b: i64): i64 { return b; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             assertThat(fn.parameters[0].declaredType).isInstanceOf(Type.UInt::class.java)
             assertThat(fn.parameters[1].declaredType).isInstanceOf(Type.Int::class.java)
         }
@@ -338,7 +347,7 @@ class GraphBuilderTest {
         @Test
         fun `creates Function with return type`() {
             val file = buildFile("fn f(): i32 { return 0; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             assertThat(fn.returnType).isNotNull()
             assertThat(fn.returnType!!.value).isInstanceOf(Type.Int::class.java)
         }
@@ -346,24 +355,24 @@ class GraphBuilderTest {
         @Test
         fun `creates Function with Implementation body`() {
             val file = buildFile("fn f(): i32 { return 5; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            assertThat(fn.body).isInstanceOf(Function.Body.Implementation::class.java)
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            assertThat(fn.body).isInstanceOf(FunctionElement.BodyElement.Implementation::class.java)
         }
 
         @Test
         fun `creates Function body with return instruction`() {
             val file = buildFile("fn f(): i32 { return 5; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = fn.body as Function.Body.Implementation
-            val returnInstructions = body.block.instructions.filterIsInstance<Instruction.Return>()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = fn.body as FunctionElement.BodyElement.Implementation
+            val returnInstructions = body.block.instructions.filterIsInstance<Return>()
             assertThat(returnInstructions).hasSize(1)
         }
 
         @Test
         fun `creates Function with variable declaration in body`() {
             val file = buildFile("fn f(): i32 { var x: i32 = 10; return x; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = fn.body as Function.Body.Implementation
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = fn.body as FunctionElement.BodyElement.Implementation
             val varDecls = body.block.instructions.filterIsInstance<VariableDeclaration>()
             assertThat(varDecls).hasSize(1)
             assertThat(varDecls[0].name.value).isEqualTo("x")
@@ -372,15 +381,15 @@ class GraphBuilderTest {
         @Test
         fun `creates native Function with Native body`() {
             val file = buildFile("native fn nativeFunc(): i32")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            assertThat(fn.body).isInstanceOf(Function.Body.Native::class.java)
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            assertThat(fn.body).isInstanceOf(FunctionElement.BodyElement.Native::class.java)
         }
 
         @Test
         fun `native function body contains native target string`() {
             val file = buildFile("native fn nativeFunc(): i32")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val native = fn.body as Function.Body.Native
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val native = fn.body as FunctionElement.BodyElement.Native
             assertThat(native.nativeTarget).isNotBlank()
             assertThat(native.nativeTarget).contains("nativeFunc")
         }
@@ -391,7 +400,7 @@ class GraphBuilderTest {
                 fn alpha(): i32 { return 1; }
                 fn beta(): u32 { return 2; }
             """.trimIndent())
-            val functions = file.sequence().filterIsInstance<Function>().toList()
+            val functions = file.sequence().filterIsInstance<FunctionElement>().toList()
             val alpha = functions.first { it.name?.value == "alpha" }
             val beta = functions.first { it.name?.value == "beta" }
             assertThat(alpha.returnType?.value).isInstanceOf(Type.Int::class.java)
@@ -406,32 +415,32 @@ class GraphBuilderTest {
         @Test
         fun `empty function body produces empty instruction list`() {
             val file = buildFile("fn noop() { }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = fn.body as Function.Body.Implementation
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = fn.body as FunctionElement.BodyElement.Implementation
             assertThat(body.block.instructions).isEmpty()
         }
 
         @Test
         fun `single return produces one instruction`() {
             val file = buildFile("fn f(): i32 { return 1; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = fn.body as Function.Body.Implementation
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = fn.body as FunctionElement.BodyElement.Implementation
             assertThat(body.block.instructions).hasSize(1)
         }
 
         @Test
         fun `variable declaration and return produce two instructions`() {
             val file = buildFile("fn f(): i32 { var x: i32 = 5; return x; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = fn.body as Function.Body.Implementation
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = fn.body as FunctionElement.BodyElement.Implementation
             assertThat(body.block.instructions).hasSize(2)
         }
 
         @Test
         fun `variable declaration has correct initial value type`() {
             val file = buildFile("fn f(): i32 { var x: i32 = 99; return x; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = fn.body as Function.Body.Implementation
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = fn.body as FunctionElement.BodyElement.Implementation
             val varDecl = body.block.instructions.filterIsInstance<VariableDeclaration>().first()
             assertThat(varDecl.initialValue).isInstanceOf(Constant.UIntConstant::class.java)
             assertThat((varDecl.initialValue as Constant.UIntConstant).value).isEqualTo(99uL)
@@ -440,8 +449,8 @@ class GraphBuilderTest {
         @Test
         fun `variable declaration with explicit type stores declared type`() {
             val file = buildFile("fn f(): i32 { var x: i32 = 0; return x; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = fn.body as Function.Body.Implementation
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = fn.body as FunctionElement.BodyElement.Implementation
             val varDecl = body.block.instructions.filterIsInstance<VariableDeclaration>().first()
             assertThat(varDecl.declaredType).isInstanceOf(Type.Int::class.java)
         }
@@ -449,10 +458,10 @@ class GraphBuilderTest {
         @Test
         fun `return value with arithmetic expression`() {
             val file = buildFile("fn f(a: i32, b: i32): i32 { return a + b; } native fn plus(a:i32,b:i32):i32")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = fn.body as Function.Body.Implementation
-            val ret = body.block.instructions.filterIsInstance<Instruction.Return>().first()
-            assertThat(ret.value).isInstanceOf(Instruction.FunctionCall::class.java)
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = fn.body as FunctionElement.BodyElement.Implementation
+            val ret = body.block.instructions.filterIsInstance<Return>().first()
+            assertThat(ret.value).isInstanceOf(FunctionCall::class.java)
         }
 
         @Test
@@ -465,8 +474,8 @@ class GraphBuilderTest {
                     return first;
                 }
             """.trimIndent())
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = fn.body as Function.Body.Implementation
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = fn.body as FunctionElement.BodyElement.Implementation
             val vars = body.block.instructions.filterIsInstance<VariableDeclaration>()
             assertThat(vars).hasSize(3)
             assertThat(vars.map { it.name.value }).containsExactly("first", "second", "third")
@@ -480,9 +489,9 @@ class GraphBuilderTest {
 
         private fun constantFrom(literal: String): Expression? {
             val file = buildFile("fn f(): u64 { return $literal; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = fn.body as Function.Body.Implementation
-            return body.block.instructions.filterIsInstance<Instruction.Return>().first().value
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = fn.body as FunctionElement.BodyElement.Implementation
+            return body.block.instructions.filterIsInstance<Return>().first().value
         }
 
         @Test
@@ -507,9 +516,9 @@ class GraphBuilderTest {
         @Test
         fun `negative integer resolves to IntConstant`() {
             val file = buildFile("fn f(): i64 { return -100; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
-            val body = fn.body as Function.Body.Implementation
-            val const = body.block.instructions.filterIsInstance<Instruction.Return>().first().value
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
+            val body = fn.body as FunctionElement.BodyElement.Implementation
+            val const = body.block.instructions.filterIsInstance<Return>().first().value
             assertThat(const).isInstanceOf(Constant.IntConstant::class.java)
             assertThat((const as Constant.IntConstant).value).isEqualTo(-100L)
         }

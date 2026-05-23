@@ -1,11 +1,12 @@
 package eu.nitok.jitsu.compiler.bitcode
 
-import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.compiler.bitcode.LowLevelExpression.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
-import eu.nitok.jitsu.compiler.graph.*
-import eu.nitok.jitsu.compiler.graph.Function
-import java.net.URI
+import eu.nitok.jitsu.compiler.graph.api.*
+import eu.nitok.jitsu.compiler.graph.api.Expression.*
+import eu.nitok.jitsu.compiler.graph.api.Function
+import eu.nitok.jitsu.compiler.graph.api.Instruction.*
+import kotlin.collections.find
 
 /**
  * Result of lowering an expression.
@@ -35,13 +36,14 @@ class FunctionLowering(
     val ctx = LoweringContext()
 
     fun lower(): List<LowLevelInstruction> {
-        return when (function.body) {
+        val body = function.body
+        return when (body) {
             is Function.Body.Implementation -> lowerCodeBlock(
-                function.body.block,
+                body,
                 function.returnType?.value?.let { TypeLowering.lower(it) }
             )
 
-            is Function.Body.Native, Function.Body.Missing -> emptyList()
+            is Function.Body.Native, is Function.Body.Missing -> emptyList()
         }
     }
 
@@ -50,29 +52,32 @@ class FunctionLowering(
         expectedReturnType: LowLevelType?
     ): List<LowLevelInstruction> {
         val implicitReturn = if(block.instructions.lastOrNull() !is Instruction.Return && expectedReturnType == null)
-            lowerReturn(Instruction.Return(null, Location(URI("memory://test.jit"),0,0,0,0)), null)
+            lowerReturn(null, null)
         else listOf()
         return block.instructions.flatMap { instruction ->
             when (instruction) {
                 is Function -> TODO("Nested functions not yet supported!")
-                is Instruction.FunctionCall -> lowerFunctionCallStatement(instruction)
+                is FunctionCall -> lowerFunctionCallStatement(instruction)
                 is Instruction.Return -> lowerReturn(instruction, expectedReturnType)
                 is VariableDeclaration -> lowerVariableDeclaration(instruction)
             }
         } + implicitReturn
     }
 
+    /**
+     * @param instruction null means an implicit no value return
+     */
     private fun lowerReturn(
-        instruction: Instruction.Return,
+        instruction: Instruction.Return?,
         expectedReturnType: LowLevelType?
     ): List<LowLevelInstruction> {
         val freeInstructions = variableRegistry.variablesToFree.flatMap { entry ->
             entry.lowLevelType.free(entry.asVariable(), ctx)
         }
 
-        val returnValue = instruction.value
+        val returnValue = instruction?.value
         if (returnValue == null || expectedReturnType == null) {
-            return freeInstructions + Return(null)
+            return freeInstructions + LowLevelInstruction.Return(null)
         }
 
         // Pass expected return type as hint for type-predictive lowering
@@ -83,7 +88,7 @@ class FunctionLowering(
             lowered.expression, lowered.type, expectedReturnType
         )
 
-        return lowered.instructions + convertInstructions + freeInstructions + Return(convertedExpr)
+        return lowered.instructions + convertInstructions + freeInstructions + LowLevelInstruction.Return(convertedExpr)
     }
 
     private fun lowerVariableDeclaration(variable: VariableDeclaration): List<LowLevelInstruction> {
@@ -111,7 +116,7 @@ class FunctionLowering(
         return instructions
     }
 
-    private fun lowerFunctionCallStatement(call: Instruction.FunctionCall): List<LowLevelInstruction> {
+    private fun lowerFunctionCallStatement(call: FunctionCall): List<LowLevelInstruction> {
         val target = call.target ?: TODO("function not found")
         val (invoke, instructions) = invokeFunction(call.parameters, target)
         return instructions + invoke
@@ -137,7 +142,7 @@ class FunctionLowering(
         return invoke to instructions
     }
 
-    private fun lowerFunctionCallExpression(call: Instruction.FunctionCall): LoweredExpression {
+    private fun lowerFunctionCallExpression(call: FunctionCall): LoweredExpression {
         val target = call.target ?: TODO("function not found")
         val (invoke, instructions) = invokeFunction(call.parameters, target)
         val returnGraphType = target.returnType?.value
@@ -164,7 +169,7 @@ class FunctionLowering(
         return when (expression) {
             is Constant.BooleanConstant -> LoweredExpression(
                 NumericalValue(if (expression.value) 1L else 0L),
-                LowLevelType.LLBool,
+                TypeLowering.lower(expression.type),
                 emptyList()
             )
 
@@ -180,21 +185,18 @@ class FunctionLowering(
                 emptyList()
             )
 
+            is FunctionCall -> lowerFunctionCallExpression(expression)
+            is VariableReference -> lowerVariableReference(expression)
+            is ArrayLiteral -> lowerArrayLiteral(expression, hint)
             is Constant.StringConstant -> TODO("String constants not yet supported")
-            is Instruction.FunctionCall -> lowerFunctionCallExpression(expression)
-            is Expression.VariableReference -> lowerVariableReference(expression)
-            is Expression.ArrayLiteral -> lowerArrayLiteral(expression, hint)
-            is Expression.Undefined -> TODO("Cannot lower undefined expression")
+            is Undefined -> TODO("Cannot lower undefined expression")
         }
     }
 
-    private fun lowerVariableReference(ref: Expression.VariableReference): LoweredExpression {
+    private fun lowerVariableReference(ref: VariableReference): LoweredExpression {
         val variableName = ref.reference.value
         val lowType = when (val target = ref.target) {
-            is Function.Parameter -> {
-                val gt = target.declaredType
-                TypeLowering.lower(gt)
-            }
+            is Function.Parameter -> TypeLowering.lower(target.type)
 
             is VariableDeclaration -> {
                 variableRegistry.getLowLevelType(target)
@@ -211,7 +213,7 @@ class FunctionLowering(
      * Lower an array literal, using hint to determine element type if available.
      */
     private fun lowerArrayLiteral(
-        literal: Expression.ArrayLiteral,
+        literal: ArrayLiteral,
         hint: LowLevelType?
     ): LoweredExpression {
         // Use hint if it's a compatible array type, otherwise fall back to inferred type
@@ -245,15 +247,13 @@ class FunctionLowering(
      * Check if we can use the hint array type for this literal.
      * The hint is usable if all elements can be assigned to the hint's element type.
      */
-    private fun canUseArrayHint(literal: Expression.ArrayLiteral, hint: JitsuArray): Boolean {
+    private fun canUseArrayHint(literal: ArrayLiteral, hint: JitsuArray): Boolean {
         // For now, simple check: element count must match for fixed arrays
         if (hint.isFixedSize && hint.fixedSize != literal.elements.size) {
             return false
         }
         return true
     }
-
-    // ==================== Type conversion ====================
 
     private fun convert(
         expression: LowLevelExpression,

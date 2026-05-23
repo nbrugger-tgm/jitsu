@@ -3,15 +3,12 @@ package eu.nitok.jitsu.gradle.tasks
 import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.format
 import eu.nitok.jitsu.common.sequence
-import eu.nitok.jitsu.compiler.graph.JitsuModule
-import eu.nitok.jitsu.compiler.graph.buildJitsuModule
-import eu.nitok.jitsu.compiler.graph.restoreJitsuModule
+import eu.nitok.jitsu.compiler.graph.api.JitsuModule
 import eu.nitok.jitsu.gradle.json
 import eu.nitok.jitsu.parser.ast.JitsuModuleAst
 import eu.nitok.jitsu.parser.parseJitsuFile
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.decodeFromStream
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
@@ -43,13 +40,8 @@ abstract class JitsuCompile @Inject constructor() : DefaultTask() {
     @OptIn(ExperimentalSerializationApi::class)
     fun compile() {
         val (moduleAst, parseErrors) = parse(moduleName.get())
-        val dependencies = dependencies.asSequence()
-            .map { json.decodeFromStream<JitsuModule>(it.inputStream()) }
-            .toList()
 
-
-        dependencies.forEach { restoreJitsuModule(it) }
-        val graph = buildJitsuModule(moduleAst, dependencies)
+        val graph = JitsuModule.compile(moduleAst, dependencies.files.map { it.toPath() })
         val errors = graph.messages.errors + parseErrors
         graph.messages.warnings.forEach {
             logger.warn(it.format("w"))
@@ -62,7 +54,7 @@ abstract class JitsuCompile @Inject constructor() : DefaultTask() {
         }
         val moduleCache = targetFile.get().asFile
         moduleCache.createNewFile()
-        moduleCache.writeText(json.encodeToString(graph))
+        graph.writeToFile(moduleCache.toPath())
         logger.info("Store module cache in $moduleCache")
     }
     class ModuleDirectory(var name: String, var subModules: MutableList<ModuleDirectory>, var files: MutableList<Path>)

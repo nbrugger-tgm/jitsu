@@ -4,10 +4,21 @@ import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.common.locating.Position
 import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.compiler.graph.*
-import eu.nitok.jitsu.compiler.graph.Function
+import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.locating.Located
+import eu.nitok.jitsu.compiler.graph.elements.CodeBlockElement
+import eu.nitok.jitsu.compiler.graph.api.Expression
+import eu.nitok.jitsu.compiler.graph.api.Instruction
+import eu.nitok.jitsu.compiler.graph.behaviour.ModuleAware
+import eu.nitok.jitsu.compiler.graph.elements.types.Type
 import eu.nitok.jitsu.compiler.graph.behaviour.ScopeAware
+import eu.nitok.jitsu.compiler.graph.elements.JitsuModule
+import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
+import eu.nitok.jitsu.compiler.graph.elements.expressions.Constant
+import eu.nitok.jitsu.compiler.graph.elements.expressions.VariableReference
+import eu.nitok.jitsu.compiler.graph.elements.instructions.FunctionCall
+import eu.nitok.jitsu.compiler.graph.elements.instructions.Return
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -41,31 +52,31 @@ class AnalysisRepositoryTest {
     private fun buildFunction(
         name: String,
         returnType: Type? = null,
-        parameters: List<Function.Parameter> = emptyList(),
+        parameters: List<FunctionElement.Parameter> = emptyList(),
         instructions: List<Instruction> = emptyList()
-    ): Function {
-        val function = Function(
+    ): FunctionElement {
+        val function = FunctionElement(
             located(name),
             returnType?.let { located(it) },
             parameters,
-            Function.Body.Implementation(CodeBlock(instructions)),
+            FunctionElement.BodyElement.Implementation(CodeBlockElement(instructions)),
             dummyLocation
         )
         function.setEnclosingModule(module)
         function.setEnclosingScope(module.scope)
         return function
     }
-    private fun param(name: String, type: Type): Function.Parameter =
-        Function.Parameter(located(name), type, null).modularized()
+    private fun param(name: String, type: Type): FunctionElement.Parameter =
+        FunctionElement.Parameter(located(name), type, null).modularized()
 
     private fun constI32(value: Long): Constant.IntConstant =
         Constant.IntConstant(value, dummyLocation).modularized()
 
-    private fun ret(value: Expression? = null): Instruction.Return =
-        Instruction.Return(value, dummyLocation).modularized()
+    private fun ret(value: Expression? = null): Return =
+        Return(value, dummyLocation).modularized()
 
-    private fun call(name: String, args: List<Expression> = emptyList()): Instruction.FunctionCall =
-        Instruction.FunctionCall(located(name), args, dummyLocation).modularized()
+    private fun call(name: String, args: List<Expression> = emptyList()): FunctionCall =
+        FunctionCall(located(name), args, dummyLocation).modularized()
 
     @Test
     fun `single non-recursive function gets summary`() {
@@ -192,7 +203,7 @@ class AnalysisRepositoryTest {
             declaredType = i32,
             initialValue = constI32(7)
         ).modularized()
-        val ref = Expression.VariableReference(located("x")).modularized()
+        val ref = VariableReference(located("x")).modularized()
         ref.setResolvedTarget(decl)
         val foo = buildFunction("foo", i32, instructions = listOf(decl, ret(ref)))
         repo.analyzeAll(listOf(foo), messages)

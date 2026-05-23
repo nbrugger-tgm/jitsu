@@ -1,6 +1,7 @@
-package eu.nitok.jitsu.compiler.graph
+package eu.nitok.jitsu.compiler.graph.behaviour
 
-interface ModuleAware {
-    val module: JitsuModule
+import eu.nitok.jitsu.compiler.graph.elements.JitsuModule
+
+internal interface ModuleAware {
     fun setEnclosingModule(parent: JitsuModule)
 }

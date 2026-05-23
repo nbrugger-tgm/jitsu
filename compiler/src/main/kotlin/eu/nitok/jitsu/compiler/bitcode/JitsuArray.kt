@@ -1,9 +1,7 @@
 package eu.nitok.jitsu.compiler.bitcode
 
-import eu.nitok.jitsu.compiler.bitcode.LowLevelType.Companion.I32
-import eu.nitok.jitsu.compiler.bitcode.LowLevelType.Companion.I64
 import eu.nitok.jitsu.compiler.bitcode.LowLevelType.*
-import eu.nitok.jitsu.compiler.graph.Type
+import eu.nitok.jitsu.compiler.graph.api.Type
 
 /**
  * Jitsu array type - a higher-level abstraction over LLStruct.
@@ -13,6 +11,7 @@ import eu.nitok.jitsu.compiler.graph.Type
 class JitsuArray private constructor(
     val elementType: LowLevelType,
     val fixedSize: Int?,
+    val sizeType: LowLevelType,
     val layout: LLStruct,
 ) : Custom(layout) {
     val isFixedSize: Boolean get() = fixedSize != null
@@ -66,7 +65,7 @@ class JitsuArray private constructor(
         if(fixedSize == 0) return emptyList()
         val sizeExpr = sizeExpression(array)
 
-        val (counter, counterInstructs) = ctx.createTmpVar(I32)
+        val (counter, counterInstructs) = ctx.createTmpVar(sizeType)
         val initCounter = LowLevelInstruction.Write(counter, LowLevelExpression.NumericalValue(0))
 
         val elementAccess = accessIndex(array, counter)
@@ -122,27 +121,27 @@ class JitsuArray private constructor(
          * Create a fixed-size array type.
          * Layout: { data: [T; size] }
          */
-        fun fixed(elementType: LowLevelType, size: Int, graphType: Type): JitsuArray {
+        fun fixed(elementType: LowLevelType, sizeType: LowLevelType, size: Int, graphType: Type): JitsuArray {
             val layout = LLStruct(
                 mapOf("data" to LLFixedArray(elementType, size, graphType)),
                 graphType
             )
-            return JitsuArray(elementType, size, layout)
+            return JitsuArray(elementType, size, sizeType, layout)
         }
 
         /**
          * Create a dynamic (heap-allocated) array type.
          * Layout: { length: i64, data: *T }
          */
-        fun dynamic(elementType: LowLevelType, graphType: Type): JitsuArray {
+        fun dynamic(elementType: LowLevelType, sizeType: LowLevelType, graphType: Type): JitsuArray {
             val layout = LLStruct(
                 mapOf(
-                    "length" to I64,
+                    "length" to sizeType,
                     "data" to LLPointer(elementType, graphType)
                 ),
                 graphType
             )
-            return JitsuArray(elementType, null, layout)
+            return JitsuArray(elementType, null, sizeType, layout)
         }
     }
 }

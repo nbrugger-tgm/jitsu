@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.compiler.bitcode
 
 import eu.nitok.jitsu.common.BitSize
-import eu.nitok.jitsu.compiler.graph.Type
+import eu.nitok.jitsu.compiler.graph.api.Type
 
 /**
  * Low-level type system for bytecode generation.
@@ -44,23 +44,23 @@ sealed interface LowLevelType {
      */
     sealed interface LLPrimitive : LowLevelType {
         val size: BitSize
+        override val graphType: Type.Primitive
     }
 
-    data class LLInt(override val size: BitSize, override val graphType: Type) : LLPrimitive {
+    data class LLInt(override val size: BitSize, override val graphType: Type.Primitive) : LLPrimitive {
         override fun toString() = "i${size.bits}"
     }
 
-    data class LLUInt(override val size: BitSize, override val graphType: Type) : LLPrimitive {
+    data class LLUInt(override val size: BitSize, override val graphType: Type.Primitive) : LLPrimitive {
         override fun toString() = "u${size.bits}"
     }
 
-    data class LLFloat(override val size: BitSize, override val graphType: Type) : LLPrimitive {
+    data class LLFloat(override val size: BitSize, override val graphType: Type.Primitive) : LLPrimitive {
         override fun toString() = "f${size.bits}"
     }
 
-    data object LLBool : LLPrimitive {
+    data class LLBool(override val graphType: Type.Boolean) : LLPrimitive {
         override val size = BitSize.BIT_1
-        override val graphType: Type get() = Type.Boolean
         override fun toString() = "bool"
     }
 
@@ -180,21 +180,5 @@ sealed interface LowLevelType {
     }
 
     open class Custom(val lowLevelType: LowLevelType) : LowLevelType by lowLevelType
-
-    companion object {
-        /** Common primitive types */
-        val I8 = LLInt(BitSize.BIT_8, Type.Int(BitSize.BIT_8))
-        val I16 = LLInt(BitSize.BIT_16, Type.Int(BitSize.BIT_16))
-        val I32 = LLInt(BitSize.BIT_32, Type.Int(BitSize.BIT_32))
-        val I64 = LLInt(BitSize.BIT_64, Type.Int(BitSize.BIT_64))
-
-        val U8 = LLUInt(BitSize.BIT_8, Type.UInt(BitSize.BIT_8))
-        val U16 = LLUInt(BitSize.BIT_16, Type.UInt(BitSize.BIT_16))
-        val U32 = LLUInt(BitSize.BIT_32, Type.UInt(BitSize.BIT_32))
-        val U64 = LLUInt(BitSize.BIT_64, Type.UInt(BitSize.BIT_64))
-
-        val F32 = LLFloat(BitSize.BIT_32, Type.Float(BitSize.BIT_32))
-        val F64 = LLFloat(BitSize.BIT_64, Type.Float(BitSize.BIT_64))
-    }
 }
 

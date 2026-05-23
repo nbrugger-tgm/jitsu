@@ -1,8 +1,13 @@
 package eu.nitok.jitsu.compiler.analysis
 
 import eu.nitok.jitsu.compiler.graph.*
-import eu.nitok.jitsu.compiler.graph.Function
+import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.common.sequence
+import eu.nitok.jitsu.compiler.graph.elements.JitsuFile
+import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
+import eu.nitok.jitsu.compiler.graph.elements.expressions.VariableReference
+import eu.nitok.jitsu.compiler.graph.elements.instructions.FunctionCall
+import eu.nitok.jitsu.compiler.graph.elements.instructions.Return
 import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -24,7 +29,7 @@ class AnalysisIntegrationTest {
     fun `pure function returning constant gets deterministic summary`() {
         val file = buildFile("fn five(): i32 { return 5; }")
 
-        val fn = file.sequence().filterIsInstance<Function>().first()
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first()
         assertThat(fn.summary).isNotNull()
         assertThat(fn.summary!!.returnSummary!!.deterministic.value).isTrue()
         assertThat(fn.summary!!.noSideEffects.value).isTrue()
@@ -34,7 +39,7 @@ class AnalysisIntegrationTest {
     @Test
     fun `function with parameter returns parameter value`() {
         val file = buildFile("fn identity(x: i32): i32 { return x; }")
-        val fn = file.sequence().filterIsInstance<Function>().first()
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first()
         assertThat(fn.summary).isNotNull()
         assertThat(fn.summary!!.returnSummary!!.deterministic.value).isTrue()
         assertThat(fn.summary!!.returnSummary!!.dependsOnParameters).contains("x")
@@ -43,7 +48,7 @@ class AnalysisIntegrationTest {
     @Test
     fun `function with parameter returns parameter-dependent value`() {
         val file = buildFile("fn identity(x: i32): i32 { return x + 20; } native fn plus(x: i32,y: i32): i32")
-        val fn = file.sequence().filterIsInstance<Function>().first()
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first()
         assertThat(fn.summary).isNotNull()
         assertThat(fn.summary!!.returnSummary!!.deterministic.value).isTrue()
         assertThat(fn.summary!!.returnSummary!!.dependsOnParameters).containsExactlyInAnyOrder("x")
@@ -53,7 +58,7 @@ class AnalysisIntegrationTest {
     @Test
     fun `function with multiple parameters returns parameter-dependent value`() {
         val file = buildFile("fn identity(x: i32,y: i32): i32 { return x + y; } native fn plus(x: i32,y: i32): i32")
-        val fn = file.sequence().filterIsInstance<Function>().first()
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first()
         assertThat(fn.summary).isNotNull()
         assertThat(fn.summary!!.returnSummary!!.deterministic.value).isTrue()
         assertThat(fn.summary!!.returnSummary!!.dependsOnParameters).containsExactlyInAnyOrder("x","y")
@@ -62,7 +67,7 @@ class AnalysisIntegrationTest {
     @Test
     fun `function with multiple parameters returns only parameter-dependent value`() {
         val file = buildFile("fn identity(x: i32,y: i32): i32 { return x + 30; } native fn plus(x: i32,y: i32): i32")
-        val fn = file.sequence().filterIsInstance<Function>().first()
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first()
         assertThat(fn.summary).isNotNull()
         assertThat(fn.summary!!.returnSummary!!.deterministic.value).isTrue()
         assertThat(fn.summary!!.returnSummary!!.dependsOnParameters).containsExactlyInAnyOrder("x")
@@ -74,7 +79,7 @@ class AnalysisIntegrationTest {
             fn bar(): i32 { return 42; }
             fn foo(): i32 { return bar(); }
         """.trimIndent())
-        val functions = file.sequence().filterIsInstance<Function>().toList()
+        val functions = file.sequence().filterIsInstance<FunctionElement>().toList()
         val foo = functions.first { it.name?.value == "foo" }
         val bar = functions.first { it.name?.value == "bar" }
 
@@ -91,7 +96,7 @@ class AnalysisIntegrationTest {
             fn b(): i32 { return 2; }
             fn c(): i32 { return 3; }
         """.trimIndent())
-        val functions = file.sequence().filterIsInstance<Function>().toList()
+        val functions = file.sequence().filterIsInstance<FunctionElement>().toList()
         assertThat(functions).allSatisfy { fn ->
             assertThat(fn.summary).isNotNull()
         }
@@ -106,7 +111,7 @@ class AnalysisIntegrationTest {
             }
             native fn plus(a: i32, b: i32): i32
         """.trimIndent())
-        val fn = file.sequence().filterIsInstance<Function>().first()
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first()
         assertThat(fn.summary).isNotNull()
         assertThat(fn.summary!!.returnSummary!!.deterministic.value).isTrue()
         assertThat(fn.summary!!.returnSummary!!.dependsOnParameters).containsExactlyInAnyOrder("a", "b")
@@ -123,12 +128,12 @@ class AnalysisIntegrationTest {
                 return number;
             }
         """.trimIndent())
-        val fn = file.sequence().filterIsInstance<Function>().first { it.name?.value == "main" }
-        val body = (fn.body as Function.Body.Implementation).block.instructions
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "main" }
+        val body = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
 
         // Find the variable reference to 'input' in 'var number: u32 = input;'
         val numberDecl = body.filterIsInstance<VariableDeclaration>().first { it.name.value == "number" }
-        val inputRef = numberDecl.initialValue as? Expression.VariableReference
+        val inputRef = numberDecl.initialValue as? VariableReference
         assertThat(inputRef).isNotNull()
         assertThat(inputRef!!.target).isNotNull()
             .withFailMessage("Variable reference 'input' should resolve to the variable declared above")
@@ -148,12 +153,12 @@ class AnalysisIntegrationTest {
                 return 42;
             }
         """.trimIndent())
-        val fn = file.sequence().filterIsInstance<Function>().first { it.name?.value == "main" }
-        val helperFn = file.sequence().filterIsInstance<Function>().first { it.name?.value == "helper" }
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "main" }
+        val helperFn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "helper" }
 
         // Find the function call 'helper()' in 'var result = helper();'
-        val resultDecl = (fn.body as Function.Body.Implementation).block.instructions.filterIsInstance<VariableDeclaration>().first { it.name.value == "result" }
-        val helperCall = resultDecl.initialValue as? Instruction.FunctionCall
+        val resultDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions.filterIsInstance<VariableDeclaration>().first { it.name.value == "result" }
+        val helperCall = resultDecl.initialValue as? FunctionCall
         assertThat(helperCall).isNotNull()
         assertThat(helperCall!!.target).isNotNull()
             .withFailMessage("Function call 'helper()' should resolve to the helper function")
@@ -180,15 +185,15 @@ class AnalysisIntegrationTest {
             native fn plus(x: i64,y: i64): u32
         """.trimIndent()
         val file = buildFile(source)
-        val mainFn = file.sequence().filterIsInstance<Function>().first { it.name?.value == "main" }
-        val testFn = file.sequence().filterIsInstance<Function>().first { it.name?.value == "test" }
-        val testGenericFn = file.sequence().filterIsInstance<Function>().first { it.name?.value == "testGeneric" }
+        val mainFn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "main" }
+        val testFn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "test" }
+        val testGenericFn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "testGeneric" }
 
-        val body = (mainFn.body as Function.Body.Implementation).block.instructions
+        val body = (mainFn.body as FunctionElement.BodyElement.Implementation).block.instructions
 
         // 'input' reference in 'var number : u32 | i32 = input;' resolves
         val numberDecl = body.filterIsInstance<VariableDeclaration>().first { it.name.value == "number" }
-        val inputRef = numberDecl.initialValue as? Expression.VariableReference
+        val inputRef = numberDecl.initialValue as? VariableReference
         assertThat(inputRef).isNotNull()
         assertThat(inputRef!!.target).isNotNull()
             .withFailMessage("Variable reference 'input' on line 3 must resolve to the declaration on line 2")
@@ -198,7 +203,7 @@ class AnalysisIntegrationTest {
 
         // 'test(number, number)' resolves to test function
         val return1Decl = body.filterIsInstance<VariableDeclaration>().first { it.name.value == "return1" }
-        val testCall = return1Decl.initialValue as? Instruction.FunctionCall
+        val testCall = return1Decl.initialValue as? FunctionCall
         assertThat(testCall).isNotNull()
         assertThat(testCall!!.target).isNotNull()
             .withFailMessage("Function call 'test(number, number)' must resolve to the test function")
@@ -206,18 +211,18 @@ class AnalysisIntegrationTest {
 
         // 'testGeneric(number, number)' resolves to testGeneric function
         val return2Decl = body.filterIsInstance<VariableDeclaration>().first { it.name.value == "return2" }
-        val testGenericCall = return2Decl.initialValue as? Instruction.FunctionCall
+        val testGenericCall = return2Decl.initialValue as? FunctionCall
         assertThat(testGenericCall).isNotNull()
         assertThat(testGenericCall!!.target).isNotNull()
             .withFailMessage("Function call 'testGeneric(number, number)' must resolve to the testGeneric function")
         assertThat(testGenericCall.target).isSameAs(testGenericFn)
 
         // Variable references in return statement resolve
-        val returnStmt = body.filterIsInstance<Instruction.Return>().first()
-        val returnOp = returnStmt.value as? Instruction.FunctionCall
+        val returnStmt = body.filterIsInstance<Return>().first()
+        val returnOp = returnStmt.value as? FunctionCall
         assertThat(returnOp).isNotNull()
-        val return1Ref = returnOp!!.callParameters[0] as? Expression.VariableReference
-        val return2Ref = returnOp.callParameters[1] as? Expression.VariableReference
+        val return1Ref = returnOp!!.callParameters[0] as? VariableReference
+        val return2Ref = returnOp.callParameters[1] as? VariableReference
         assertThat(return1Ref).isNotNull()
         assertThat(return2Ref).isNotNull()
         assertThat(return1Ref!!.target).isNotNull()

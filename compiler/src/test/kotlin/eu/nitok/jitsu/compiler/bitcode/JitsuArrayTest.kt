@@ -6,7 +6,7 @@ import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelType.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelType.Companion.I32
 import eu.nitok.jitsu.compiler.bitcode.LowLevelType.Companion.I64
-import eu.nitok.jitsu.compiler.graph.Type
+import eu.nitok.jitsu.compiler.graph.elements.types.Type
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalStateException
 import org.junit.jupiter.api.BeforeEach

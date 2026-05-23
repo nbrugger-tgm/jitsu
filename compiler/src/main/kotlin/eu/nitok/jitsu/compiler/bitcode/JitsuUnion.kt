@@ -1,9 +1,11 @@
 package eu.nitok.jitsu.compiler.bitcode
 
-import eu.nitok.jitsu.compiler.bitcode.LowLevelType.Companion.I32
+import eu.nitok.jitsu.common.BitSize
+import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.compiler.bitcode.LowLevelType.LLStruct
 import eu.nitok.jitsu.compiler.bitcode.LowLevelType.LLUnion
-import eu.nitok.jitsu.compiler.graph.Type
+import eu.nitok.jitsu.compiler.graph.api.Element
+import eu.nitok.jitsu.compiler.graph.api.Type
 
 /**
  * Jitsu union type - a higher-level abstraction combining LLStruct and LLUnion.
@@ -137,7 +139,7 @@ class JitsuUnion private constructor(
         /**
          * Create a union type from a list of LowLevelType options.
          * Each option carries its own graphType.
-         * Layout: { option: i32, value: union { o0: T0, o1: T1, ... } }
+         * Layout: { option: int, value: union { o0: T0, o1: T1, ... } }
          */
         fun of(union: Type.Union, options: List<LowLevelType>): JitsuUnion {
             require(options.isNotEmpty()) { "Union must have at least one option" }
@@ -146,12 +148,29 @@ class JitsuUnion private constructor(
             val valueUnion = LLUnion(valueMembers, union)
             val layout = LLStruct(
                 mapOf(
-                    "option" to I32,
+                    "option" to uintTypeFor(options.size.toUInt()),
                     "value" to valueUnion
                 ),
                 union
             )
             return JitsuUnion(options, layout, union)
         }
+        private fun uintTypeFor(max: UInt) = when {
+            max <= UByte.MAX_VALUE -> uintTypeFor(BitSize.BIT_8)
+            max <= UShort.MAX_VALUE -> uintTypeFor(BitSize.BIT_16)
+            max <= UInt.MAX_VALUE -> uintTypeFor(BitSize.BIT_32)
+            max <= ULong.MAX_VALUE -> uintTypeFor(BitSize.BIT_64)
+            else -> throw IllegalArgumentException("UInt max value $max is too large (u64 max value is ${ULong.MAX_VALUE})")
+        }
+
+        private fun uintTypeFor(bits: BitSize) = TypeLowering.lower(object: Type.UInt {
+            override val size: BitSize get() = bits
+            override val rawType: Type get() = this
+
+            override fun acceptsInstanceOf(type: Type): ReasonedBoolean {
+                throw UnsupportedOperationException()
+            }
+            override val children: List<Element> get() = throw UnsupportedOperationException()
+        })
     }
 }

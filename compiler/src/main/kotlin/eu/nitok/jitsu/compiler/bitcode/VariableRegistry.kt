@@ -1,8 +1,8 @@
 package eu.nitok.jitsu.compiler.bitcode
 
 import eu.nitok.jitsu.compiler.analysis.OwnershipState
-import eu.nitok.jitsu.compiler.graph.Function
-import eu.nitok.jitsu.compiler.graph.VariableDeclaration
+import eu.nitok.jitsu.compiler.graph.api.Function
+import eu.nitok.jitsu.compiler.graph.api.VariableDeclaration
 
 /**
  * Registry for variables during function lowering.

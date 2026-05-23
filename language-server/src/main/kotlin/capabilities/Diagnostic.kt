@@ -2,8 +2,8 @@ package capabilities
 
 import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.flatMap
-import eu.nitok.jitsu.compiler.graph.JitsuFile
-import eu.nitok.jitsu.compiler.graph.JitsuModule
+import eu.nitok.jitsu.compiler.graph.api.JitsuFile
+import eu.nitok.jitsu.compiler.graph.api.JitsuModule
 import eu.nitok.jitsu.parser.ast.AstNode
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity

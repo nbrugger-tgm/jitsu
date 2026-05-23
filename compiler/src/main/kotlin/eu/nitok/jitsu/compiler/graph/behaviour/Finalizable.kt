@@ -2,6 +2,6 @@ package eu.nitok.jitsu.compiler.graph.behaviour
 
 import eu.nitok.jitsu.common.CompilerMessages
 
-interface Finalizable {
+internal interface Finalizable {
     fun finalize(messages: CompilerMessages)
 }

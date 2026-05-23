@@ -1,7 +1,7 @@
 package eu.nitok.jitsu.compiler.graph.behaviour
 
-import eu.nitok.jitsu.compiler.graph.Element
-import eu.nitok.jitsu.compiler.graph.Scope
+import eu.nitok.jitsu.compiler.graph.api.Element
+import eu.nitok.jitsu.compiler.graph.elements.Scope
 import kotlinx.serialization.Transient
 
 internal interface ScopeProvider: Element, ScopeAware {

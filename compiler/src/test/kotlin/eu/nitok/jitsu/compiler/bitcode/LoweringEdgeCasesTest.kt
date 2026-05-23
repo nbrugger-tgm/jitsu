@@ -1,10 +1,14 @@
 package eu.nitok.jitsu.compiler.bitcode
 
+import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
 import eu.nitok.jitsu.compiler.graph.*
-import eu.nitok.jitsu.compiler.graph.Function
+import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.common.sequence
+import eu.nitok.jitsu.compiler.graph.elements.types.Type
 import eu.nitok.jitsu.compiler.graph.buildJitsuModule
+import eu.nitok.jitsu.compiler.graph.elements.JitsuFile
+import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
 import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.InstanceOfAssertFactories.map
@@ -43,24 +47,24 @@ class LoweringEdgeCasesTest {
     /** Lower the first function found in [source]. */
     private fun lower(source: String): List<LowLevelInstruction> {
         val file = buildFile(source)
-        val fn = file.sequence().filterIsInstance<Function>().first()
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first()
         return FunctionLowering({ it.name?.value ?: "anon" }, fn).lower()
     }
 
     /** Lower the function named [name] inside [source]. */
     private fun lowerFunction(source: String, name: String): List<LowLevelInstruction> {
         val file = buildFile(source)
-        val fn = file.sequence().filterIsInstance<Function>().first { it.name?.value == name }
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == name }
         return FunctionLowering({ it.name?.value ?: "anon" }, fn).lower()
     }
 
     /** Lower the first function with a custom name-resolver [namer]. */
     private fun lowerWithNamer(
         source: String,
-        namer: (Function) -> String
+        namer: (FunctionElement) -> String
     ): List<LowLevelInstruction> {
         val file = buildFile(source)
-        val fn = file.sequence().filterIsInstance<Function>().first()
+        val fn = file.sequence().filterIsInstance<FunctionElement>().first()
         return FunctionLowering(namer, fn).lower()
     }
 
@@ -151,7 +155,7 @@ class LoweringEdgeCasesTest {
                 }
             """.trimIndent()
             val file = buildFile(source)
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
             // Parameter of union type must lower to JitsuUnion
@@ -166,11 +170,11 @@ class LoweringEdgeCasesTest {
         @Test
         fun `array type with i64 elements resolves element type to LLInt(BIT_64)`() {
             val file = buildFile("fn f() { var x: i64[] = [1, 2]; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as Function.Body.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "x" }
             val arrayType = lowering.variableRegistry.getLowLevelType(varDecl) as JitsuArray
             assertThat(arrayType.elementType).isEqualTo(LowLevelType.I64)
@@ -184,7 +188,7 @@ class LoweringEdgeCasesTest {
         @Disabled("Function type signatures not implemented")
         fun `function type signature lowers to a function pointer type`() {
             val fnSig = Type.FunctionTypeSignature(
-                returnType = Type.Int(eu.nitok.jitsu.common.BitSize.BIT_32),
+                returnType = Type.Int(BitSize.BIT_32),
                 parameters = emptyList()
             )
             // Once implemented, TypeLowering.lower(fnSig) should return some JitsuFunctionPointer
@@ -333,7 +337,7 @@ class LoweringEdgeCasesTest {
         fun `variable reference to i64 parameter has I64 low-level type`() {
             val source = "fn f(v: i64): i64 { return v; }"
             val file = buildFile(source)
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
@@ -728,7 +732,7 @@ class LoweringEdgeCasesTest {
                 }
                 """.trimIndent()
             )
-            val callerFn = file.sequence().filterIsInstance<Function>()
+            val callerFn = file.sequence().filterIsInstance<FunctionElement>()
                 .first { it.name?.value == "caller" }
 
             val instructions =
@@ -757,7 +761,7 @@ class LoweringEdgeCasesTest {
                 }
                 """.trimIndent()
             )
-            val callerFn = file.sequence().filterIsInstance<Function>()
+            val callerFn = file.sequence().filterIsInstance<FunctionElement>()
                 .first { it.name?.value == "caller" }
 
             val instructions =
@@ -954,9 +958,9 @@ class LoweringEdgeCasesTest {
                 }
                 """.trimIndent()
             )
-            val pongFn = file.sequence().filterIsInstance<Function>()
+            val pongFn = file.sequence().filterIsInstance<FunctionElement>()
                 .first { it.name?.value == "pong" }
-            val pingFn = file.sequence().filterIsInstance<Function>()
+            val pingFn = file.sequence().filterIsInstance<FunctionElement>()
                 .first { it.name?.value == "ping" }
 
             val namingMap = mapOf(pingFn to "pkg.ping", pongFn to "pkg.pong")
@@ -1007,11 +1011,11 @@ class LoweringEdgeCasesTest {
             // We verify via the AllocStack layout of a variable holding a u32 value,
             // since we can't directly inspect the Return expression's type.
             val file = buildFile("fn f(): u32 { var x: u32 = 5; return x; }")
-            val fn = file.sequence().filterIsInstance<Function>().first()
+            val fn = file.sequence().filterIsInstance<FunctionElement>().first()
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as Function.Body.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "x" }
             val lowType = lowering.variableRegistry.getLowLevelType(varDecl)
             assertThat(lowType).isInstanceOf(LowLevelType.LLUInt::class.java)

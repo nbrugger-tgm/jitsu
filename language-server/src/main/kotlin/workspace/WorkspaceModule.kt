@@ -1,6 +1,7 @@
 package workspace
 
-import eu.nitok.jitsu.compiler.graph.buildJitsuModule
+import eu.nitok.jitsu.compiler.graph.api.JitsuFile
+import eu.nitok.jitsu.compiler.graph.api.JitsuModule
 import eu.nitok.jitsu.parser.ast.JitsuModuleAst
 import eu.nitok.jitsu.parser.ast.SourceFileNode
 import helpers.Cache
@@ -62,7 +63,7 @@ class WorkspaceModule(
     }
     private val graphCache = Cache {
         ast.thenApply {
-            buildJitsuModule(it,listOf(/*TODO dependency support*/))
+            JitsuModule.compile(it,listOf(/*TODO dependency support*/))
         }
     }
     val graph get() = graphCache.get()
