@@ -39,6 +39,8 @@ sealed interface LowLevelType {
      */
     fun writeAccess(variable: LowLevelExpression.Field): LowLevelExpression.Field = variable
 
+    data class LLNull(override val graphType: Type) : LowLevelType
+
     /**
      * Primitive numeric types (integers, floats, booleans).
      */

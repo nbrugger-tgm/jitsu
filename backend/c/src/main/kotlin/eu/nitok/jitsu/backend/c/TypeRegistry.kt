@@ -43,6 +43,7 @@ class TypeRegistry {
             is LowLevelType.LLUInt -> "${formatUInt(type.size)} $variable"
             is LowLevelType.LLUnion -> "union ${getUniqueName(type)} $variable"
             is LowLevelType.Custom -> formatType(variable, type.lowLevelType)
+            is LowLevelType.LLNull -> "void* $variable"
         }
     }
 
