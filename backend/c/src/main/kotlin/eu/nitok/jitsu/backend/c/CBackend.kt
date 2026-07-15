@@ -31,16 +31,28 @@ class CBackend : Backend {
             }
 
         headers.bufferedWriter().use { writer ->
-            writer.write(typeRegistry.typeDefs+"\n\n")
-            writer.write(functions.joinToString("\n"){it.def}+"\n\n")
+            writer.write(typeRegistry.typeDefs)
+            writer.newLine()
+            writer.newLine()
+            functions.forEach {
+                writer.write(it.def)
+                writer.newLine()
+            }
         }
         //TODO filter exported members
         publicHeaders.bufferedWriter().use { writer ->
-            writer.write(typeRegistry.typeDefs+"\n\n")
-            writer.write(functions.joinToString("\n"){it.def}+"\n\n")
+            writer.write(typeRegistry.typeDefs)
+            writer.newLine()
+            writer.newLine()
+            functions.forEach {
+                writer.write(it.def)
+                writer.newLine()
+            }
         }
         code.bufferedWriter().use { writer ->
             writer.write("#include \"${headers.relativeTo(code.parent)}\"")
+            writer.newLine()
+            writer.newLine()
             writer.write(functions.joinToString("\n"){it.impl})
             writer.flush()
         }
@@ -118,7 +130,10 @@ ${indent(1, body.joinToString("\n") { it.toCCode(typeRegistry) })}
             is LowLevelExpression.NumericalValue -> value.toString()
             is LowLevelExpression.Read -> "${this.struct.toCCode(typeRegistry)}.${this.name}"
             is LowLevelExpression.Ref -> "&${name.toCCode(typeRegistry)}"
-            is LowLevelExpression.ReturnValue -> functionCall.toCCode(typeRegistry)
+            is LowLevelExpression.ReturnValue -> functionCall.run {
+                val params = args.values.joinToString(", ") { it.toCCode(typeRegistry) }
+                "${functionName}($params)"
+            }
             is LowLevelExpression.Compare -> "${left.toCCode(typeRegistry)} == ${right.toCCode(typeRegistry)}"
             is LowLevelExpression.AllocHeap -> "malloc(sizeof(${typeRegistry.getUniqueName(layout)}))"
             is LowLevelExpression.AllocHeapArray -> "malloc(sizeof(${typeRegistry.getUniqueName(elementType)}) * ${size.toCCode(typeRegistry)})"
