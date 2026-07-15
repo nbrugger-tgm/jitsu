@@ -33,7 +33,7 @@ class ModuleLowering(private val module: JitsuModule) {
             .map { fn -> lowerFunction(fn) }
             .toList()
 
-        return LoweredModule(name = module.name,functions = loweredFunctions)
+        return LoweredModule(name = module.fullyQualifiedName,functions = loweredFunctions)
     }
 
     private fun getUniqueName(function: Function): String {

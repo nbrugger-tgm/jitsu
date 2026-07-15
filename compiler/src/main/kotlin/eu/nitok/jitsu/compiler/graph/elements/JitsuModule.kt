@@ -2,13 +2,11 @@ package eu.nitok.jitsu.compiler.graph.elements
 
 import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.compiler.graph.IrStore
-import eu.nitok.jitsu.compiler.graph.SymbolID
 import eu.nitok.jitsu.compiler.graph.api.Element
 import eu.nitok.jitsu.compiler.graph.behaviour.ModuleAware
 import eu.nitok.jitsu.compiler.graph.behaviour.ScopeProvider
 import eu.nitok.jitsu.compiler.graph.buildJitsuModule
 import eu.nitok.jitsu.compiler.graph.elements.types.TypeDefinitionElement
-import eu.nitok.jitsu.compiler.graph.elements.types.TypeElement
 import eu.nitok.jitsu.compiler.graph.restoreJitsuModule
 import eu.nitok.jitsu.parser.ast.JitsuModuleAst
 import kotlinx.serialization.Serializable
@@ -28,7 +26,7 @@ internal class JitsuModule internal constructor(
     /**
      * Full qualified name
      */
-    override val name: String,
+    override val fullyQualifiedName: String,
     override val files: List<JitsuFile>,
     override val submodules: List<JitsuModule>,
 ) : ScopeProvider, JitsuModulePublicApi {
@@ -53,7 +51,7 @@ internal class JitsuModule internal constructor(
     override val children: List<Element> get() = files + submodules
 
     override val allModules: Sequence<JitsuModule> get() = sequenceOf(this) + submodules.flatMap { it.allModules }
-    override val moduleLookup: Map<String, JitsuModule> by lazy { allModules.associateBy { it.name } }
+    override val moduleLookup: Map<String, JitsuModule> by lazy { allModules.associateBy { it.fullyQualifiedName } }
 
     @Transient
     override val allFunctions = files.flatMap { it.functions }.filter { it.name != null }.groupBy { it.name!!.value }
@@ -141,12 +139,12 @@ internal class JitsuModule internal constructor(
                 val dependenciesReadyToBeRestored = parsedDependencies.filter {
                     it.dependencies.none { restoredDependencies[it] == null }
                 }
-                if (dependenciesReadyToBeRestored.isEmpty()) throw IllegalStateException("Circular dependency detected among ${parsedDependencies.map { it.name }}")
+                if (dependenciesReadyToBeRestored.isEmpty()) throw IllegalStateException("Circular dependency detected among ${parsedDependencies.map { it.fullyQualifiedName }}")
                 dependenciesReadyToBeRestored.forEach {
                     restoreJitsuModule(it, restoredDependencies)
                     parsedDependencies.remove(it)
-                    val prev = restoredDependencies.putIfAbsent(it.name, it)
-                    if (prev != null) throw IllegalStateException("Duplicate dependency ${it.name}")
+                    val prev = restoredDependencies.putIfAbsent(it.fullyQualifiedName, it)
+                    if (prev != null) throw IllegalStateException("Duplicate dependency ${it.fullyQualifiedName}")
                 }
             }
             return restoredDependencies

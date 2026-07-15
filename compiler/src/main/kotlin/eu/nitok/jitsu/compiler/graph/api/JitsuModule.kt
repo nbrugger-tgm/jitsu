@@ -10,7 +10,8 @@ interface JitsuModule : Element {
     /**
      * Full qualified name
      */
-    val name: String
+    val fullyQualifiedName: String
+    val name get() = fullyQualifiedName.substringAfterLast('.')
     val files: List<JitsuFile>
     val submodules: List<JitsuModule>
     val dependencies: Sequence<String> get() = files.asSequence().flatMap { it.imports }.map { it.name.value }
