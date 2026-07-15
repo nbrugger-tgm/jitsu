@@ -377,10 +377,10 @@ internal class CodeBlockAnalyzer(
             .filterIndexed { index, _ -> outputInfluencingParams.contains(index) }
             .flatMap { it.paramDeps }
             .toSet()
-        val returnType = call.calculateType(typeContext, messages, typeHint) ?: run {
-            if(target != null) messages.error("Expected value but ${call.reference.value} is a void function", call.location)
+        val returnType = if(target != null) call.calculateType(typeContext, messages, typeHint) ?: run {
+            messages.error("Expected value but ${call.reference.value} is a void function", call.location)
             Undefined
-        }
+        } else Undefined
         val targetDeterminsitic =
             if (targetSummary?.returnSummary?.deterministic == null) True("Unresolved functions are assumed to be deterministic")
             else if (targetSummary.returnSummary.deterministic.value) True("$target is deterministic")
