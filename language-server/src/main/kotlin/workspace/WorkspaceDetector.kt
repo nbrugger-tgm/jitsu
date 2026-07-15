@@ -97,7 +97,7 @@ object WorkspaceDetector {
     private fun findGradlew(path: Path): Path? {
         val gradlewName = if (isWindows()) "gradlew.bat" else "gradlew"
         return walk(path).asSequence().firstOrNull { it.name == gradlewName }.let {
-            if (it != null) null
+            if (it != null) it
             else {
                 var dir = path
                 while (dir.parent != null) {
