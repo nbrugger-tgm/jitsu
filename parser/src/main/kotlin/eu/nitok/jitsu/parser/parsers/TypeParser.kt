@@ -155,7 +155,7 @@ internal fun parseExplicitType(
 
 private fun parseStructuralInterface(tokens: Tokens): TypeNode? {
     val messages = CompilerMessages()
-    val fields = tokens.range {
+    val fields = tokens.nullableRange {
         enclosedRepetition(
             DefaultToken.ROUND_BRACKET_OPEN,
             DefaultToken.COMMA,
@@ -180,8 +180,8 @@ private fun parseStructuralInterface(tokens: Tokens): TypeNode? {
             return@enclosedRepetition element.withMessages(messages)
         }
     }
-    val fieldList = fields.value?.elements
-    fieldList ?: return null;
+    if(fields == null) return null
+    val fieldList = fields.value.elements
     return TypeNode.StructuralInterfaceTypeNode(fieldList, fields.location)
         .withMessages(messages)
 }

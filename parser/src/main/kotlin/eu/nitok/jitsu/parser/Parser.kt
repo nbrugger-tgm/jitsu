@@ -175,10 +175,12 @@ internal inline fun <T> Tokens.range(action: ParserFn<T>): Located<T> {
     return Located(res, start.rangeTo(end))
 }
 
+/**
+ * Same as [range] but returns null if [action] returns null. [range] returns an Located<null> in this cases with a 0 char location
+ */
 internal inline fun <T> Tokens.nullableRange(action: ParserFn<T?>): Located<T>? {
     val start = position
-    val res = action()
-    if (res == null) return null
+    val res = action() ?: return null
     val end = lastConsumedLocation
     return Located(res, start.rangeTo(end))
 }

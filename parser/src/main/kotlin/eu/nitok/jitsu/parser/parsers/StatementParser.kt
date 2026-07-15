@@ -110,7 +110,7 @@ private fun parseSemicolonDelimited(tokens: Tokens, statmentFn: (Tokens) -> Stat
  */
 internal fun parseFunctionCall(tokens: Tokens, id: IdentifierNode): StatementNode.InstructionNode.FunctionCallNode? {
     val messages = CompilerMessages()
-    val params = tokens.range {
+    val params = tokens.nullableRange {
         enclosedRepetition(
             DefaultToken.BRACKET_OPEN,
             DefaultToken.COMMA,
@@ -120,7 +120,7 @@ internal fun parseFunctionCall(tokens: Tokens, id: IdentifierNode): StatementNod
             "parameter"
         ) { parseExpression(it) }
     }
-    val paramList = params.value?.elements ?: return null
+    val paramList = params?.value?.elements ?: return null
     return StatementNode.InstructionNode.FunctionCallNode(id, paramList, id.location.rangeTo(params.location))
         .withMessages(messages)
 }

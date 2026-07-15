@@ -2,15 +2,15 @@ package eu.nitok.jitsu.parser.parsers
 
 import com.niton.jainparse.token.DefaultToken.*
 import eu.nitok.jitsu.common.CompilerMessages
+import eu.nitok.jitsu.parser.Tokens
 import eu.nitok.jitsu.parser.ast.IdentifierNode
 import eu.nitok.jitsu.parser.ast.withMessages
-import eu.nitok.jitsu.parser.*
-import kotlin.jvm.optionals.getOrElse
+import eu.nitok.jitsu.parser.attempt
+import eu.nitok.jitsu.parser.lastConsumedLocation
+import eu.nitok.jitsu.parser.position
 
 internal fun parseIdentifier(tokens: Tokens): IdentifierNode? {
-    val firstToken = tokens.range {
-        tokens.peekOptional().getOrElse { return null }
-    }
+    val firstToken = tokens.attempt(NUMBER, UNDERSCORE, DOLLAR, LETTERS)?: return null
     val messages = CompilerMessages()
     when (firstToken.value.type) {
         NUMBER, UNDERSCORE, DOLLAR -> messages.error(
@@ -19,9 +19,8 @@ internal fun parseIdentifier(tokens: Tokens): IdentifierNode? {
         )
 
         LETTERS -> {}
-        else -> return null
+        else -> error("This should never happen")
     }
-    tokens.skip()
     var value: String = firstToken.value.value
     while (tokens.hasNext()) {
         val token = tokens.peek()
