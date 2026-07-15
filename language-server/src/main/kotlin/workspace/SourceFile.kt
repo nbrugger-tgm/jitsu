@@ -19,7 +19,16 @@ class SourceFile(
     var ast: CompletableFuture<out SourceFileNode> = parse(content)
         private set
     val graph get() = module!!.graph.thenApply {
-        it.files.firstOrNull { it.uri == uri }?:throw IllegalStateException("Source file $uri does not exist (${it.files.map { it.uri }}")
+        val submodulePath = uri.toString()
+            .substring(module?.sourceRoot.toString().length)
+            .replace("/?[^/]+\\.jit".toRegex(),"")
+        var submodule = it
+        if(submodulePath.isNotEmpty()) submodulePath.split("/").forEach { subModuleName ->
+            submodule = submodule.submodules.first { it.name == subModuleName }
+        }
+
+        submodule.files.firstOrNull { it.uri == uri }
+            ?: throw IllegalStateException("Source file $uri not found in module graph (${it.files.map { it.uri }}")
     }
 
     var module: WorkspaceModule? = null
@@ -28,7 +37,7 @@ class SourceFile(
         ast = parse(content)
         module?.invalidate()
         version++
-        uriVersions.computeIfPresent(uri) { k,v -> v + 1 }
+        uriVersions.computeIfPresent(uri) { k, v -> v + 1 }
     }
 
     private fun parse(content: String): CompletableFuture<out SourceFileNode> = CompletableFuture.supplyAsync({
