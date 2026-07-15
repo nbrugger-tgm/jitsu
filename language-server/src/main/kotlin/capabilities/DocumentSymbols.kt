@@ -112,6 +112,8 @@ private fun <T: Accessible<T>> Accessible<T>.documentSymbols(children: Iterable<
             type.toString(),
             children.toList()
         ))
+
+        else -> error("$this requires document symbols")
     }
 }
 

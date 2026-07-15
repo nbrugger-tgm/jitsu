@@ -2,21 +2,22 @@ package eu.nitok.jitsu.compiler.bitcode
 
 import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.common.BitSize.BIT_64
+import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.common.locating.locatedAt
 import eu.nitok.jitsu.compiler.bitcode.LowLevelType.*
-import eu.nitok.jitsu.compiler.graph.elements.types.Type
-import eu.nitok.jitsu.compiler.graph.elements.types.Type.TypeReference
-import eu.nitok.jitsu.compiler.graph.elements.types.Struct
+import eu.nitok.jitsu.compiler.graph.api.Type
+import eu.nitok.jitsu.compiler.graph.elements.ConstantElement.UIntConstant
+import eu.nitok.jitsu.compiler.graph.elements.JitsuModule
+import eu.nitok.jitsu.compiler.graph.elements.types.*
+import eu.nitok.jitsu.compiler.graph.elements.types.Array
+import eu.nitok.jitsu.compiler.graph.elements.types.Boolean
+import eu.nitok.jitsu.compiler.graph.elements.types.Float
+import eu.nitok.jitsu.compiler.graph.elements.types.Int
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.DisplayName
-import org.junit.jupiter.api.DynamicTest
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestFactory
+import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
@@ -29,41 +30,55 @@ class TypeLoweringTest {
     private val dummyLocation = Location(URI("memory://test.jit"), 1, 1, 1, 1)
     private fun locatedName(name: String): Located<String> = Located(name, dummyLocation)
 
-    private fun structField(name: String, type: Type): Struct.Field =
-        Struct.Field(locatedName(name), mutable = false, type = type)
+    private fun structField(name: String, type: TypeElement): Struct.Field =
+        Struct.Field(locatedName(name), mutable = false, typeElement = type)
 
-    private fun structuralInterface(vararg fields: Pair<String, Type>): Type.StructuralInterface =
-        Type.StructuralInterface(fields.associate { (name, type) -> name to structField(name, type) })
+    private fun structuralInterface(vararg fields: Pair<String, TypeElement>): StructuralInterface = StructuralInterface(fields.associate { (name, type) -> name to structField(name, type) })
 
-    private fun unionType(vararg options: Type): Type.Union = Type.Union(options.toList())
+    private fun unionType(vararg options: TypeElement): Union = Union(options.toList())
 
-    class TypeCase(val graph: Type, val lowLevel: LowLevelType)
+    internal class TypeCase(val element: TypeElement, val lowLevel: LowLevelType) {
+        val graph: Type get() = element.asType
+    }
 
-    private inline fun <T : Type> typeCase(graph: T, lowLevel: (T) -> LowLevelType): TypeCase {
+    private inline fun <T : TypeElement> typeCase(graph: T, lowLevel: (T) -> LowLevelType): TypeCase {
         return TypeCase(graph, lowLevel(graph))
     }
 
 
-    private var simpleTypes = BitSize.entries.map { bits -> typeCase(Type.Int(bits)) { LLInt(bits, it) } } +
-            BitSize.entries.map { bits -> typeCase(Type.UInt(bits)) { LLUInt(bits, it) } } +
-            typeCase(Type.Boolean) { LLBool } +
+    private val dummyModule = JitsuModule("test",listOf(),listOf())
+    private var simpleTypes = BitSize.entries.map { bits -> typeCase(Int(bits)) { LLInt(bits, it) } } +
+            BitSize.entries.map { bits -> typeCase(UInt(bits)) { LLUInt(bits, it) } } +
+            typeCase(Boolean) { LLBool(Boolean) } +
             genericUnion()
 
-
     private fun genericUnion(): TypeCase {
-        return typeCase(TypeReference(locatedName("Or"), listOf(Type.UInt(BIT_64).locatedAt(dummyLocation), Type.Boolean.locatedAt(dummyLocation))).also {
-            it.resolvedCache = Type.Union(listOf(Type.UInt(BIT_64) , Type.Boolean ))
-        }){ JitsuUnion.of(Type.Union(listOf(Type.UInt(BIT_64), Type.Boolean)),listOf(LLUInt(BIT_64, Type.UInt(BIT_64)), LLBool))}
+        return typeCase(
+            TypeReference(
+                locatedName("Or"),
+                listOf(UInt(BIT_64).locatedAt(dummyLocation), Boolean.locatedAt(dummyLocation))
+            ).also {
+                val a = TypeParameterElement("A".locatedAt(dummyLocation)).also { it.setEnclosingModule(dummyModule) }
+                val b = TypeParameterElement("B".locatedAt(dummyLocation)).also { it.setEnclosingModule(dummyModule) }
+                it.setEnclosingModule(dummyModule)
+                it.setResolvedTarget(TypeAlias("".locatedAt(dummyLocation),listOf(a, b), Union(listOf(a, b))).also {
+                    it.setEnclosingModule(dummyModule)
+                })
+                it.resolve(messages = CompilerMessages())
+            }
+        ) { JitsuUnion.of(Union(listOf(UInt(BIT_64), Boolean)), listOf(LLUInt(BIT_64, UInt(BIT_64)), LLBool(Boolean))) }
     }
 
-    val dynamicArrays = simpleTypes.map { element ->
-        typeCase(Type.Array(element.graph, null)) { arr -> JitsuArray.dynamic(element.lowLevel, arr) }
+    private val dynamicArrays = simpleTypes.map { element ->
+        typeCase(Array(element.element, null)) { arr -> JitsuArray.dynamic(element.lowLevel,I64, arr) }
     }
 
-    val fixedArrays = simpleTypes.map { element ->
-        typeCase(Type.Array(element.graph, 1)) { arr -> JitsuArray.fixed(element.lowLevel, 1, arr) }
+    private val fixedArrays = simpleTypes.map { element ->
+        typeCase(Array(element.element, UIntConstant(1u, dummyLocation))) { arr -> JitsuArray.fixed(element.lowLevel, I8, 1uL, arr) }
+    } + simpleTypes.map { element ->
+        typeCase(Array(element.element, UIntConstant(300u, dummyLocation))) { arr -> JitsuArray.fixed(element.lowLevel, I16, 300uL, arr) }
     }
-    var exampleTypes: Stream<TypeCase> = (simpleTypes.asSequence() + dynamicArrays + fixedArrays).asStream()
+    private var exampleTypes: Stream<TypeCase> = (simpleTypes.asSequence() + dynamicArrays + fixedArrays).asStream()
 
 
     @Nested
@@ -71,18 +86,25 @@ class TypeLoweringTest {
     inner class Lower {
         @TestFactory
         fun `should preserve original type`(): Stream<DynamicTest> {
-            return exampleTypes.filter { it.graph !is TypeReference }.map { type -> DynamicTest.dynamicTest(type.graph.toString()) {
-                val result = TypeLowering.lower(type.graph)
-                assertThat(result.graphType).isSameAs(type.graph)
-            } }
+            return exampleTypes.filter { it.graph !is TypeReference }.map { type ->
+                DynamicTest.dynamicTest(type.graph.toString()) {
+                    val result = TypeLowering.lower(type.graph)
+                    assertThat(result.graphType).isSameAs(type.graph)
+                }
+            }
         }
 
         @TestFactory
         fun `should return correct lower type structure`(): Stream<DynamicTest> {
-            return exampleTypes.map { type -> DynamicTest.dynamicTest(type.graph.toString()) {
-                val result = TypeLowering.lower(type.graph)
-                assertThat(result).usingRecursiveComparison().isEqualTo(type.lowLevel)
-            } }
+            return exampleTypes.map { type ->
+                DynamicTest.dynamicTest(type.graph.toString()) {
+                    val result = TypeLowering.lower(type.graph)
+                    assertThat(result)
+                        .usingRecursiveComparison()
+                        .ignoringFieldsMatchingRegexes(".+\\.asType(\\\$delegate)?\\..*")
+                        .isEqualTo(type.lowLevel)
+                }
+            }
         }
     }
 
@@ -92,7 +114,7 @@ class TypeLoweringTest {
 
         @Test
         fun `i8 lowers to LLInt with BIT_8 size`() {
-            val graphType = Type.Int(BitSize.BIT_8)
+            val graphType = Int(BitSize.BIT_8)
             val result = TypeLowering.lower(graphType)
             assertThat(result).isInstanceOf(LLInt::class.java)
             assertThat((result as LLInt).size).isEqualTo(BitSize.BIT_8)
@@ -100,7 +122,7 @@ class TypeLoweringTest {
 
         @Test
         fun `i16 lowers to LLInt with BIT_16 size`() {
-            val graphType = Type.Int(BitSize.BIT_16)
+            val graphType = Int(BitSize.BIT_16)
             val result = TypeLowering.lower(graphType)
             assertThat(result).isInstanceOf(LLInt::class.java)
             assertThat((result as LLInt).size).isEqualTo(BitSize.BIT_16)
@@ -108,7 +130,7 @@ class TypeLoweringTest {
 
         @Test
         fun `i32 lowers to LLInt with BIT_32 size`() {
-            val graphType = Type.Int(BitSize.BIT_32)
+            val graphType = Int(BitSize.BIT_32)
             val result = TypeLowering.lower(graphType)
             assertThat(result).isInstanceOf(LLInt::class.java)
             assertThat((result as LLInt).size).isEqualTo(BitSize.BIT_32)
@@ -116,7 +138,7 @@ class TypeLoweringTest {
 
         @Test
         fun `i64 lowers to LLInt with BIT_64 size`() {
-            val graphType = Type.Int(BIT_64)
+            val graphType = Int(BIT_64)
             val result = TypeLowering.lower(graphType)
             assertThat(result).isInstanceOf(LLInt::class.java)
             assertThat((result as LLInt).size).isEqualTo(BIT_64)
@@ -124,21 +146,21 @@ class TypeLoweringTest {
 
         @Test
         fun `i8 lowers with preserved graphType`() {
-            val graphType = Type.Int(BitSize.BIT_8)
+            val graphType = Int(BitSize.BIT_8)
             val result = TypeLowering.lower(graphType) as LLInt
             assertThat(result.graphType).isSameAs(graphType)
         }
 
         @Test
         fun `i32 lowers with preserved graphType`() {
-            val graphType = Type.Int(BitSize.BIT_32)
+            val graphType = Int(BitSize.BIT_32)
             val result = TypeLowering.lower(graphType) as LLInt
             assertThat(result.graphType).isSameAs(graphType)
         }
 
         @Test
         fun `i64 lowers with preserved graphType`() {
-            val graphType = Type.Int(BIT_64)
+            val graphType = Int(BIT_64)
             val result = TypeLowering.lower(graphType) as LLInt
             assertThat(result.graphType).isSameAs(graphType)
         }
@@ -150,7 +172,7 @@ class TypeLoweringTest {
 
         @Test
         fun `u8 lowers to LLUInt with BIT_8 size`() {
-            val graphType = Type.UInt(BitSize.BIT_8)
+            val graphType = UInt(BitSize.BIT_8)
             val result = TypeLowering.lower(graphType)
             assertThat(result).isInstanceOf(LLUInt::class.java)
             assertThat((result as LLUInt).size).isEqualTo(BitSize.BIT_8)
@@ -158,7 +180,7 @@ class TypeLoweringTest {
 
         @Test
         fun `u16 lowers to LLUInt with BIT_16 size`() {
-            val graphType = Type.UInt(BitSize.BIT_16)
+            val graphType = UInt(BitSize.BIT_16)
             val result = TypeLowering.lower(graphType)
             assertThat(result).isInstanceOf(LLUInt::class.java)
             assertThat((result as LLUInt).size).isEqualTo(BitSize.BIT_16)
@@ -166,7 +188,7 @@ class TypeLoweringTest {
 
         @Test
         fun `u32 lowers to LLUInt with BIT_32 size`() {
-            val graphType = Type.UInt(BitSize.BIT_32)
+            val graphType = UInt(BitSize.BIT_32)
             val result = TypeLowering.lower(graphType)
             assertThat(result).isInstanceOf(LLUInt::class.java)
             assertThat((result as LLUInt).size).isEqualTo(BitSize.BIT_32)
@@ -179,7 +201,7 @@ class TypeLoweringTest {
 
         @Test
         fun `f32 lowers to LLFloat with BIT_32 size`() {
-            val graphType = Type.Float(BitSize.BIT_32)
+            val graphType = Float(BitSize.BIT_32)
             val result = TypeLowering.lower(graphType)
             assertThat(result).isInstanceOf(LLFloat::class.java)
             assertThat((result as LLFloat).size).isEqualTo(BitSize.BIT_32)
@@ -187,7 +209,7 @@ class TypeLoweringTest {
 
         @Test
         fun `f64 lowers to LLFloat with BIT_64 size`() {
-            val graphType = Type.Float(BIT_64)
+            val graphType = Float(BIT_64)
             val result = TypeLowering.lower(graphType)
             assertThat(result).isInstanceOf(LLFloat::class.java)
             assertThat((result as LLFloat).size).isEqualTo(BIT_64)
@@ -199,19 +221,19 @@ class TypeLoweringTest {
     inner class BooleanType {
 
         @Test
-        fun `boolean lowers to LLBool`() {
-            val result = TypeLowering.lower(Type.Boolean)
-            assertThat(result).isEqualTo(LLBool)
+        fun `boolean lowers to LLBool(Boolean)`() {
+            val result = TypeLowering.lower(Boolean)
+            assertThat(result).isEqualTo(LLBool(Boolean))
         }
 
         @Test
-        fun `LLBool has BIT_1 size`() {
-            assertThat(LLBool.size).isEqualTo(BitSize.BIT_1)
+        fun `LLBool(Boolean) has BIT_1 size`() {
+            assertThat(LLBool(Boolean).size).isEqualTo(BitSize.BIT_1)
         }
 
         @Test
-        fun `LLBool graphType is Type Boolean`() {
-            assertThat(LLBool.graphType).isEqualTo(Type.Boolean)
+        fun `LLBool(Boolean) graphType is Type Boolean`() {
+            assertThat(LLBool(Boolean).graphType).isEqualTo(Boolean)
         }
     }
 
@@ -225,35 +247,35 @@ class TypeLoweringTest {
 
             @Test
             fun `lowers to JitsuArray`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = null)
+                val graphType = Array(Int(BitSize.BIT_32), size = null)
                 val result = TypeLowering.lower(graphType)
                 assertThat(result).isInstanceOf(JitsuArray::class.java)
             }
 
             @Test
             fun `produces isDynamic=true`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = null)
+                val graphType = Array(Int(BitSize.BIT_32), size = null)
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 assertThat(result.isDynamic).isTrue()
             }
 
             @Test
             fun `produces isFixedSize=false`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = null)
+                val graphType = Array(Int(BitSize.BIT_32), size = null)
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 assertThat(result.isFixedSize).isFalse()
             }
 
             @Test
             fun `fixedSize is null`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = null)
+                val graphType = Array(Int(BitSize.BIT_32), size = null)
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 assertThat(result.fixedSize).isNull()
             }
 
             @Test
             fun `layout has length field of type i64`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = null)
+                val graphType = Array(Int(BitSize.BIT_32), size = null)
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 val layout = result.layout
                 assertThat(layout.fields).containsKey("length")
@@ -263,7 +285,7 @@ class TypeLoweringTest {
 
             @Test
             fun `layout has data field as pointer to element type`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = null)
+                val graphType = Array(Int(BitSize.BIT_32), size = null)
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 val layout = result.layout
                 assertThat(layout.fields).containsKey("data")
@@ -277,12 +299,16 @@ class TypeLoweringTest {
                 }
             }
 
-            fun dataPointerPointsToLoweredElementType(case: TypeCase){
-                val graphType = Type.Array(case.graph, size = null)
+            internal fun dataPointerPointsToLoweredElementType(case: TypeCase) {
+                val graphType = Array(case.element, size = null)
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 val dataField = result.layout.fields["data"] as LLPointer<*>
-                assertThat(dataField.pointeeType).usingRecursiveComparison().isEqualTo(case.lowLevel)
+                assertThat(dataField.pointeeType)
+                    .usingRecursiveComparison()
+                    .ignoringFieldsMatchingRegexes(".+\\.asType(\\\$delegate)?\\..*")
+                    .isEqualTo(case.lowLevel)
             }
+
             @TestFactory
             fun `element type is lowered`(): Stream<DynamicTest> {
                 return exampleTypes.map {
@@ -290,17 +316,18 @@ class TypeLoweringTest {
                 }
             }
 
-            fun elementTypeIsLowered(type: TypeCase) {
-                val graphType = Type.Array(type.graph, size = null)
+            internal fun elementTypeIsLowered(type: TypeCase) {
+                val graphType = Array(type.element, size = null)
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 assertThat(result.elementType)
                     .usingRecursiveComparison()
+                    .ignoringFieldsMatchingRegexes(".+\\.asType(\\\$delegate)?\\..*")
                     .isEqualTo(type.lowLevel)
             }
 
             @Test
             fun `layout only has length and data fields`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = null)
+                val graphType = Array(Int(BitSize.BIT_32), size = null)
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 assertThat(result.layout.fields.keys).containsExactlyInAnyOrder("length", "data")
             }
@@ -312,36 +339,36 @@ class TypeLoweringTest {
 
             @Test
             fun `lowers to JitsuArray`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = 5)
+                val graphType = Array(Int(BitSize.BIT_32), size = UIntConstant(5u,dummyLocation))
                 val result = TypeLowering.lower(graphType)
                 assertThat(result).isInstanceOf(JitsuArray::class.java)
             }
 
             @Test
             fun `produces isFixedSize=true`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = 5)
+                val graphType = Array(Int(BitSize.BIT_32), size = UIntConstant(5u, dummyLocation))
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 assertThat(result.isFixedSize).isTrue()
             }
 
             @Test
             fun `produces isDynamic=false`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = 5)
+                val graphType = Array(Int(BitSize.BIT_32), size = UIntConstant(5u, dummyLocation))
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 assertThat(result.isDynamic).isFalse()
             }
 
             @ParameterizedTest
             @ValueSource(ints = [1, 20, 500])
-            fun `fixedSize matches declared size`(size: Int) {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = size)
+            fun `fixedSize matches declared size`(size: ULong) {
+                val graphType = Array(Int(BitSize.BIT_32), size = UIntConstant(size, dummyLocation))
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 assertThat(result.fixedSize).isEqualTo(size)
             }
 
             @Test
             fun `layout has data field of LLFixedArray type`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = 5)
+                val graphType = Array(Int(BitSize.BIT_32), size = UIntConstant(5u, dummyLocation))
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 assertThat(result.layout.fields).containsKey("data")
                 assertThat(result.layout.fields["data"]).isInstanceOf(LLFixedArray::class.java)
@@ -349,7 +376,7 @@ class TypeLoweringTest {
 
             @Test
             fun `LLFixedArray has correct element type`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = 5)
+                val graphType = Array(Int(BitSize.BIT_32), size = UIntConstant(5u, dummyLocation))
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 val dataField = result.layout.fields["data"] as LLFixedArray
                 assertThat(dataField.elementType).isInstanceOf(LLInt::class.java)
@@ -358,22 +385,22 @@ class TypeLoweringTest {
 
             @Test
             fun `LLFixedArray has correct size`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = 5)
+                val graphType = Array(Int(BitSize.BIT_32), size = UIntConstant(5u, dummyLocation))
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 val dataField = result.layout.fields["data"] as LLFixedArray
-                assertThat(dataField.size).isEqualTo(5)
+                assertThat(dataField.size).isEqualTo(5uL)
             }
 
             @Test
             fun `layout does not have a length field`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = 5)
+                val graphType = Array(Int(BitSize.BIT_32), size = UIntConstant(5u, dummyLocation))
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 assertThat(result.layout.fields.keys).doesNotContain("length")
             }
 
             @Test
             fun `layout only has data field`() {
-                val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = 5)
+                val graphType = Array(Int(BitSize.BIT_32), size = UIntConstant(5u, dummyLocation))
                 val result = TypeLowering.lower(graphType) as JitsuArray
                 assertThat(result.layout.fields.keys).containsExactly("data")
             }
@@ -386,16 +413,16 @@ class TypeLoweringTest {
             @Test
             fun `nested dynamic array lowers to JitsuArray of JitsuArray`() {
                 // i32[][] = Array(Array(i32, null), null)
-                val innerArrayType = Type.Array(Type.Int(BitSize.BIT_32), size = null)
-                val outerArrayType = Type.Array(innerArrayType, size = null)
+                val innerArrayType = Array(Int(BitSize.BIT_32), size = null)
+                val outerArrayType = Array(innerArrayType, size = null)
                 val result = TypeLowering.lower(outerArrayType) as JitsuArray
                 assertThat(result.elementType).isInstanceOf(JitsuArray::class.java)
             }
 
             @Test
             fun `nested array inner element type is correctly lowered`() {
-                val innerArrayType = Type.Array(Type.Int(BitSize.BIT_32), size = null)
-                val outerArrayType = Type.Array(innerArrayType, size = null)
+                val innerArrayType = Array(Int(BitSize.BIT_32), size = null)
+                val outerArrayType = Array(innerArrayType, size = null)
                 val result = TypeLowering.lower(outerArrayType) as JitsuArray
                 val innerArray = result.elementType as JitsuArray
                 assertThat(innerArray.elementType).isInstanceOf(LLInt::class.java)
@@ -404,18 +431,18 @@ class TypeLoweringTest {
 
             @Test
             fun `fixed nested array has correct sizes at each level`() {
-                val innerArrayType = Type.Array(Type.Int(BitSize.BIT_32), size = 3)
-                val outerArrayType = Type.Array(innerArrayType, size = 4)
+                val innerArrayType = Array(Int(BitSize.BIT_32), size = UIntConstant(3u, dummyLocation))
+                val outerArrayType = Array(innerArrayType, size = UIntConstant(4u, dummyLocation))
                 val result = TypeLowering.lower(outerArrayType) as JitsuArray
-                assertThat(result.fixedSize).isEqualTo(4)
+                assertThat(result.fixedSize).isEqualTo(4uL)
                 val innerArray = result.elementType as JitsuArray
-                assertThat(innerArray.fixedSize).isEqualTo(3)
+                assertThat(innerArray.fixedSize).isEqualTo(3uL)
             }
 
             @Test
             fun `array with union element type recursively lowers union`() {
-                val unionType = unionType(Type.Int(BitSize.BIT_32), Type.Float(BitSize.BIT_32))
-                val arrayType = Type.Array(unionType, size = null)
+                val unionType = unionType(Int(BitSize.BIT_32), Float(BitSize.BIT_32))
+                val arrayType = Array(unionType, size = null)
                 val result = TypeLowering.lower(arrayType) as JitsuArray
                 assertThat(result.elementType).isInstanceOf(JitsuUnion::class.java)
             }
@@ -428,24 +455,24 @@ class TypeLoweringTest {
 
         @Test
         fun `lowers to JitsuUnion`() {
-            val graphType = unionType(Type.Int(BitSize.BIT_32), Type.Float(BitSize.BIT_32))
+            val graphType = unionType(Int(BitSize.BIT_32), Float(BitSize.BIT_32))
             val result = TypeLowering.lower(graphType)
             assertThat(result).isInstanceOf(JitsuUnion::class.java)
         }
 
         @Test
-        fun `layout has discriminant option field of type i32`() {
-            val graphType = unionType(Type.Int(BitSize.BIT_32), Type.Float(BitSize.BIT_32))
+        fun `layout has discriminant option field of type i8`() {
+            val graphType = unionType(Int(BitSize.BIT_32), Float(BitSize.BIT_32))
             val result = TypeLowering.lower(graphType) as JitsuUnion
             val layout = result.layout
             assertThat(layout.fields).containsKey("option")
-            assertThat(layout.fields["option"]).isInstanceOf(LLInt::class.java)
-            assertThat((layout.fields["option"] as LLInt).size).isEqualTo(BitSize.BIT_32)
+            assertThat(layout.fields["option"]).isInstanceOf(LLUInt::class.java)
+            assertThat((layout.fields["option"] as LLUInt).size).isEqualTo(BitSize.BIT_8)
         }
 
         @Test
         fun `layout has value field of type LLUnion`() {
-            val graphType = unionType(Type.Int(BitSize.BIT_32), Type.Float(BitSize.BIT_32))
+            val graphType = unionType(Int(BitSize.BIT_32), Float(BitSize.BIT_32))
             val result = TypeLowering.lower(graphType) as JitsuUnion
             assertThat(result.layout.fields).containsKey("value")
             assertThat(result.layout.fields["value"]).isInstanceOf(LLUnion::class.java)
@@ -453,7 +480,7 @@ class TypeLoweringTest {
 
         @Test
         fun `value LLUnion has members for each option`() {
-            val graphType = unionType(Type.Int(BitSize.BIT_32), Type.Float(BitSize.BIT_32))
+            val graphType = unionType(Int(BitSize.BIT_32), Float(BitSize.BIT_32))
             val result = TypeLowering.lower(graphType) as JitsuUnion
             val valueUnion = result.layout.fields["value"] as LLUnion
             assertThat(valueUnion.members.keys).containsExactlyInAnyOrder("o0", "o1")
@@ -461,7 +488,7 @@ class TypeLoweringTest {
 
         @Test
         fun `option types are recursively lowered`() {
-            val graphType = unionType(Type.Int(BitSize.BIT_32), Type.Float(BIT_64))
+            val graphType = unionType(Int(BitSize.BIT_32), Float(BIT_64))
             val result = TypeLowering.lower(graphType) as JitsuUnion
             assertThat(result.options[0]).isInstanceOf(LLInt::class.java)
             assertThat(result.options[1]).isInstanceOf(LLFloat::class.java)
@@ -470,20 +497,20 @@ class TypeLoweringTest {
         @Test
         fun `option order is preserved`() {
             val graphType = unionType(
-                Type.Int(BitSize.BIT_32),
-                Type.Float(BitSize.BIT_32),
-                Type.Boolean
+                Int(BitSize.BIT_32),
+                Float(BitSize.BIT_32),
+                Boolean
             )
             val result = TypeLowering.lower(graphType) as JitsuUnion
             assertThat(result.options).hasSize(3)
             assertThat(result.options[0]).isInstanceOf(LLInt::class.java)
             assertThat(result.options[1]).isInstanceOf(LLFloat::class.java)
-            assertThat(result.options[2]).isEqualTo(LLBool)
+            assertThat(result.options[2]).isEqualTo(LLBool(Boolean))
         }
 
         @Test
         fun `o0 member in value LLUnion has correct type`() {
-            val graphType = unionType(Type.Int(BitSize.BIT_32), Type.Float(BIT_64))
+            val graphType = unionType(Int(BitSize.BIT_32), Float(BIT_64))
             val result = TypeLowering.lower(graphType) as JitsuUnion
             val valueUnion = result.layout.fields["value"] as LLUnion
             assertThat(valueUnion.members["o0"]).isInstanceOf(LLInt::class.java)
@@ -492,7 +519,7 @@ class TypeLoweringTest {
 
         @Test
         fun `o1 member in value LLUnion has correct type`() {
-            val graphType = unionType(Type.Int(BitSize.BIT_32), Type.Float(BIT_64))
+            val graphType = unionType(Int(BitSize.BIT_32), Float(BIT_64))
             val result = TypeLowering.lower(graphType) as JitsuUnion
             val valueUnion = result.layout.fields["value"] as LLUnion
             assertThat(valueUnion.members["o1"]).isInstanceOf(LLFloat::class.java)
@@ -501,7 +528,7 @@ class TypeLoweringTest {
 
         @Test
         fun `graphType is preserved on the JitsuUnion`() {
-            val graphType = unionType(Type.Int(BitSize.BIT_32), Type.Float(BitSize.BIT_32))
+            val graphType = unionType(Int(BitSize.BIT_32), Float(BitSize.BIT_32))
             val result = TypeLowering.lower(graphType) as JitsuUnion
             assertThat(result.graphType).isSameAs(graphType)
         }
@@ -509,9 +536,9 @@ class TypeLoweringTest {
         @Test
         fun `with three options produces three LLUnion members`() {
             val graphType = unionType(
-                Type.Int(BitSize.BIT_8),
-                Type.Int(BitSize.BIT_16),
-                Type.Int(BitSize.BIT_32)
+                Int(BitSize.BIT_8),
+                Int(BitSize.BIT_16),
+                Int(BitSize.BIT_32)
             )
             val result = TypeLowering.lower(graphType) as JitsuUnion
             val valueUnion = result.layout.fields["value"] as LLUnion
@@ -520,15 +547,15 @@ class TypeLoweringTest {
 
         @Test
         fun `with array option recursively lowers array`() {
-            val arrayType = Type.Array(Type.Int(BitSize.BIT_32), size = null)
-            val graphType = unionType(arrayType, Type.Boolean)
+            val arrayType = Array(Int(BitSize.BIT_32), size = null)
+            val graphType = unionType(arrayType, Boolean)
             val result = TypeLowering.lower(graphType) as JitsuUnion
             assertThat(result.options[0]).isInstanceOf(JitsuArray::class.java)
         }
 
         @Test
         fun `layout only has option and value fields`() {
-            val graphType = unionType(Type.Int(BitSize.BIT_32), Type.Float(BitSize.BIT_32))
+            val graphType = unionType(Int(BitSize.BIT_32), Float(BitSize.BIT_32))
             val result = TypeLowering.lower(graphType) as JitsuUnion
             assertThat(result.layout.fields.keys).containsExactlyInAnyOrder("option", "value")
         }
@@ -540,7 +567,7 @@ class TypeLoweringTest {
 
         @Test
         fun `struct with one field lowers to LLStruct`() {
-            val graphType = structuralInterface("x" to Type.Int(BitSize.BIT_32))
+            val graphType = structuralInterface("x" to Int(BitSize.BIT_32))
             val result = TypeLowering.lower(graphType)
             assertThat(result).isInstanceOf(LLStruct::class.java)
         }
@@ -548,8 +575,8 @@ class TypeLoweringTest {
         @Test
         fun `struct field names are preserved`() {
             val graphType = structuralInterface(
-                "x" to Type.Int(BitSize.BIT_32),
-                "y" to Type.Float(BitSize.BIT_32)
+                "x" to Int(BitSize.BIT_32),
+                "y" to Float(BitSize.BIT_32)
             )
             val result = TypeLowering.lower(graphType) as LLStruct
             assertThat(result.fields.keys).containsExactlyInAnyOrder("x", "y")
@@ -558,8 +585,8 @@ class TypeLoweringTest {
         @Test
         fun `struct field types are recursively lowered`() {
             val graphType = structuralInterface(
-                "count" to Type.Int(BitSize.BIT_32),
-                "value" to Type.Float(BIT_64)
+                "count" to Int(BitSize.BIT_32),
+                "value" to Float(BIT_64)
             )
             val result = TypeLowering.lower(graphType) as LLStruct
             assertThat(result.fields["count"]).isInstanceOf(LLInt::class.java)
@@ -570,14 +597,14 @@ class TypeLoweringTest {
 
         @Test
         fun `struct graphType is preserved`() {
-            val graphType = structuralInterface("x" to Type.Int(BitSize.BIT_32))
+            val graphType = structuralInterface("x" to Int(BitSize.BIT_32))
             val result = TypeLowering.lower(graphType) as LLStruct
             assertThat(result.graphType).isSameAs(graphType)
         }
 
         @Test
         fun `struct with array field recursively lowers array`() {
-            val arrayType = Type.Array(Type.Int(BitSize.BIT_32), size = null)
+            val arrayType = Array(Int(BitSize.BIT_32), size = null)
             val graphType = structuralInterface("data" to arrayType)
             val result = TypeLowering.lower(graphType) as LLStruct
             assertThat(result.fields["data"]).isInstanceOf(JitsuArray::class.java)
@@ -585,17 +612,17 @@ class TypeLoweringTest {
 
         @Test
         fun `struct with union field recursively lowers union`() {
-            val unionGraphType = unionType(Type.Int(BitSize.BIT_32), Type.Boolean)
+            val unionGraphType = unionType(Int(BitSize.BIT_32), Boolean)
             val graphType = structuralInterface("value" to unionGraphType)
             val result = TypeLowering.lower(graphType) as LLStruct
             assertThat(result.fields["value"]).isInstanceOf(JitsuUnion::class.java)
         }
 
         @Test
-        fun `struct with boolean field lowers to LLBool`() {
-            val graphType = structuralInterface("flag" to Type.Boolean)
+        fun `struct with boolean field lowers to LLBool(Boolean)`() {
+            val graphType = structuralInterface("flag" to Boolean)
             val result = TypeLowering.lower(graphType) as LLStruct
-            assertThat(result.fields["flag"]).isSameAs(LLBool)
+            assertThat(result.fields["flag"]).isEqualTo(LLBool(Boolean))
         }
 
         @Test
@@ -607,7 +634,7 @@ class TypeLoweringTest {
 
         @Test
         fun `struct with nested struct field recursively lowers`() {
-            val innerStruct = structuralInterface("z" to Type.Int(BitSize.BIT_8))
+            val innerStruct = structuralInterface("z" to Int(BitSize.BIT_8))
             val outerStruct = structuralInterface("inner" to innerStruct)
             val result = TypeLowering.lower(outerStruct) as LLStruct
             assertThat(result.fields["inner"]).isInstanceOf(LLStruct::class.java)
@@ -620,7 +647,7 @@ class TypeLoweringTest {
 
         @Test
         fun `TypeReference resolves and lowers the cached resolved type`() {
-            val resolvedType = Type.Int(BitSize.BIT_32)
+            val resolvedType = Int(BitSize.BIT_32)
             val ref = makeTypeRef("MyInt", resolvedType)
             val result = TypeLowering.lower(ref)
             assertThat(result).isInstanceOf(LLInt::class.java)
@@ -628,7 +655,7 @@ class TypeLoweringTest {
 
         @Test
         fun `TypeReference to integer preserves correct bit size`() {
-            val resolvedType = Type.Int(BIT_64)
+            val resolvedType = Int(BIT_64)
             val ref = makeTypeRef("MyBigInt", resolvedType)
             val result = TypeLowering.lower(ref) as LLInt
             assertThat(result.size).isEqualTo(BIT_64)
@@ -636,7 +663,7 @@ class TypeLoweringTest {
 
         @Test
         fun `TypeReference to array resolves to JitsuArray`() {
-            val resolvedType = Type.Array(Type.Int(BitSize.BIT_32), size = null)
+            val resolvedType = Array(Int(BitSize.BIT_32), size = null)
             val ref = makeTypeRef("IntArray", resolvedType)
             val result = TypeLowering.lower(ref)
             assertThat(result).isInstanceOf(JitsuArray::class.java)
@@ -644,26 +671,28 @@ class TypeLoweringTest {
 
         @Test
         fun `TypeReference to union resolves to JitsuUnion`() {
-            val resolvedType = unionType(Type.Int(BitSize.BIT_32), Type.Boolean)
+            val resolvedType = unionType(Int(BitSize.BIT_32), Boolean)
             val ref = makeTypeRef("IntOrBool", resolvedType)
             val result = TypeLowering.lower(ref)
             assertThat(result).isInstanceOf(JitsuUnion::class.java)
         }
 
         @Test
-        fun `TypeReference to boolean resolves to LLBool`() {
-            val ref = makeTypeRef("BoolAlias", Type.Boolean)
+        fun `TypeReference to boolean resolves to LLBool(Boolean)`() {
+            val ref = makeTypeRef("BoolAlias", Boolean)
             val result = TypeLowering.lower(ref)
-            assertThat(result).isSameAs(LLBool)
+            assertThat(result).isEqualTo(LLBool(Boolean))
         }
 
         // Creates a TypeReference with the resolvedCache pre-populated
-        private fun makeTypeRef(name: String, resolved: Type): TypeReference {
+        private fun makeTypeRef(name: String, resolved: TypeElement): TypeReference {
             val ref = TypeReference(
                 reference = locatedName(name),
                 genericParameters = emptyList()
             )
-            ref.resolvedCache = resolved
+            ref.setEnclosingModule(dummyModule)
+            ref.setResolvedTarget(TypeAlias("".locatedAt(dummyLocation),listOf(),resolved).also { it.setEnclosingModule(dummyModule) })
+            ref.resolve(CompilerMessages())
             return ref
         }
     }
@@ -680,9 +709,9 @@ class TypeLoweringTest {
 
         @Test
         fun `union containing array containing union`() {
-            val innerUnion = unionType(Type.Int(BitSize.BIT_8), Type.Boolean)
-            val arrayOfUnion = Type.Array(innerUnion, size = null)
-            val outerUnion = unionType(arrayOfUnion, Type.Int(BIT_64))
+            val innerUnion = unionType(Int(BitSize.BIT_8), Boolean)
+            val arrayOfUnion = Array(innerUnion, size = null)
+            val outerUnion = unionType(arrayOfUnion, Int(BIT_64))
             val result = TypeLowering.lower(outerUnion) as JitsuUnion
 
             // First option should be JitsuArray
@@ -693,8 +722,8 @@ class TypeLoweringTest {
 
         @Test
         fun `struct with union field containing array produces correct nested layout`() {
-            val arrayType = Type.Array(Type.Float(BitSize.BIT_32), size = null)
-            val unionField = unionType(arrayType, Type.Boolean)
+            val arrayType = Array(Float(BitSize.BIT_32), size = null)
+            val unionField = unionType(arrayType, Boolean)
             val graphType = structuralInterface("items" to unionField)
             val result = TypeLowering.lower(graphType) as LLStruct
             val itemsField = result.fields["items"]
@@ -705,13 +734,13 @@ class TypeLoweringTest {
 
         @Test
         fun `three-level nesting - struct containing array of union`() {
-            val union = unionType(Type.Int(BitSize.BIT_32), Type.UInt(BitSize.BIT_32))
-            val array = Type.Array(union, size = 3)
+            val union = unionType(Int(BitSize.BIT_32), UInt(BitSize.BIT_32))
+            val array = Array(union, size = UIntConstant(3u, dummyLocation))
             val struct = structuralInterface("table" to array)
             val result = TypeLowering.lower(struct) as LLStruct
             val tableField = result.fields["table"] as JitsuArray
             assertThat(tableField.isFixedSize).isTrue()
-            assertThat(tableField.fixedSize).isEqualTo(3)
+            assertThat(tableField.fixedSize).isEqualTo(3uL)
             assertThat(tableField.elementType).isInstanceOf(JitsuUnion::class.java)
         }
     }
@@ -725,36 +754,36 @@ class TypeLoweringTest {
             // Type.Union with one option: JitsuUnion.of() requires non-empty list,
             // so single-option is valid to create but the switch() TODO hints it "shouldn't exist".
             // We verify lowering succeeds and produces a JitsuUnion regardless.
-            val graphType = unionType(Type.Int(BitSize.BIT_32))
+            val graphType = unionType(Int(BitSize.BIT_32))
             val result = TypeLowering.lower(graphType)
             assertThat(result).isInstanceOf(JitsuUnion::class.java)
         }
 
         @Test
         fun `single-option union has exactly one lowered option`() {
-            val graphType = unionType(Type.Int(BitSize.BIT_32))
+            val graphType = unionType(Int(BitSize.BIT_32))
             val result = TypeLowering.lower(graphType) as JitsuUnion
             assertThat(result.options).hasSize(1)
         }
 
         @Test
         fun `array of size zero is a valid fixed array`() {
-            val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = 0)
+            val graphType = Array(Int(BitSize.BIT_32), size = UIntConstant(0u, dummyLocation))
             val result = TypeLowering.lower(graphType) as JitsuArray
             assertThat(result.isFixedSize).isTrue()
-            assertThat(result.fixedSize).isEqualTo(0)
+            assertThat(result.fixedSize).isEqualTo(0uL)
         }
 
         @Test
         fun `array of size one is a valid fixed array`() {
-            val graphType = Type.Array(Type.Int(BitSize.BIT_32), size = 1)
+            val graphType = Array(Int(BitSize.BIT_32), size = UIntConstant(1u, dummyLocation))
             val result = TypeLowering.lower(graphType) as JitsuArray
-            assertThat(result.fixedSize).isEqualTo(1)
+            assertThat(result.fixedSize).isEqualTo(1uL)
         }
 
         @Test
         fun `lowering Undefined throws an error`() {
-            assertThatThrownBy { TypeLowering.lower(Type.Undefined) }
+            assertThatThrownBy { TypeLowering.lower(Undefined) }
                 .isInstanceOf(IllegalStateException::class.java)
         }
 
@@ -762,7 +791,8 @@ class TypeLoweringTest {
         fun `distinct graph type instances produce equal lowered types`(): Stream<DynamicTest> {
             return exampleTypes.map {
                 DynamicTest.dynamicTest(it.graph.toString()) {
-                    assertThat(TypeLowering.lower(it.graph)).usingRecursiveComparison().isEqualTo(TypeLowering.lower(it.graph))
+                    assertThat(TypeLowering.lower(it.graph)).usingRecursiveComparison()
+                        .isEqualTo(TypeLowering.lower(it.graph))
                 }
             }
         }

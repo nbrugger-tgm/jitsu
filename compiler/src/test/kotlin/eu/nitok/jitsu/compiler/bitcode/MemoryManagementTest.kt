@@ -3,11 +3,10 @@ package eu.nitok.jitsu.compiler.bitcode
 import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.compiler.bitcode.LowLevelExpression.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
-import eu.nitok.jitsu.compiler.bitcode.LowLevelType.Companion.I32
+import eu.nitok.jitsu.compiler.graph.buildJitsuModule
 import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.compiler.graph.elements.JitsuFile
 import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
-import eu.nitok.jitsu.compiler.graph.buildJitsuModule
 import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.InstanceOfAssertFactories.type
@@ -300,7 +299,7 @@ class MemoryManagementTest {
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "x" }
             val entry = lowering.variableRegistry.getEntry(varDecl)
             assertThat(entry.requiresFree).isTrue()

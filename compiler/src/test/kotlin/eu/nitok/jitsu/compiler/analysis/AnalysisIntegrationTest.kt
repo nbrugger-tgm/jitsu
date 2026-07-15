@@ -3,11 +3,11 @@ package eu.nitok.jitsu.compiler.analysis
 import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.common.sequence
+import eu.nitok.jitsu.compiler.graph.elements.FunctionCall
 import eu.nitok.jitsu.compiler.graph.elements.JitsuFile
+import eu.nitok.jitsu.compiler.graph.elements.Return
 import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
-import eu.nitok.jitsu.compiler.graph.elements.expressions.VariableReference
-import eu.nitok.jitsu.compiler.graph.elements.instructions.FunctionCall
-import eu.nitok.jitsu.compiler.graph.elements.instructions.Return
+import eu.nitok.jitsu.compiler.graph.elements.VariableReference
 import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -129,7 +129,7 @@ class AnalysisIntegrationTest {
             }
         """.trimIndent())
         val fn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "main" }
-        val body = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+        val body = (fn.body as FunctionElement.BodyElement.Implementation).instructions
 
         // Find the variable reference to 'input' in 'var number: u32 = input;'
         val numberDecl = body.filterIsInstance<VariableDeclaration>().first { it.name.value == "number" }
@@ -157,7 +157,7 @@ class AnalysisIntegrationTest {
         val helperFn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "helper" }
 
         // Find the function call 'helper()' in 'var result = helper();'
-        val resultDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions.filterIsInstance<VariableDeclaration>().first { it.name.value == "result" }
+        val resultDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions.filterIsInstance<VariableDeclaration>().first { it.name.value == "result" }
         val helperCall = resultDecl.initialValue as? FunctionCall
         assertThat(helperCall).isNotNull()
         assertThat(helperCall!!.target).isNotNull()
@@ -189,7 +189,7 @@ class AnalysisIntegrationTest {
         val testFn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "test" }
         val testGenericFn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "testGeneric" }
 
-        val body = (mainFn.body as FunctionElement.BodyElement.Implementation).block.instructions
+        val body = (mainFn.body as FunctionElement.BodyElement.Implementation).instructions
 
         // 'input' reference in 'var number : u32 | i32 = input;' resolves
         val numberDecl = body.filterIsInstance<VariableDeclaration>().first { it.name.value == "number" }

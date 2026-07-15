@@ -1,14 +1,15 @@
 package eu.nitok.jitsu.compiler.bitcode
 
 import eu.nitok.jitsu.common.BitSize
+import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
 import eu.nitok.jitsu.compiler.graph.*
+import eu.nitok.jitsu.compiler.graph.api.Function
 import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
-import eu.nitok.jitsu.common.sequence
-import eu.nitok.jitsu.compiler.graph.elements.types.Type
-import eu.nitok.jitsu.compiler.graph.buildJitsuModule
 import eu.nitok.jitsu.compiler.graph.elements.JitsuFile
 import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
+import eu.nitok.jitsu.compiler.graph.elements.types.FunctionTypeSignature
+import eu.nitok.jitsu.compiler.graph.elements.types.Int
 import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.InstanceOfAssertFactories.map
@@ -29,11 +30,6 @@ import java.net.URI
  */
 @DisplayName("Lowering – Edge Cases & Integration")
 class LoweringEdgeCasesTest {
-
-    // ──────────────────────────────────────────────────────────────────────────
-    // Helpers
-    // ──────────────────────────────────────────────────────────────────────────
-
     private fun buildFile(source: String): JitsuFile {
         val ast = parseJitsuFile(source, URI("test://sourcefile.jit"))
         ast.sequence().forEach {
@@ -61,16 +57,12 @@ class LoweringEdgeCasesTest {
     /** Lower the first function with a custom name-resolver [namer]. */
     private fun lowerWithNamer(
         source: String,
-        namer: (FunctionElement) -> String
+        namer: (Function) -> String
     ): List<LowLevelInstruction> {
         val file = buildFile(source)
         val fn = file.sequence().filterIsInstance<FunctionElement>().first()
         return FunctionLowering(namer, fn).lower()
     }
-
-    // ──────────────────────────────────────────────────────────────────────────
-    // 1. Unsupported Expression Types
-    // ──────────────────────────────────────────────────────────────────────────
 
     @Nested
     @DisplayName("1 · Unsupported Expression Types (TODO behavior)")
@@ -174,10 +166,10 @@ class LoweringEdgeCasesTest {
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "x" }
             val arrayType = lowering.variableRegistry.getLowLevelType(varDecl) as JitsuArray
-            assertThat(arrayType.elementType).isEqualTo(LowLevelType.I64)
+            assertThat(arrayType.elementType).isEqualTo(I64)
         }
 
         /**
@@ -187,8 +179,8 @@ class LoweringEdgeCasesTest {
         @Test
         @Disabled("Function type signatures not implemented")
         fun `function type signature lowers to a function pointer type`() {
-            val fnSig = Type.FunctionTypeSignature(
-                returnType = Type.Int(BitSize.BIT_32),
+            val fnSig = FunctionTypeSignature(
+                returnTypeElement = Int(BitSize.BIT_32),
                 parameters = emptyList()
             )
             // Once implemented, TypeLowering.lower(fnSig) should return some JitsuFunctionPointer
@@ -342,7 +334,7 @@ class LoweringEdgeCasesTest {
             lowering.lower()
 
             val paramType = TypeLowering.lower(fn.parameters.first().declaredType!!)
-            assertThat(paramType).isEqualTo(LowLevelType.I64)
+            assertThat(paramType).isEqualTo(I64)
         }
     }
 
@@ -987,9 +979,9 @@ class LoweringEdgeCasesTest {
                 """.trimIndent()
             )
             val allocs = instructions.filterIsInstance<AllocStack>().associateBy { it.name }
-            assertThat(allocs["a"]?.layout).isEqualTo(LowLevelType.I32)
-            assertThat(allocs["b"]?.layout).isEqualTo(LowLevelType.I64)
-            assertThat(allocs["c"]?.layout).isEqualTo(LowLevelType.I32)
+            assertThat(allocs["a"]?.layout).isEqualTo(I32)
+            assertThat(allocs["b"]?.layout).isEqualTo(I64)
+            assertThat(allocs["c"]?.layout).isEqualTo(I32)
         }
 
         /**
@@ -1015,7 +1007,7 @@ class LoweringEdgeCasesTest {
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "x" }
             val lowType = lowering.variableRegistry.getLowLevelType(varDecl)
             assertThat(lowType).isInstanceOf(LowLevelType.LLUInt::class.java)

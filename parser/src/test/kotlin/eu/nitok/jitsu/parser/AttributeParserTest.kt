@@ -170,7 +170,7 @@ class AttributeParserTest : ParsingTest() {
     @DisplayName("parseAttributeDeclaration")
     inner class ParseDeclaration : MethodTest<AttributeDeclarationNode>() {
         override fun parseMethod(input: String): AttributeDeclarationNode? {
-            return parseAttributeDeclaration(tokenize(input))
+            return parseAttributeDeclaration(tokenize(input), listOf())
         }
 
         override fun fullyValidInputs(): List<String> = listOf(

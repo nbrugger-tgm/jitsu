@@ -4,7 +4,10 @@ import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.compiler.bitcode.LowLevelExpression.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelType.*
-import eu.nitok.jitsu.compiler.graph.elements.types.Type
+import eu.nitok.jitsu.compiler.graph.elements.types.*
+import eu.nitok.jitsu.compiler.graph.elements.types.Array
+import eu.nitok.jitsu.compiler.graph.elements.types.Boolean
+import eu.nitok.jitsu.compiler.graph.elements.types.Int
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.DisplayName
@@ -20,31 +23,31 @@ import org.junit.jupiter.api.Test
  */
 @DisplayName("JitsuUnion")
 class JitsuUnionTest : LowLevelTypeTest() {
-    private val graphI32 = Type.Int(BitSize.BIT_32)
-    private val graphI64 = Type.Int(BitSize.BIT_64)
-    private val graphNull = Type.Null
-    private val graphBool = Type.Boolean
-    private val graphArray = Type.Array(graphI32, null)
+    private val graphI32 = Int(BitSize.BIT_32)
+    private val graphI64 = Int(BitSize.BIT_64)
+    private val graphNull = Null
+    private val graphBool = Boolean
+    private val graphArray = Array(graphI32, null)
 
-    private val llI32 = LowLevelType.I32   // LowLevelType.I32 convenience alias
-    private val llI64 = LowLevelType.I64   // LowLevelType.I64 convenience alias
+    private val llI32 = I32   // LowLevelType.I32 convenience alias
+    private val llI64 = I64   // LowLevelType.I64 convenience alias
 
     /** Simple 2-option union: i32 | i64 */
-    private val twoOptionGraphType = Type.Union(listOf(graphI32, graphI64))
+    private val twoOptionGraphType = Union(listOf(graphI32, graphI64))
     private val twoOptionUnion: JitsuUnion by lazy {
         JitsuUnion.of(twoOptionGraphType, listOf(llI32, llI64))
     }
 
     /** 3-option union: i32 | i64 | bool */
-    private val threeOptionGraphType = Type.Union(listOf(graphI32, graphI64, graphBool))
+    private val threeOptionGraphType = Union(listOf(graphI32, graphI64, graphBool))
     private val threeOptionUnion: JitsuUnion by lazy {
-        JitsuUnion.of(threeOptionGraphType, listOf(llI32, llI64, LLBool))
+        JitsuUnion.of(threeOptionGraphType, listOf(llI32, llI64, LLBool(Boolean)))
     }
 
     /** Union with null option: i32 | null — uses I32 for both for simplicity of graph type */
-    private val nullableGraphType = Type.Union(listOf(graphI32, graphNull))
+    private val nullableGraphType = Union(listOf(graphI32, graphNull))
     private val nullableUnion: JitsuUnion by lazy {
-        JitsuUnion.of(nullableGraphType, listOf(llI32, LLInt(BitSize.BIT_8, graphNull)))
+        JitsuUnion.of(nullableGraphType, listOf(llI32, LLNull(Null)))
     }
 
     /** A field expression used as the union variable in all tests */
@@ -60,9 +63,11 @@ class JitsuUnionTest : LowLevelTypeTest() {
         }
 
         @Test
-        fun `layout has 'option' field of type I32`() {
+        fun `layout has 'option' field of type u8`() {
             val optionField = twoOptionUnion.layout.fieldType("option")
-            assertThat(optionField).isEqualTo(LowLevelType.I32)
+            assertThat(optionField)
+                .usingRecursiveComparison()
+                .isEqualTo(U8)
         }
 
         @Test
@@ -92,7 +97,7 @@ class JitsuUnionTest : LowLevelTypeTest() {
         @Test
         fun `single-option union is created`() {
             // of() accepts single option; edge-case behaviour exposed via switch/free
-            val singleGraphType = Type.Union(listOf(graphI32))
+            val singleGraphType = Union(listOf(graphI32))
             val singleUnion = JitsuUnion.of(singleGraphType, listOf(llI32))
             assertThat(singleUnion.options).hasSize(1)
         }
@@ -194,7 +199,7 @@ class JitsuUnionTest : LowLevelTypeTest() {
 
             @Test
             fun `index 2 returns third option type in three-option union`() {
-                assertThat(threeOptionUnion.optionType(2)).isEqualTo(LLBool)
+                assertThat(threeOptionUnion.optionType(2)).isInstanceOf(LLBool::class.java)
             }
 
             @Test
@@ -236,14 +241,14 @@ class JitsuUnionTest : LowLevelTypeTest() {
         fun `exact match wins before assignable match`() {
             // i32 is both an exact match (o0) and is assignable to i64 (o1),
             // but exact match should return 0 not 1
-            assertThat(JitsuUnion.of(Type.Union(listOf(graphI64, graphI32)), listOf(llI64, llI32)).findOptionIndex(graphI32))
+            assertThat(JitsuUnion.of(Union(listOf(graphI64, graphI32)), listOf(llI64, llI32)).findOptionIndex(graphI32))
                 .isEqualTo(1)
         }
 
         @Test
         fun `assignable match returns correct index when no exact match`() {
             // i8 is assignable to i32 (i32 accepts integers its size and smaller)
-            val graphI8 = Type.Int(BitSize.BIT_8)
+            val graphI8 = Int(BitSize.BIT_8)
             // i8 should be assignable to i32 (index 0) and also to i64 (index 1);
             // first assignable match wins → 0
             val result = twoOptionUnion.findOptionIndex(graphI8)
@@ -257,7 +262,7 @@ class JitsuUnionTest : LowLevelTypeTest() {
 
         @Test
         fun `array type match in array union`() {
-            val arrayGraphType = Type.Union(listOf(graphI32, graphArray))
+            val arrayGraphType = Union(listOf(graphI32, graphArray))
             val arrayUnion = JitsuUnion.of(
                 arrayGraphType,
                 listOf(llI32, LLPointer(llI32, graphArray))
@@ -551,7 +556,7 @@ class JitsuUnionTest : LowLevelTypeTest() {
         fun `union containing a pointer type produces Conditional free instructions`() {
             // LLPointer always emits at least one Free instruction for its field.
             val ptrType = LLPointer(llI32, graphI32)
-            val graphType = Type.Union(listOf(graphI32, graphI32))
+            val graphType = Union(listOf(graphI32, graphI32))
             val ptrUnion = JitsuUnion.of(graphType, listOf(llI32, ptrType))
 
             val result = ptrUnion.free(unionVar, ctx)
@@ -565,7 +570,7 @@ class JitsuUnionTest : LowLevelTypeTest() {
         fun `union of two pointer types generates nested Conditional free`() {
             val ptrI32 = LLPointer(llI32, graphI32)
             val ptrI64 = LLPointer(llI64, graphI64)
-            val graphType = Type.Union(listOf(graphI32, graphI64))
+            val graphType = Union(listOf(graphI32, graphI64))
             val ptrUnion = JitsuUnion.of(graphType, listOf(ptrI32, ptrI64))
 
             val result = ptrUnion.free(unionVar, ctx)
@@ -580,7 +585,7 @@ class JitsuUnionTest : LowLevelTypeTest() {
         @Test
         fun `free for pointer option emits Free instruction targeting option field`() {
             val ptrI32 = LLPointer(llI32, graphI32)
-            val graphType = Type.Union(listOf(graphI32, graphI64))
+            val graphType = Union(listOf(graphI32, graphI64))
             val ptrUnion = JitsuUnion.of(graphType, listOf(llI64, ptrI32))
 
             val result = ptrUnion.free(unionVar, ctx)
@@ -601,7 +606,7 @@ class JitsuUnionTest : LowLevelTypeTest() {
 
         @Test
         fun `single-option union free returns empty list for primitive option`() {
-            val singleGraphType = Type.Union(listOf(graphI32, graphI64))
+            val singleGraphType = Union(listOf(graphI32, graphI64))
             val singleUnion = JitsuUnion.of(singleGraphType, listOf(llI32, llI64))
             val result = singleUnion.free(unionVar, ctx)
             assertThat(result).isEmpty()

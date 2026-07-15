@@ -12,9 +12,11 @@ import eu.nitok.jitsu.compiler.analysis.ReturnSummaryElement
 import eu.nitok.jitsu.compiler.analysis.VariableSummaryElement
 import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.compiler.graph.elements.JitsuFile
-import eu.nitok.jitsu.compiler.graph.elements.types.Type
+import eu.nitok.jitsu.compiler.graph.elements.types.Int
 import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
 import eu.nitok.jitsu.compiler.graph.buildJitsuModule
+import eu.nitok.jitsu.compiler.graph.elements.types.Boolean
+import eu.nitok.jitsu.compiler.graph.elements.types.TypeElement
 import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -67,22 +69,22 @@ class VariableRegistryTest {
     private fun variableSummary(ownershipState: OwnershipState) =
         VariableSummaryElement(
             ownershipState = ownershipState,
-            compileTimeValue = AbstractValueElement.Unknown
+            compileTimeValueElement = AbstractValueElement.Unknown
         )
 
-    private fun variableDecl(name: String, type: Type): VariableDeclaration =
+    private fun variableDecl(name: String, type: TypeElement): VariableDeclaration =
         VariableDeclaration(
             reassignable = true,
             name = loc(name),
-            declaredType = type,
-            initialValue = null
+            declaredTypeElement = type,
+            initialValueElement = null
         )
 
-    private fun parameter(name: String, type: Type): FunctionElement.Parameter =
+    private fun parameter(name: String, type: TypeElement): FunctionElement.Parameter =
         FunctionElement.Parameter(
             name = loc(name),
-            declaredType = type,
-            initialValue = null
+            declaredTypeElement = type,
+            initialValueElement = null
         )
 
     @Nested
@@ -102,8 +104,8 @@ class VariableRegistryTest {
             val fn = firstFunction("fn f() { }")
             fn.withSummary(borrowedSummary("a", "b"))
             val registry = VariableRegistry(fn)
-            registry.getEntry(variableDecl("a", Type.Int(BitSize.BIT_32)))
-            registry.getEntry(variableDecl("b", Type.Int(BitSize.BIT_64)))
+            registry.getEntry(variableDecl("a", Int(BitSize.BIT_32)))
+            registry.getEntry(variableDecl("b", Int(BitSize.BIT_64)))
 
             assertThat(registry.variablesToFree).isEmpty()
         }
@@ -120,8 +122,8 @@ class VariableRegistryTest {
                 )
             )
             val registry = VariableRegistry(fn)
-            val ownedDecl = variableDecl("owned", Type.Int(BitSize.BIT_32))
-            val borrowedDecl = variableDecl("borrowed", Type.Int(BitSize.BIT_32))
+            val ownedDecl = variableDecl("owned", Int(BitSize.BIT_32))
+            val borrowedDecl = variableDecl("borrowed", Int(BitSize.BIT_32))
             registry.getEntry(ownedDecl)
             registry.getEntry(borrowedDecl)
 
@@ -135,9 +137,9 @@ class VariableRegistryTest {
             val fn = firstFunction("fn f() { }")
             fn.withSummary(ownedSummary("x", "y", "z"))
             val registry = VariableRegistry(fn)
-            registry.getEntry(variableDecl("x", Type.Int(BitSize.BIT_32)))
-            registry.getEntry(variableDecl("y", Type.Int(BitSize.BIT_64)))
-            registry.getEntry(variableDecl("z", Type.Boolean))
+            registry.getEntry(variableDecl("x", Int(BitSize.BIT_32)))
+            registry.getEntry(variableDecl("y", Int(BitSize.BIT_64)))
+            registry.getEntry(variableDecl("z", Boolean))
 
             assertThat(registry.variablesToFree).hasSize(3)
             assertThat(registry.variablesToFree.map { it.name })
@@ -156,8 +158,8 @@ class VariableRegistryTest {
                 )
             )
             val registry = VariableRegistry(fn)
-            registry.getEntry(variableDecl("moved", Type.Int(BitSize.BIT_32)))
-            registry.getEntry(variableDecl("owned", Type.Int(BitSize.BIT_32)))
+            registry.getEntry(variableDecl("moved", Int(BitSize.BIT_32)))
+            registry.getEntry(variableDecl("owned", Int(BitSize.BIT_32)))
 
             assertThat(registry.variablesToFree.map { it.name }).containsExactly("owned")
         }
@@ -176,8 +178,8 @@ class VariableRegistryTest {
             val decl = VariableDeclaration(
                 reassignable = false,
                 name = loc("undeclared"),
-                declaredType = null,
-                initialValue = null
+                declaredTypeElement = null,
+                initialValueElement = null
             )
             // implicitType stays null → type resolves to Type.Undefined
 
@@ -195,10 +197,10 @@ class VariableRegistryTest {
             // Initially empty
             assertThat(registry.variablesToFree).isEmpty()
 
-            registry.getEntry(variableDecl("a", Type.Int(BitSize.BIT_32)))
+            registry.getEntry(variableDecl("a", Int(BitSize.BIT_32)))
             assertThat(registry.variablesToFree).hasSize(1)
 
-            registry.getEntry(variableDecl("b", Type.Int(BitSize.BIT_64)))
+            registry.getEntry(variableDecl("b", Int(BitSize.BIT_64)))
             assertThat(registry.variablesToFree).hasSize(2)
         }
     }
@@ -224,12 +226,12 @@ class VariableRegistryTest {
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "x" }
 
             val entry = lowering.variableRegistry.getEntry(varDecl)
             assertThat(entry.name).isEqualTo("x")
-            assertThat(entry.lowLevelType).isEqualTo(LowLevelType.I32)
+            assertThat(entry.lowLevelType).isEqualTo(I32)
         }
 
         @Test
@@ -247,13 +249,13 @@ class VariableRegistryTest {
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val decls = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            val decls = (fn.body as FunctionElement.BodyElement.Implementation).instructions
                 .filterIsInstance<VariableDeclaration>()
 
             val declA = decls.first { it.name.value == "a" }
             val declB = decls.first { it.name.value == "b" }
-            assertThat(lowering.variableRegistry.getLowLevelType(declA)).isEqualTo(LowLevelType.I32)
-            assertThat(lowering.variableRegistry.getLowLevelType(declB)).isEqualTo(LowLevelType.I64)
+            assertThat(lowering.variableRegistry.getLowLevelType(declA)).isEqualTo(I32)
+            assertThat(lowering.variableRegistry.getLowLevelType(declB)).isEqualTo(I64)
         }
 
         @Test
@@ -263,7 +265,7 @@ class VariableRegistryTest {
             lowering.lower()
 
             // variablesToFree must be a subset of all registered entries
-            val allEntries = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            val allEntries = (fn.body as FunctionElement.BodyElement.Implementation).instructions
                 .filterIsInstance<VariableDeclaration>()
                 .map { lowering.variableRegistry.getEntry(it) }
             val toFree = lowering.variableRegistry.variablesToFree
@@ -277,7 +279,7 @@ class VariableRegistryTest {
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "arr" }
 
             assertThat(lowering.variableRegistry.getLowLevelType(varDecl))

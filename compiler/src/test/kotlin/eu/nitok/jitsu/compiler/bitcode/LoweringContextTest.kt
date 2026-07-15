@@ -1,35 +1,35 @@
 package eu.nitok.jitsu.compiler.bitcode
 
 import eu.nitok.jitsu.common.BitSize
+import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.compiler.bitcode.LowLevelExpression.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
 import eu.nitok.jitsu.compiler.bitcode.LowLevelType.*
-import eu.nitok.jitsu.compiler.graph.elements.types.Type
+import eu.nitok.jitsu.compiler.graph.elements.ConstantElement
+import eu.nitok.jitsu.compiler.graph.elements.ConstantElement.IntConstant
+import eu.nitok.jitsu.compiler.graph.elements.ConstantElement.UIntConstant
+import eu.nitok.jitsu.compiler.graph.elements.types.*
+import eu.nitok.jitsu.compiler.graph.elements.types.Array
+import eu.nitok.jitsu.compiler.graph.elements.types.Boolean
+import eu.nitok.jitsu.compiler.graph.elements.types.Float
+import eu.nitok.jitsu.compiler.graph.elements.types.Int
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import java.net.URI
 
 @DisplayName("LoweringContext")
 class LoweringContextTest {
+    val dummyLocation = Location(
+        URI("file://x"),
+        0, 0, 0, 0
+    )
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Shared fixtures
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private val graphI32 = Type.Int(BitSize.BIT_32)
-    private val graphI64 = Type.Int(BitSize.BIT_64)
-    private val graphF64 = Type.Float(BitSize.BIT_64)
-    private val graphBool = Type.Boolean
-
-    // Companion object shorthand aliases (not importable via wildcard)
-    private val I32 = LowLevelType.I32
-    private val I64 = LowLevelType.I64
-    private val F64 = LowLevelType.F64
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // nextTmpName()
-    // ─────────────────────────────────────────────────────────────────────────
+    private val graphI32 = Int(BitSize.BIT_32)
+    private val graphI64 = Int(BitSize.BIT_64)
+    private val graphF64 = Float(BitSize.BIT_64)
+    private val graphBool = Boolean
 
     @Nested
     @DisplayName("nextTmpName()")
@@ -104,13 +104,13 @@ class LoweringContextTest {
         @DisplayName("returns Variable with correct name and AllocStack for bool type")
         fun primitiveBool_returnsVariableAndAllocStack() {
             val ctx = LoweringContext()
-            val type = LLBool
+            val type = LLBool(Boolean)
 
             val (variable, instructions) = ctx.createTmpVar(type)
 
             assertThat(variable.name).isEqualTo("tmp_0")
             assertThat(instructions).hasSize(1)
-            assertThat(instructions[0]).isEqualTo(AllocStack("tmp_0", LLBool))
+            assertThat(instructions[0]).isEqualTo(AllocStack("tmp_0", LLBool(Boolean)))
         }
 
         @Test
@@ -166,7 +166,7 @@ class LoweringContextTest {
         @DisplayName("for dynamic JitsuArray: instructions are [AllocStack] only (arrays need explicit alloc)")
         fun dynamicJitsuArray_returnsAllocStackOnly() {
             val ctx = LoweringContext()
-            val arrayType = JitsuArray.dynamic(I32, Type.Array(graphI32, null))
+            val arrayType = JitsuArray.dynamic(I32, I32, Array(graphI32, null))
 
             val (variable, instructions) = ctx.createTmpVar(arrayType)
 
@@ -182,7 +182,7 @@ class LoweringContextTest {
         @DisplayName("for JitsuUnion: instructions are [AllocStack] only")
         fun jitsuUnion_returnsAllocStackOnly() {
             val ctx = LoweringContext()
-            val unionGraphType = Type.Union(listOf(graphI32, graphF64))
+            val unionGraphType = Union(listOf(graphI32, graphF64))
             val unionType = JitsuUnion.of(unionGraphType, listOf(I32, F64))
 
             val (variable, instructions) = ctx.createTmpVar(unionType)
@@ -345,11 +345,11 @@ class LoweringContextTest {
             val ctx = LoweringContext()
             val compare = Compare(NumericalValue(1L), NumericalValue(2L))
 
-            val (field, instructions) = ctx.asField(compare, LLBool)
+            val (field, instructions) = ctx.asField(compare, LLBool(Boolean))
 
             assertThat(field).isEqualTo(Variable("tmp_0"))
             assertThat(instructions).hasSize(2)
-            assertThat(instructions[0]).isEqualTo(AllocStack("tmp_0", LLBool))
+            assertThat(instructions[0]).isEqualTo(AllocStack("tmp_0", LLBool(Boolean)))
             val write = instructions[1] as Write
             assertThat(write.value).isEqualTo(compare)
         }
@@ -452,7 +452,7 @@ class LoweringContextTest {
             val target = Variable("flag")
             val value = NumericalValue(1L)
 
-            val instructions = ctx.write(LLBool, target, value)
+            val instructions = ctx.write(LLBool(Boolean), target, value)
 
             assertThat(instructions).containsExactly(Write(target, value))
         }
@@ -522,7 +522,7 @@ class LoweringContextTest {
             val ctx = LoweringContext()
 
             val (v0, _) = ctx.createTmpVar(I32)
-            val (v1, _) = ctx.createTmpVar(LLBool)
+            val (v1, _) = ctx.createTmpVar(LLBool(Boolean))
             val (v2, _) = ctx.createTmpVar(F64)
 
             assertThat(v0.name).isEqualTo("tmp_0")
@@ -560,7 +560,7 @@ class LoweringContextTest {
             val name0 = ctx.nextTmpName()           // tmp_0
             val (var1, _) = ctx.createTmpVar(I32)   // tmp_1
             val name2 = ctx.nextTmpName()           // tmp_2
-            val (var3, _) = ctx.createTmpVar(LLBool) // tmp_3
+            val (var3, _) = ctx.createTmpVar(LLBool(Boolean)) // tmp_3
 
             assertThat(name0).isEqualTo("tmp_0")
             assertThat(var1.name).isEqualTo("tmp_1")
@@ -596,7 +596,7 @@ class LoweringContextTest {
         @DisplayName("createTmpVar for JitsuUnion: only AllocStack (no heap alloc)")
         fun jitsuUnion_onlyAllocStack() {
             val ctx = LoweringContext()
-            val unionGraphType = Type.Union(listOf(graphI32, graphI64))
+            val unionGraphType = Union(listOf(graphI32, graphI64))
             val unionType = JitsuUnion.of(unionGraphType, listOf(I32, I64))
 
             val (variable, instructions) = ctx.createTmpVar(unionType)
@@ -638,7 +638,7 @@ class LoweringContextTest {
         @DisplayName("createTmpVar with fixed JitsuArray: only AllocStack")
         fun fixedJitsuArray_onlyAllocStack() {
             val ctx = LoweringContext()
-            val arrayType = JitsuArray.fixed(I32, 4, Type.Array(graphI32, 4))
+            val arrayType = JitsuArray.fixed(I32, I32, 4uL, Array(graphI32, UIntConstant(4u, dummyLocation)))
 
             val (variable, instructions) = ctx.createTmpVar(arrayType)
 

@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * Per-use-site analysis information.
- * Attached to each [eu.nitok.jitsu.compiler.graph.elements.expressions.VariableReference].
+ * Attached to each [eu.nitok.jitsu.compiler.graph.elements.VariableReference].
  */
 @Serializable
 internal data class UseSiteInfo(

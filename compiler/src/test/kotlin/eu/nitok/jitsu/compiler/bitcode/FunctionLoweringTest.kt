@@ -71,7 +71,7 @@ class FunctionLoweringTest {
         fun `variable declaration AllocStack has correct low-level type`() {
             val instructions = lower("fn f(): i32 { var x: i32 = 10; return x; }")
             val xAlloc = instructions.filterIsInstance<AllocStack>().first { it.name == "x" }
-            assertThat(xAlloc.layout).isEqualTo(LowLevelType.I32)
+            assertThat(xAlloc.layout).isEqualTo(I32)
         }
 
         @Test
@@ -245,7 +245,6 @@ class FunctionLoweringTest {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
     @Nested
     @DisplayName("Variable Registry Tests")
     inner class VariableRegistryTests {
@@ -257,10 +256,10 @@ class FunctionLoweringTest {
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "x" }
             val lowLevelType = lowering.variableRegistry.getLowLevelType(varDecl)
-            assertThat(lowLevelType).isEqualTo(LowLevelType.I32)
+            assertThat(lowLevelType).isEqualTo(I32)
         }
 
         @Test
@@ -270,10 +269,10 @@ class FunctionLoweringTest {
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "x" }
             val lowLevelType = lowering.variableRegistry.getLowLevelType(varDecl)
-            assertThat(lowLevelType).isEqualTo(LowLevelType.I64)
+            assertThat(lowLevelType).isEqualTo(I64)
         }
 
         @Test
@@ -283,7 +282,7 @@ class FunctionLoweringTest {
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "x" }
             val lowLevelType = lowering.variableRegistry.getLowLevelType(varDecl)
             assertThat(lowLevelType).isInstanceOf(JitsuArray::class.java)
@@ -296,10 +295,10 @@ class FunctionLoweringTest {
             val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
             lowering.lower()
 
-            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).block.instructions
+            val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
                 .filterIsInstance<VariableDeclaration>().first { it.name.value == "x" }
             val lowLevelType = lowering.variableRegistry.getLowLevelType(varDecl) as JitsuArray
-            assertThat(lowLevelType.elementType).isEqualTo(LowLevelType.I32)
+            assertThat(lowLevelType.elementType).isEqualTo(I32)
         }
 
         @Test

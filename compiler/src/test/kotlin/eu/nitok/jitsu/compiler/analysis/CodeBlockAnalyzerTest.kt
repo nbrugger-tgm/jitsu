@@ -9,17 +9,18 @@ import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.compiler.graph.elements.CodeBlockElement
-import eu.nitok.jitsu.compiler.graph.api.Expression
-import eu.nitok.jitsu.compiler.graph.api.Instruction
 import eu.nitok.jitsu.compiler.graph.behaviour.ModuleAware
-import eu.nitok.jitsu.compiler.graph.elements.types.Type
 import eu.nitok.jitsu.compiler.graph.behaviour.ScopeAware
+import eu.nitok.jitsu.compiler.graph.elements.ConstantElement
+import eu.nitok.jitsu.compiler.graph.elements.ExpressionElement
+import eu.nitok.jitsu.compiler.graph.elements.FunctionCall
+import eu.nitok.jitsu.compiler.graph.elements.InstructionElement
 import eu.nitok.jitsu.compiler.graph.elements.JitsuModule
+import eu.nitok.jitsu.compiler.graph.elements.Return
 import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
-import eu.nitok.jitsu.compiler.graph.elements.expressions.Constant
-import eu.nitok.jitsu.compiler.graph.elements.expressions.VariableReference
-import eu.nitok.jitsu.compiler.graph.elements.instructions.FunctionCall
-import eu.nitok.jitsu.compiler.graph.elements.instructions.Return
+import eu.nitok.jitsu.compiler.graph.elements.VariableReference
+import eu.nitok.jitsu.compiler.graph.elements.types.Int
+import eu.nitok.jitsu.compiler.graph.elements.types.TypeElement
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -29,8 +30,8 @@ class CodeBlockAnalyzerTest {
 
     private val dummyLoc = Position(1, 1, URI("memory://test.jit"))
     private val dummyLocation = Location(dummyLoc, dummyLoc)
-    private val i8 = Type.Int(BitSize.BIT_8)
-    private val i32 = Type.Int(BitSize.BIT_32)
+    private val i8 = Int(BitSize.BIT_8)
+    private val i32 = Int(BitSize.BIT_32)
     private val messages = CompilerMessages()
     private val noOracle: (FunctionElement) -> FunctionSummaryElement? = { null }
     private var module = JitsuModule("test", listOf(), listOf())
@@ -44,39 +45,39 @@ class CodeBlockAnalyzerTest {
 
     private fun buildFunction(
         name: String? = "foo",
-        returnType: Type? = null,
+        returnType: TypeElement? = null,
         parameters: List<FunctionElement.Parameter> = emptyList(),
-        instructions: List<Instruction> = emptyList()
+        instructions: List<InstructionElement> = emptyList()
     ): FunctionElement = FunctionElement(
         name = name?.let { loc(it) },
-        returnType = returnType?.let { loc(it) },
+        returnTypeElement = returnType?.let { loc(it) },
         parameters = parameters,
-        body = FunctionElement.BodyElement.Implementation(CodeBlockElement(instructions)),
+        bodyElement = FunctionElement.BodyElement.Implementation(CodeBlockElement(instructions)),
         dummyLocation
     ).modularized()
 
-    private fun param(name: String, type: Type): FunctionElement.Parameter =
+    private fun param(name: String, type: TypeElement): FunctionElement.Parameter =
         FunctionElement.Parameter(loc(name), type, null).modularized()
 
-    private fun constInt(value: Long): Constant.IntConstant =
-        Constant.IntConstant(value, dummyLocation).modularized()
+    private fun constInt(value: Long): ConstantElement.IntConstant =
+        ConstantElement.IntConstant(value, dummyLocation).modularized()
 
     private fun varRef(name: String): VariableReference =
         VariableReference(loc(name)).modularized()
 
     private fun varDecl(
         name: String,
-        type: Type? = null,
-        initialValue: Expression? = null,
+        type: TypeElement? = null,
+        initialValue: ExpressionElement? = null,
         reassignable: Boolean = false
     ): VariableDeclaration = VariableDeclaration(
         reassignable = reassignable,
         name = loc(name),
-        declaredType = type,
-        initialValue = initialValue
+        declaredTypeElement = type,
+        initialValueElement = initialValue
     ).modularized()
 
-    private fun ret(value: Expression? = null): Return =
+    private fun ret(value: ExpressionElement? = null): Return =
         Return(value, dummyLocation).modularized()
 
     private fun analyze(
@@ -132,7 +133,7 @@ class CodeBlockAnalyzerTest {
             val result = analyze(fn)
             val returnSummary = result.functionSummary.returnSummary
             assertThat(returnSummary).isNotNull()
-            assertThat(returnSummary!!.compileTimeValue).isEqualTo(AbstractValueElement.Const("5", i8))
+            assertThat(returnSummary!!.compileTimeValue).isEqualTo(AbstractValueElement.Const("5", i32))
         }
 
         @Test
@@ -142,7 +143,7 @@ class CodeBlockAnalyzerTest {
                 instructions = listOf(ret(constInt(5)))
             )
             val result = analyze(fn)
-            assertThat(result.functionSummary.returnSummary!!.possibleTypes).contains(i8)
+            assertThat(result.functionSummary.returnSummary!!.possibleTypes).contains(i32)
         }
     }
 
@@ -213,7 +214,8 @@ class CodeBlockAnalyzerTest {
             val result = analyze(fn)
             val xSummary = result.functionSummary.variableSummary.entries
                 .first { it.key == "x" }.value
-            assertThat(xSummary.compileTimeValue).isEqualTo(AbstractValueElement.Const("5", i8))
+            assertThat(xSummary.compileTimeValue).isEqualTo(AbstractValueElement.Const("5", i32))
+            assertThat(xSummary.narrowedTypeElement).isEqualTo(i8)
         }
 
         @Test
