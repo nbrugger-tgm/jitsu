@@ -36,7 +36,7 @@ sealed interface Type : Element {
 
     interface Array : Type {
         val elementType: Type
-        val size: Expression.Constant.IntConstant?
+        val size: Expression.Constant.UIntConstant?
         val sizeType: Type
     }
 

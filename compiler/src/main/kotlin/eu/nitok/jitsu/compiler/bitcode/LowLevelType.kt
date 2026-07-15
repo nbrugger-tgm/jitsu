@@ -134,7 +134,7 @@ sealed interface LowLevelType {
     /**
      * Fixed-size array type (for stack-allocated arrays).
      */
-    data class LLFixedArray(val elementType: LowLevelType, val size: Int, override val graphType: Type) : LowLevelType {
+    data class LLFixedArray(val elementType: LowLevelType, val size: ULong, override val graphType: Type) : LowLevelType {
         /**
          * Access an element at a given index.
          */
@@ -143,7 +143,7 @@ sealed interface LowLevelType {
         }
 
         override fun free(field: LowLevelExpression.Field, ctx: LoweringContext): List<LowLevelInstruction> {
-            return (0 until size).flatMap {
+            return (0uL until size).flatMap {
                 elementType.free(accessIndex(field, LowLevelExpression.NumericalValue(it.toLong())), ctx)
             }
         }

@@ -11,7 +11,7 @@ import kotlinx.serialization.Transient
 @Serializable
 internal data class Array(
     val elementTypeElement: TypeElement,
-    override val size: ConstantElement.IntConstant?
+    override val size: ConstantElement.UIntConstant?
 ) : TypeElement(), Type.Array{
     override val elementType get() = elementTypeElement.asType
     override val sizeType: Type
@@ -25,7 +25,7 @@ internal data class Array(
         if (type !is Type.Array) return ReasonedBoolean.False("$type is not an array and can therefore not be assigned to an array")
         val elementsAccept = this.elementTypeElement.acceptsInstanceOf(type.elementType)
         return if (elementsAccept.value) {
-            if (this.size != null && type.size != this.size) {
+            if (this.size != null && type.size?.value != this.size.value) {
                 ReasonedBoolean.False("$this and $type have differing fixed sizes")
             } else ReasonedBoolean.True("$type is an array with an assignable element type", elementsAccept)
         } else {
@@ -40,7 +40,7 @@ internal data class Array(
     override val children: List<Element> = listOfNotNull(elementTypeElement)
 
     override fun toString(): String {
-        return "$elementTypeElement[${size?.toString() ?: ""}]"
+        return "$elementTypeElement[${size?.value?.toString() ?: ""}]"
     }
 
 }

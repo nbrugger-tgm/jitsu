@@ -10,7 +10,7 @@ import eu.nitok.jitsu.compiler.graph.api.Type
  */
 class JitsuArray private constructor(
     val elementType: LowLevelType,
-    val fixedSize: Int?,
+    val fixedSize: ULong?,
     val sizeType: LowLevelType,
     val layout: LLStruct,
 ) : Custom(layout) {
@@ -62,7 +62,7 @@ class JitsuArray private constructor(
         ctx: LoweringContext,
         body: (element: LowLevelExpression.Field, index: LowLevelExpression) -> List<LowLevelInstruction>
     ): List<LowLevelInstruction> {
-        if(fixedSize == 0) return emptyList()
+        if(fixedSize == 0uL) return emptyList()
         val sizeExpr = sizeExpression(array)
 
         val (counter, counterInstructs) = ctx.createTmpVar(sizeType)
@@ -121,7 +121,7 @@ class JitsuArray private constructor(
          * Create a fixed-size array type.
          * Layout: { data: [T; size] }
          */
-        fun fixed(elementType: LowLevelType, sizeType: LowLevelType, size: Int, graphType: Type): JitsuArray {
+        fun fixed(elementType: LowLevelType, sizeType: LowLevelType, size: ULong, graphType: Type): JitsuArray {
             val layout = LLStruct(
                 mapOf("data" to LLFixedArray(elementType, size, graphType)),
                 graphType

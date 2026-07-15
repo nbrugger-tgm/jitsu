@@ -249,7 +249,7 @@ class FunctionLowering(
      */
     private fun canUseArrayHint(literal: ArrayLiteral, hint: JitsuArray): Boolean {
         // For now, simple check: element count must match for fixed arrays
-        if (hint.isFixedSize && hint.fixedSize != literal.elements.size) {
+        if (hint.isFixedSize && hint.fixedSize != literal.elements.size.toULong()) {
             return false
         }
         return true

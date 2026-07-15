@@ -45,7 +45,7 @@ object TypeLowering {
         val sizeType = lower(type.sizeType)
         val size = type.size
         return if (size != null) {
-            JitsuArray.fixed(elementType, sizeType, size.value.toInt(), type)
+            JitsuArray.fixed(elementType, sizeType, size.value, type)
         } else {
             JitsuArray.dynamic(elementType, sizeType, type)
         }

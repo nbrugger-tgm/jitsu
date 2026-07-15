@@ -38,7 +38,7 @@ internal fun restoreJitsuModule(module: JitsuModule, dependencies: Map<String, J
     val moduleLookup = merge(dependencies, module.moduleLookup) { a, b ->
         if (!(a.files.isEmpty() && b.files.isEmpty()))
             module.messages.error(
-                "Module name conflict, ${a.name}, ${b.name}",
+                "Module name conflict, ${a.fullyQualifiedName}, ${b.fullyQualifiedName}",
                 Position(1, 1, (a.files.getOrNull(0) ?: b.files[0]).uri)
             )
         a
@@ -81,7 +81,7 @@ private fun GraphBuilder.buildGraph(moduleAst: JitsuModuleAst, dependencies: Map
     val moduleLookup = merge(dependencies, module.moduleLookup) { a, b ->
         if (!(a.files.isEmpty() && b.files.isEmpty()))
             messages.error(
-                "Module name conflict, ${a.name}, ${b.name}",
+                "Module name conflict, ${a.fullyQualifiedName}, ${b.fullyQualifiedName}",
                 Position(1, 1, URI((a.files.getOrNull(0) ?: b.files[0]).path))
             )
         a
@@ -540,13 +540,15 @@ val IdentifierNode.located: Located<String> get() = Located(value, location)
 private fun GraphBuilder.rawType(type: TypeNode?): TypeElement {
     if(type == null) return Undefined
     return when (type) {
-        is TypeNode.ArrayTypeNode -> Array(
-            rawType(type.type),
-            type.fixedSize?.let { resolveIntConstant(it) as? ConstantElement.IntConstant ?: run {
-                messages.error("Array size must be positive", it)
-                null
-            }}
-        )
+        is TypeNode.ArrayTypeNode -> {
+            val size = type.fixedSize?.let {
+                resolveIntConstant(it) as? ConstantElement.UIntConstant ?: run {
+                    messages.error("Array size must be positive", it)
+                    null
+                }
+            }
+            Array(rawType(type.type), size)
+        }
 
         is TypeNode.FloatTypeNode -> Float(type.bitSize)
         is TypeNode.IntTypeNode -> Int(type.bitSize)
