@@ -43,7 +43,20 @@ internal class CodeBlockAnalyzer(
     )
 
     private data class ExpressionResult(
+        /**
+         * The type of the expression considering the expected type.
+         * Example
+         * `var x: i32[] = [1, 2]`
+         * `[1, 2]` is of type `i8[]` but since it is assigned to a `i32[]` type would be `i32[]`
+         */
         val type: TypeElement,
+        /**
+         * The actual type of the expression at this point in time
+         * Example
+         * `var x: i32[] = [1]`
+         * `[1]` is of type `i8[]` even tho assigned to a `i32[]` the narrowed type is still i8[]
+         */
+        val narrowedType: TypeElement,
         val deterministic: ReasonedBoolean,
         val constValue: AbstractValueElement,
         val paramDeps: Set<String>
@@ -154,7 +167,7 @@ internal class CodeBlockAnalyzer(
         val expression: ExpressionResult? = decl.initialValueElement?.let { analyzeExpression(it, decl.declaredTypeElement?.rawTypeElement) }
         decl.implicitTypeElement = expression?.type
         val narrowedType: TypeElement? = when {
-            expression != null -> expression.type
+            expression != null -> expression.narrowedType
             decl.declaredType != null -> decl.declaredTypeElement
             else -> null
         }
@@ -235,7 +248,8 @@ internal class CodeBlockAnalyzer(
             is VariableReference -> analyzeVariableReference(expr, typeHint)
             is FunctionCall -> analyzeFunctionCallExpression(expr, typeHint)
             is UndefinedExpression -> ExpressionResult(
-                type = Undefined,
+                type = typeHint?: Undefined,
+                narrowedType = Undefined,
                 deterministic = False("Undefined expression"),
                 constValue = AbstractValueElement.Unknown,
                 paramDeps = emptySet()
@@ -251,6 +265,7 @@ internal class CodeBlockAnalyzer(
         val elements = expr.elementExpressions.asSequence().map { analyzeExpression(it, elementType) }.toList()
         return ExpressionResult(
             type = arrayType,
+            narrowedType = arrayType,
             deterministic = elements.map { it.deterministic }.fold(
                 True("Empty array is deterministic") as ReasonedBoolean
             ) { acc, d -> acc.and(d) },
@@ -261,8 +276,10 @@ internal class CodeBlockAnalyzer(
 
     private fun analyzeConstant(constant: ConstantElement<*>, typeHint: TypeElement?): ExpressionResult {
         val type = constant.calculateType(typeContext, messages, typeHint)?: Undefined
+        val narrowType = constant.calculateType(typeContext, messages)?: Undefined
         return ExpressionResult(
             type = type,
+            narrowedType = narrowType,
             deterministic = True("Constant values are deterministic"),
             constValue = AbstractValueElement.Const(constant.literal, type),
             paramDeps = emptySet()
@@ -280,7 +297,8 @@ internal class CodeBlockAnalyzer(
                 ownershipState = OwnershipState.BORROWS
             )
             return ExpressionResult(
-                type = Undefined,
+                type = typeHint?: Undefined,
+                narrowedType = Undefined,
                 deterministic = True("Variable '$varName' not found"),
                 constValue = AbstractValueElement.NoValue,
                 paramDeps = emptySet()
@@ -293,12 +311,13 @@ internal class CodeBlockAnalyzer(
         val type = ref.calculateType(typeContext, messages, typeHint) ?: Undefined
 
         useSiteInfos[ref] = UseSiteInfo(
-            narrowedType = type,
+            narrowedType = varState.narrowedType,
             ownershipState = varState.ownershipState
         )
 
         return ExpressionResult(
             type = type,
+            narrowedType = varState.narrowedType,
             deterministic = varState.deterministic,
             constValue = varState.compileTimeValue,
             paramDeps = varState.paramDeps
@@ -370,6 +389,7 @@ internal class CodeBlockAnalyzer(
 
         return ExpressionResult(
             type = returnType,
+            narrowedType = returnType,
             deterministic = deterministic,
             constValue = targetSummary?.returnSummary?.compileTimeValueElement ?: AbstractValueElement.Unknown,
             paramDeps = allParamDeps
