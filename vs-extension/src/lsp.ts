@@ -35,7 +35,7 @@ const clientOptions: LanguageClientOptions = {
 export const client = new LanguageClient('jitsu-lsp', serverOptions, clientOptions);
 client.setTrace(Trace.Verbose);
 
-var restarts = 2;
+let restarts = 2;
 client.onDidChangeState(ev => {
     if(ev.newState == State.Stopped) {
         if(restarts == 0) {

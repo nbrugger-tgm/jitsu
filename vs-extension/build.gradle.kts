@@ -16,7 +16,7 @@ tasks.register("build", NpmTask::class) {
 tasks.register("runIde", Exec::class) {
     dependsOn("build")
     dependsOn(":language-server:installDist")
-    commandLine("code", "--extensionDevelopmentPath=${projectDir.absolutePath}", "../examples/")
+    commandLine("code", "--extensionDevelopmentPath=${projectDir.absolutePath}", "../")
 }
 
 node {
