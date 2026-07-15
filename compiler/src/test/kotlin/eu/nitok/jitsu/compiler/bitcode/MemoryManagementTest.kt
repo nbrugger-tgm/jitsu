@@ -41,7 +41,7 @@ class MemoryManagementTest {
                 )
             }"
         )
-        return graph.files[0]
+        return graph.module.files[0]
     }
 
     private fun lower(source: String): List<LowLevelInstruction> {
@@ -631,7 +631,7 @@ class MemoryManagementTest {
             // Verify ordering: dataWrite < dataFree < Return
             val dataWriteIdx = instructions.indexOfFirst { it is Write && (it as Write).value is AllocHeapArray }
             val dataFreeIdx = instructions.indexOfFirst {
-                it is Free && (it as Free).target is Read && ((it as Free).target as Read).name == "data"
+                it is Free && it.target is Read && ((it as Free).target as Read).name == "data"
             }
             val returnIdx = instructions.returnIndex()
             assertThat(dataWriteIdx).isGreaterThanOrEqualTo(0)

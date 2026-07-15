@@ -19,16 +19,17 @@ class SourceFile(
     var ast: CompletableFuture<out SourceFileNode> = parse(content)
         private set
     val graph get() = module!!.graph.thenApply {
+        val moduleGraph = it.module
         val submodulePath = uri.toString()
             .substring(module?.sourceRoot.toString().length)
             .replace("/?[^/]+\\.jit".toRegex(),"")
-        var submodule = it
+        var submodule = moduleGraph
         if(submodulePath.isNotEmpty()) submodulePath.split("/").forEach { subModuleName ->
             submodule = submodule.submodules.first { it.name == subModuleName }
         }
 
         submodule.files.firstOrNull { it.uri == uri }
-            ?: throw IllegalStateException("Source file $uri not found in module graph (${it.files.map { it.uri }}")
+            ?: throw IllegalStateException("Source file $uri not found in module graph (${moduleGraph.files.map { it.uri }}")
     }
 
     var module: WorkspaceModule? = null

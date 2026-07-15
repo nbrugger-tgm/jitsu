@@ -41,9 +41,10 @@ abstract class JitsuCompile @Inject constructor() : DefaultTask() {
     fun compile() {
         val (moduleAst, parseErrors) = parse(moduleName.get())
 
-        val graph = JitsuModule.compile(moduleAst, dependencies.files.map { it.toPath() })
-        val errors = graph.messages.errors + parseErrors
-        graph.messages.warnings.forEach {
+        val compilation = JitsuModule.compile(moduleAst, dependencies.files.map { it.toPath() })
+        val graph = compilation.module
+        val errors = compilation.messages.errors + parseErrors
+        compilation.messages.warnings.forEach {
             logger.warn(it.format("w"))
         }
         if (errors.isNotEmpty()) {

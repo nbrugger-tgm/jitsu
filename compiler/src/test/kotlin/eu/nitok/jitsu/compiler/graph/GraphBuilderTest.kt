@@ -2,7 +2,6 @@ package eu.nitok.jitsu.compiler.graph
 
 import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.compiler.graph.api.Expression
-import eu.nitok.jitsu.compiler.graph.elements.ConstantElement
 import eu.nitok.jitsu.compiler.graph.elements.ConstantElement.IntConstant
 import eu.nitok.jitsu.compiler.graph.elements.ConstantElement.UIntConstant
 import eu.nitok.jitsu.compiler.graph.elements.FunctionCall
@@ -34,7 +33,7 @@ class GraphBuilderTest {
         }
         val graph = buildJitsuModule(ast)
         if(graph.messages.errors.isNotEmpty()) throw IllegalArgumentException("Compilation error(s)! ${graph.messages.errors.joinToString("\n")}")
-        return graph.files[0]
+        return graph.module.files[0]
     }
 
     @Nested

@@ -1,6 +1,5 @@
 package eu.nitok.jitsu.compiler.graph.api
 
-import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.parser.ast.JitsuModuleAst
 import kotlinx.serialization.Transient
 import java.nio.file.Path
@@ -16,8 +15,6 @@ interface JitsuModule : Element {
     val submodules: List<JitsuModule>
     val dependencies: Sequence<String> get() = files.asSequence().flatMap { it.imports }.map { it.name.value }
     val allDependencies: Sequence<String> get() = dependencies + submodules.asSequence().flatMap { it.allDependencies }.distinct()
-    @Transient
-    val messages: CompilerMessages
     val allModules: Sequence<JitsuModule> get() = sequenceOf(this) + submodules.flatMap { it.allModules }
     val moduleLookup: Map<String, JitsuModule>
     @Transient
@@ -34,10 +31,10 @@ interface JitsuModule : Element {
     fun writeToFile(path: Path)
 
     companion object {
-        fun readModule(moduleFile: Path, dependencies: Iterable<Path>): JitsuModule {
+        fun readModule(moduleFile: Path, dependencies: Iterable<Path>): JitsuModuleResult {
             return JitsuModuleImpl.readModule(moduleFile, dependencies)
         }
-        fun compile(syntaxTree: JitsuModuleAst, dependencies: Collection<Path>): JitsuModule {
+        fun compile(syntaxTree: JitsuModuleAst, dependencies: Collection<Path>): JitsuModuleResult {
             return JitsuModuleImpl.createModule(syntaxTree, dependencies)
         }
     }

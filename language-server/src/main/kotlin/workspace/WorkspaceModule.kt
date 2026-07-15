@@ -1,6 +1,5 @@
 package workspace
 
-import eu.nitok.jitsu.compiler.graph.api.JitsuFile
 import eu.nitok.jitsu.compiler.graph.api.JitsuModule
 import eu.nitok.jitsu.parser.ast.JitsuModuleAst
 import eu.nitok.jitsu.parser.ast.SourceFileNode

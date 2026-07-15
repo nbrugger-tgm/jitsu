@@ -20,6 +20,7 @@ import java.nio.file.Path
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import eu.nitok.jitsu.compiler.graph.api.JitsuModule as JitsuModulePublicApi
+import eu.nitok.jitsu.compiler.graph.api.JitsuModuleResult as JitsuModuleResultPublicApi
 
 @Serializable
 internal class JitsuModule internal constructor(
@@ -44,10 +45,6 @@ internal class JitsuModule internal constructor(
         }
         informElements(children)
     }
-
-    @Transient
-    override val messages = CompilerMessages()
-
     override val children: List<Element> get() = files + submodules
 
     override val allModules: Sequence<JitsuModule> get() = sequenceOf(this) + submodules.flatMap { it.allModules }
@@ -96,35 +93,21 @@ internal class JitsuModule internal constructor(
     fun getType(id: Int) = typeDb[id]
     fun getFunction(id: Int) = functionDb[id]
     fun getVariable(id: Int) = variableDb[id]
-
-
-    //    val exportedFunctions = merge(*files.map { file -> file.functions }.toTypedArray()) { a, b -> a + b }
-//    val exportedTypes = merge(*files.map { file -> file.types.map { it to file } }.toTypedArray()) { a, b ->
-//        b.second.messages.error("Type with name ${b.first.name.value} is already exported by module",b.first.name.location, CompilerMessage.Hint(
-//            "First definition", a.first.name.location
-//        ))
-//        a
-//    }.mapValues { it.value.first }
-//    val exportedVariables = merge(*files.map { file -> file.variables.map { it to file } }.toTypedArray())  { a, b ->
-//        b.second.messages.error("Variable with name ${b.first.name.value} is already exported by module",b.first.name.location, CompilerMessage.Hint(
-//            "First definition", a.first.name.location
-//        ))
-//        a
-//    }.mapValues { it.value.first }
     companion object {
         internal fun readModule(
             text: Path,
             dependencies: Iterable<Path>
-        ): JitsuModule {
+        ): JitsuModuleResultPublicApi {
             val module: JitsuModule = json.decodeFromString(text.readText())
-            val restoredDependencies = readDependencies(dependencies)
-            restoreJitsuModule(module, restoredDependencies)
-            return module
+            val (restoredDependencies, dependencyMessages) = readDependencies(dependencies)
+            val messages = restoreJitsuModule(module, restoredDependencies)
+            messages.add(dependencyMessages)
+            return JitsuModuleResultPublicApi(module, messages)
         }
 
         private fun readDependencies(
             dependencies: Iterable<Path>
-        ): Map<String, JitsuModule> {
+        ): Pair<Map<String, JitsuModule>, CompilerMessages> {
             val parsedDependencies = dependencies.asSequence()
                 .map { it.readText() }
                 .map { json.decodeFromString<JitsuModule>(it) }
@@ -133,25 +116,29 @@ internal class JitsuModule internal constructor(
             return restoredDependencies
         }
 
-        private fun restoreDependencies(parsedDependencies: MutableList<JitsuModule>): Map<String, JitsuModule> {
+        private fun restoreDependencies(parsedDependencies: MutableList<JitsuModule>): Pair<Map<String, JitsuModule>, CompilerMessages> {
             val restoredDependencies = mutableMapOf<String, JitsuModule>()
+            val messages = CompilerMessages()
             while (parsedDependencies.isNotEmpty()) {
                 val dependenciesReadyToBeRestored = parsedDependencies.filter {
                     it.dependencies.none { restoredDependencies[it] == null }
                 }
                 if (dependenciesReadyToBeRestored.isEmpty()) throw IllegalStateException("Circular dependency detected among ${parsedDependencies.map { it.fullyQualifiedName }}")
                 dependenciesReadyToBeRestored.forEach {
-                    restoreJitsuModule(it, restoredDependencies)
+                    messages.add(restoreJitsuModule(it, restoredDependencies))
                     parsedDependencies.remove(it)
                     val prev = restoredDependencies.putIfAbsent(it.fullyQualifiedName, it)
                     if (prev != null) throw IllegalStateException("Duplicate dependency ${it.fullyQualifiedName}")
                 }
             }
-            return restoredDependencies
+            return restoredDependencies to messages
         }
 
-        fun createModule(syntaxTree: JitsuModuleAst, dependencies: Collection<Path>): JitsuModulePublicApi {
-            return buildJitsuModule(syntaxTree, readDependencies(dependencies))
+        fun createModule(syntaxTree: JitsuModuleAst, dependencies: Collection<Path>): JitsuModuleResultPublicApi {
+            val (parsedDependencies, dependencyMessages) = readDependencies(dependencies)
+            val result = buildJitsuModule(syntaxTree, parsedDependencies)
+            result.messages.add(dependencyMessages)
+            return JitsuModuleResultPublicApi(result.module, result.messages)
         }
     }
 }

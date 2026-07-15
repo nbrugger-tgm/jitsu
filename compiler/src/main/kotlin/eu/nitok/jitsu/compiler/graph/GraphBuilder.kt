@@ -31,26 +31,36 @@ private class GraphBuilder {
     val messages: CompilerMessages = CompilerMessages()
 }
 
+internal data class ModuleCompilationResult(
+    val module: JitsuModule,
+    val messages: CompilerMessages
+)
+
 /**
  * Restores a de-serialized Module to its former interconnected state
  */
-internal fun restoreJitsuModule(module: JitsuModule, dependencies: Map<String, JitsuModule> = mapOf()) {
+internal fun restoreJitsuModule(module: JitsuModule, dependencies: Map<String, JitsuModule> = mapOf()): CompilerMessages {
+    val messages = CompilerMessages()
     val moduleLookup = merge(dependencies, module.moduleLookup) { a, b ->
         if (!(a.files.isEmpty() && b.files.isEmpty()))
-            module.messages.error(
+            messages.error(
                 "Module name conflict, ${a.fullyQualifiedName}, ${b.fullyQualifiedName}",
                 Position(1, 1, (a.files.getOrNull(0) ?: b.files[0]).uri)
             )
         a
     }
-    populateReferences(module, module.messages, moduleLookup, resolutionMode = RESTORE)
+    populateReferences(module, messages, moduleLookup, resolutionMode = RESTORE)
+    return messages
 }
 
-internal fun buildJitsuModule(moduleAst: JitsuModuleAst, dependencies: Map<String, JitsuModule> = mapOf()): JitsuModule {
+internal fun buildJitsuModule(
+    moduleAst: JitsuModuleAst,
+    dependencies: Map<String, JitsuModule> = mapOf()
+): ModuleCompilationResult {
     return GraphBuilder().buildGraph(moduleAst, dependencies)
 }
 
-internal fun buildJitsuModule(file: SourceFileNode): JitsuModule {
+internal fun buildJitsuModule(file: SourceFileNode): ModuleCompilationResult {
     return GraphBuilder().buildGraph(
         JitsuModuleAst(singleFileModuleName(file.url), listOf(file), listOf()),
         mapOf()
@@ -62,7 +72,7 @@ private fun singleFileModuleName(file: URI): String {
     return parts.last().replace(".jit", "")
 }
 
-private fun GraphBuilder.buildGraph(moduleAst: JitsuModuleAst, dependencies: Map<String, JitsuModule>): JitsuModule {
+private fun GraphBuilder.buildGraph(moduleAst: JitsuModuleAst, dependencies: Map<String, JitsuModule>): ModuleCompilationResult {
     val messages = CompilerMessages()
 
     fun buildModule(
@@ -99,8 +109,7 @@ private fun GraphBuilder.buildGraph(moduleAst: JitsuModuleAst, dependencies: Map
             it.summary = repository.getFunctionSummary(it)
         }
     }
-    module.messages.add(messages)
-    return module
+    return ModuleCompilationResult(module, messages)
 }
 
 private enum class ReferenceResolutionMode {
@@ -121,11 +130,11 @@ private fun populateReferences(
     module.sequence().forEach(
         when(resolutionMode) {
             RESOLVE -> ({ if (it is Resolvable) it.resolve(messages) })
-            RESTORE -> ({ if (it is Restorable) it.restore(module.messages) })
+            RESTORE -> ({ if (it is Restorable) it.restore(messages) })
         }
     )
     module.sequence().forEach {
-        if (it is Finalizable) it.finalize(module.messages)
+        if (it is Finalizable) it.finalize(messages)
     }
 }
 

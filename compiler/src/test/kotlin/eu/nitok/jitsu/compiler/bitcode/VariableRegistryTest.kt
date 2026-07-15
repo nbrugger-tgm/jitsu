@@ -36,7 +36,7 @@ class VariableRegistryTest {
         }
         val graph = buildJitsuModule(ast)
         if(graph.messages.errors.isNotEmpty()) throw IllegalArgumentException("Compilation error(s)! ${graph.messages.errors.joinToString("\n")}")
-        return graph.files[0]
+        return graph.module.files[0]
     }
 
     private fun firstFunction(source: String): FunctionElement =

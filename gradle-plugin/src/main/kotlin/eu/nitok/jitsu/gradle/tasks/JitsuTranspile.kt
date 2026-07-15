@@ -30,11 +30,11 @@ abstract class JitsuTranspile @Inject constructor(
 
     @TaskAction
     fun transpile() {
-        val module = JitsuModule.readModule(moduleFile.get().asFile.toPath(), dependencies.files.map { it.toPath() })
-        module.messages.errors.forEach { error ->
+        val readResult = JitsuModule.readModule(moduleFile.get().asFile.toPath(), dependencies.files.map { it.toPath() })
+        readResult.messages.errors.forEach { error ->
             logger.error(error.format("e"))
         }
-        val modules = module.lower()
+        val modules = readResult.module.lower()
         val files = CBackend().run {
             val outputDir = targetDirectory.get().asFile
             files.delete {

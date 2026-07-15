@@ -95,11 +95,11 @@ class JitsuFileService(val workspaces: Workspaces, val log: (Any) -> Unit) : Tex
         log("file diagnostic($params)")
         val document = workspaces.getDocument(params.textDocument.uri)
         val ast = document.ast
-        val graph = document.graph
-        return ast.thenCombine(graph) { ast, graph ->
+        val moduleGraph = document.module?.graph ?: error("file ${params.textDocument.uri} is not associated with a module")
+        return ast.thenCombine(moduleGraph) { ast, graph ->
             DocumentDiagnosticReport(
                 RelatedFullDocumentDiagnosticReport(
-                    syntaxDiagnostic(ast) + graphDiagnostic(graph)
+                    syntaxDiagnostic(ast) + graphDiagnostic(graph, document.uri)
                 ).also {
                     it.resultId = workspaces.diagnosticsId.toString()
                 }
