@@ -7,12 +7,15 @@ import eu.nitok.jitsu.compiler.graph.api.JitsuModule
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.*
 import javax.inject.Inject
 
 @CacheableTask
-abstract class JitsuTranspile @Inject constructor() : DefaultTask() {
+abstract class JitsuTranspile @Inject constructor(
+    private val files: FileSystemOperations
+) : DefaultTask() {
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val dependencies: ConfigurableFileCollection
@@ -33,7 +36,11 @@ abstract class JitsuTranspile @Inject constructor() : DefaultTask() {
         }
         val modules = module.lower()
         val files = CBackend().run {
-            transpile(listOf(modules), targetDirectory.get().asFile.toPath())
+            val outputDir = targetDirectory.get().asFile
+            files.delete {
+                it.delete(outputDir)
+            }
+            transpile(listOf(modules), outputDir.toPath())
         }
         logger.info("Transpiled to $files")
     }
