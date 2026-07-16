@@ -127,4 +127,22 @@ internal interface AccessElement<T : Accessible<T>, TE : AccessibleElement> : Ac
         override fun getApiValue(element: VariableElement): Variable = element.asVariable
     }
 
+    interface AttributeAccess : AccessElement<AttributeDefinition, AttributeDefinitionElement>, Resolvable
+    @Serializable
+    open class AttributeAccessElement(
+        override val reference: Located<String>
+    ) : AccessImpl<AttributeDefinitionElement, AttributeDefinition>(), AttributeAccess {
+        @Transient
+        override val restore: JitsuModule.(Int) -> AttributeDefinitionElement? = JitsuModule::getAttribute
+
+        override fun getApiValue(element: AttributeDefinitionElement) = element
+        override fun resolve(messages: CompilerMessages) {
+            target?.let { return }
+            val resolveAttribute = scope.resolveAttribute(reference, messages)
+            if (resolveAttribute != null) {
+                setResolvedTarget(resolveAttribute)
+            }
+        }
+
+    }
 }

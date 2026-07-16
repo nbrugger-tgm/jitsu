@@ -59,6 +59,7 @@ class AnalysisRepositoryTest {
             returnType?.let { located(it) },
             parameters,
             FunctionElement.BodyElement.Implementation(CodeBlockElement(instructions)),
+            listOf(),
             dummyLocation
         )
         function.setEnclosingModule(module)

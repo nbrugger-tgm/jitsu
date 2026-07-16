@@ -7,6 +7,7 @@ interface JitsuFile : Element {
     val functions: List<Function>
     val variables: List<Variable>
     val types: List<TypeDefinition>
+    val attributes: List<AttributeDefinition>
     val uri: URI
 
     val scope: Scope

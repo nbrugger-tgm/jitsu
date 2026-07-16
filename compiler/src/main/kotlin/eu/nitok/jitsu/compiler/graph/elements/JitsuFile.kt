@@ -17,6 +17,7 @@ internal class JitsuFile internal constructor(
     val typeElements: List<TypeDefinitionElement>,
     val variableElements: List<VariableElement>,
     override val imports: List<Import>,
+    override val attributes: List<AttributeDefinitionElement>,
     val path: String
 ) : ScopeProvider, ModuleAware, JitsuFile {
 
@@ -27,7 +28,7 @@ internal class JitsuFile internal constructor(
         typeElements.map { it.asTypeDefinition }
     }
     override val uri by lazy { URI(path) }
-    override val children: List<Element> get() = functions + types + variables + imports
+    override val children: List<Element> get() = functions + types + variables + imports + attributes
 
     @Transient
     override val scope: Scope = Scope(imports = imports)

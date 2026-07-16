@@ -9,6 +9,9 @@ import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.compiler.analysis.AnalysisRepository
 import eu.nitok.jitsu.compiler.graph.ReferenceResolutionMode.RESOLVE
 import eu.nitok.jitsu.compiler.graph.ReferenceResolutionMode.RESTORE
+import eu.nitok.jitsu.compiler.graph.api.Attribute
+import eu.nitok.jitsu.compiler.graph.api.AttributeDefinition
+import eu.nitok.jitsu.compiler.graph.api.HasAttributes
 import eu.nitok.jitsu.compiler.graph.behaviour.Finalizable
 import eu.nitok.jitsu.compiler.graph.behaviour.Resolvable
 import eu.nitok.jitsu.compiler.graph.behaviour.Restorable
@@ -28,6 +31,7 @@ import eu.nitok.jitsu.parser.ast.StatementNode.InstructionNode.*
 import java.net.URI
 
 private class GraphBuilder {
+
     val messages: CompilerMessages = CompilerMessages()
 }
 
@@ -126,6 +130,9 @@ private fun populateReferences(
         if (it is Import) {
             it.resolve(messages, moduleLookup)
         }
+        if(it is HasAttributesElement) it.attributes.forEach { attr ->
+            attr.attachTo(it)
+        }
     }
     module.sequence().forEach(
         when(resolutionMode) {
@@ -149,6 +156,7 @@ private fun GraphBuilder.buildGraph(
         typeElements = statements.types,
         variableElements = statements.variables,
         imports = statements.imports,
+        attributes = statements.attributes,
         path = srcFile.url.toString(), //TODO: toString should not be needed
     )
 }
@@ -158,6 +166,7 @@ private data class Statements(
     val variables: List<VariableDeclaration>,
     val constants: List<ConstantElement<Any>>,
     val types: List<TypeDefinitionElement>,
+    val attributes: List<AttributeDefinitionElement>,
     val imports: List<Import>
 )
 
@@ -170,6 +179,7 @@ private fun GraphBuilder.processStatements(
     val variables: MutableList<VariableDeclaration> = mutableListOf()
     val constants: MutableList<ConstantElement<Any>> = mutableListOf()
     val types: MutableList<TypeDefinitionElement> = mutableListOf()
+    val attributes: MutableList<AttributeDefinitionElement> = mutableListOf()
     val imports = mutableMapOf<String, Import>()
     val allowImports = module != null
     for (statement in statements) {
@@ -202,10 +212,25 @@ private fun GraphBuilder.processStatements(
                 else imports[statement.moduleReference.value] = Import(statement.moduleReference)
             }
 
-            is AttributeDeclarationNode -> {}
+            is AttributeDeclarationNode -> buildGraph(statement)?.let { attributes.add(it) }
         }
     }
-    return Statements(functions, variables, constants, types, imports.values.toList())
+    return Statements(functions, variables, constants, types, attributes, imports.values.toList())
+}
+
+private fun GraphBuilder.buildGraph(attributeDefinitionElement: AttributeDeclarationNode): AttributeDefinitionElement? {
+    val name = attributeDefinitionElement.name ?: return null
+    return AttributeDefinitionElement(
+        name.located,
+        attributeDefinitionElement.properties.mapNotNull { property ->
+            val propName = property.name ?: return@mapNotNull null
+            AttributeDefinitionElement.Property(
+                propName.located,
+                property.type?.let { rawType(it) } ?: Undefined
+            )
+        }
+    )
+
 }
 
 private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.ClassDeclarationNode): Class? {
@@ -234,6 +259,7 @@ private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.Cla
                         )
                     ) + base.parameters,
                     base.bodyElement,
+                    it.function.attributes.mapNotNull { buildAttributeUseGraph(it) },
                     base.location
                 )
             }
@@ -386,6 +412,7 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
         functionNode.returnType?.let { Located(rawType(it), it.location) },
         parameters,
         functionBody,
+        functionNode.attributes.mapNotNull { buildAttributeUseGraph(it) },
         functionNode.name?.location ?: functionNode.keywordLocation
     );
 }
@@ -583,4 +610,18 @@ private fun GraphBuilder.rawType(type: TypeNode?): TypeElement {
         is TypeNode.ValueTypeNode -> TODO("Needs constant expression resolution")
         is TypeNode.NullTypeNode -> Null
     }
+}
+
+/**
+ * @return null if the attribute has no name
+ */
+private fun GraphBuilder.buildAttributeUseGraph(attribute: AttributeNode): AttributeElement? {
+    val name = attribute.name?.located ?: return null
+    val props = attribute.values.map { property ->
+        AttributeElement.Property(property.name.located,property.value?.let { expression ->  buildExpressionGraph(expression) }?: UndefinedExpression(property.name.location))
+    }
+    return AttributeElement(
+        name,
+        props
+    )
 }

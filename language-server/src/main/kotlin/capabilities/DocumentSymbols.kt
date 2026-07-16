@@ -112,7 +112,14 @@ private fun <T: Accessible<T>> Accessible<T>.documentSymbols(children: Iterable<
             type.toString(),
             children.toList()
         ))
-
+        is AttributeDefinition -> listOf(DocumentSymbol(
+            name.value,
+            SymbolKind.Constructor,
+            range(name.location),
+            range(name.location),
+            null,
+            children.toList()
+        ))
         else -> error("$this requires document symbols")
     }
 }

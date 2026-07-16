@@ -35,6 +35,7 @@ internal class JitsuModule internal constructor(
     @Transient private val typeDb: IrStore<TypeDefinitionElement> = IrStore()
     @Transient private val functionDb: IrStore<FunctionElement> = IrStore()
     @Transient private val variableDb: IrStore<VariableElement> = IrStore()
+    @Transient private val attributeDb: IrStore<AttributeDefinitionElement> = IrStore()
 
     init {
         fun informElements(elem: List<Element>) {
@@ -55,6 +56,8 @@ internal class JitsuModule internal constructor(
 
     @Transient
     val allTypeElements = files.flatMap { it.typeElements }.associateBy { it.name.value }
+    @Transient
+    val allAttributes = files.flatMap { it.attributes }.associateBy { it.name.value }
 
     @Transient
     override val allTypes by lazy { allTypeElements.mapValues { it.value.asTypeDefinition } }
@@ -62,7 +65,8 @@ internal class JitsuModule internal constructor(
     @Transient
     override val scope: Scope = Scope(
         functions = allFunctions,
-        typeElements = allTypeElements
+        typeElements = allTypeElements,
+        attributes = allAttributes
     )
 
     @Transient
@@ -90,9 +94,14 @@ internal class JitsuModule internal constructor(
         return variableDb.getSymbolId(type)
     }
 
+    fun getSymbolID(type: AttributeDefinitionElement): Int {
+        return attributeDb.getSymbolId(type)
+    }
+
     fun getType(id: Int) = typeDb[id]
     fun getFunction(id: Int) = functionDb[id]
     fun getVariable(id: Int) = variableDb[id]
+    fun getAttribute(id: Int) = attributeDb[id]
     companion object {
         internal fun readModule(
             text: Path,

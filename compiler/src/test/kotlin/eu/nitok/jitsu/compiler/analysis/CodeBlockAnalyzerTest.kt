@@ -53,6 +53,7 @@ class CodeBlockAnalyzerTest {
         returnTypeElement = returnType?.let { loc(it) },
         parameters = parameters,
         bodyElement = FunctionElement.BodyElement.Implementation(CodeBlockElement(instructions)),
+        listOf(),
         dummyLocation
     ).modularized()
 

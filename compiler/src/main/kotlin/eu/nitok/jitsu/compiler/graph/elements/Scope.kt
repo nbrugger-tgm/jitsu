@@ -6,6 +6,7 @@ import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.compiler.analysis.FunctionSignatureMatch
 import eu.nitok.jitsu.compiler.analysis.matchFunctionSignatures
 import eu.nitok.jitsu.compiler.graph.SymbolID
+import eu.nitok.jitsu.compiler.graph.api.AttributeDefinition
 import eu.nitok.jitsu.compiler.graph.api.Type
 import eu.nitok.jitsu.compiler.graph.api.TypeDefinition
 import eu.nitok.jitsu.compiler.graph.api.Variable
@@ -19,6 +20,7 @@ internal class Scope(
     val typeElements: Map<String, TypeDefinitionElement> = mapOf(),
     override val functions: Map<String, List<FunctionElement>> = mapOf(),
     val variableElements: Map<String, VariableElement> = mapOf(),
+    override val attributes: Map<String, AttributeDefinitionElement> = mapOf(),
     override val imports: List<Import> = listOf(),
 ) : eu.nitok.jitsu.compiler.graph.api.Scope {
     override var parent: Scope? = null
@@ -122,4 +124,14 @@ internal class Scope(
         return import?.target?.getElement(id.value.index)
     }
     private fun resolveModule(module: String): Import? = imports.find { it.name.value == module }?: parent?.resolveModule(module)
+
+    fun resolveAttribute(reference: Located<String>, messages: CompilerMessages): AttributeDefinitionElement? {
+        val self = attributes[reference.value]
+        if (self != null) return self
+        if (parent == null) {
+            messages.error("No attribute named '${reference.value}'", reference.location)
+            return null
+        }
+        return parent!!.resolveAttribute(reference, messages)
+    }
 }

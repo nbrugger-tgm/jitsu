@@ -1,7 +1,5 @@
 package eu.nitok.jitsu.compiler.graph.api
 
-import eu.nitok.jitsu.common.CompilerMessages
-import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.compiler.merge
 
 interface Scope {
@@ -10,6 +8,7 @@ interface Scope {
     val functions: Map<String, List<Function>>
     val variables: Map<String, Variable>
     val imports: List<Import>
+    val attributes: Map<String, AttributeDefinition>
 
     val allFunctions: Map<String, List<Function>>
         get() = merge(

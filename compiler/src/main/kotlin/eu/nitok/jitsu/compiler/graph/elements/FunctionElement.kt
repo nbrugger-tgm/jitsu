@@ -21,10 +21,11 @@ internal class FunctionElement(
     val returnTypeElement: Located<TypeElement>?,
     override val parameters: List<Parameter>,
     val bodyElement: BodyElement,
+    override val attributes: List<AttributeElement>,
     val location: Locatable
 ) : ScopeProvider, Function, InstructionElement, AccessibleElement {
     override fun getSymbol(module: JitsuModule) = module.getSymbolID(this)
-    override var symbolIndex by Delegates.notNull<Int>()
+    override var symbolIndex: Int? = null
     override val body: Function.Body = bodyElement.asBody
 
     @Transient
@@ -81,7 +82,7 @@ internal class FunctionElement(
         parameters.map { FunctionTypeSignature.Parameter(it.name, it.declaredTypeElement, it.initialValue != null) }
     )
 
-    override val children: List<Element> get() = listOfNotNull(returnType?.value) + parameters + body
+    override val children: List<Element> get() = listOfNotNull(returnType?.value) + parameters + body + attributes
 
     @Transient
     override val accessToSelf: MutableList<Access<Function>> = mutableListOf()
@@ -116,7 +117,7 @@ internal class FunctionElement(
         override val initialValueElement: ExpressionElement?
     ) : VariableElement, Function.Parameter, AccessibleElement {
         override fun getSymbol(module: JitsuModule) = module.getSymbolID(this)
-        override var symbolIndex by Delegates.notNull<Int>()
+        override var symbolIndex: Int? = null
         @Transient
         override val initialValue: Expression? = initialValueElement?.asExpression
 
