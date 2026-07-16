@@ -1,0 +1,3 @@
+attribute Native {
+    name: u16[];
+}
