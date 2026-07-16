@@ -10,6 +10,25 @@ The other Main points of the language are memory safety, explicit mutability and
 
 While this might seem like feature creep (might be) a high priority is that the language is easy to read, write and understand 
 
+## Roadmap
+
+
+- [x] Parser
+- [x] Graph/IR representation
+- [x] Lowering (C)
+- [x] Module/Multi file compilation
+- [x] Fully (de)serializable IR/Graph 
+- [x] Gradle plugin
+- [x] Attributes
+- [ ] Modules with native parts/FFM
+- [ ] Modules can depend on other modules
+- [ ] Modules can use the stdlib
+- [ ] Add math to stdlib
+- [ ] Add array ops (indexed read, indexed write, lenght read)
+- [ ] Add loops
+- [ ] Add basic strings + printing to stdlib
+- [ ] C transpile readability improvements
+
 ## Features
 
 - [ ] Static types / Typesafe
