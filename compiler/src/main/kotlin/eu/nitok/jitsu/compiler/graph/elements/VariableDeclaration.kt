@@ -1,20 +1,12 @@
 package eu.nitok.jitsu.compiler.graph.elements
 
 import eu.nitok.jitsu.common.locating.Located
-import eu.nitok.jitsu.compiler.graph.SymbolID
-import eu.nitok.jitsu.compiler.graph.api.Access
-import eu.nitok.jitsu.compiler.graph.api.Element
-import eu.nitok.jitsu.compiler.graph.api.Expression
-import eu.nitok.jitsu.compiler.graph.api.Function
-import eu.nitok.jitsu.compiler.graph.api.Type
-import eu.nitok.jitsu.compiler.graph.api.Variable
+import eu.nitok.jitsu.compiler.graph.api.*
 import eu.nitok.jitsu.compiler.graph.api.VariableDeclaration
-import eu.nitok.jitsu.compiler.graph.behaviour.ModuleAware
 import eu.nitok.jitsu.compiler.graph.elements.types.TypeElement
 import eu.nitok.jitsu.compiler.graph.elements.types.Undefined
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlin.properties.Delegates
 
 @Serializable
 internal data class VariableDeclaration(

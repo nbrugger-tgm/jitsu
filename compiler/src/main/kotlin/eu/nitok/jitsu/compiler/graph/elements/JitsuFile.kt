@@ -1,7 +1,5 @@
 package eu.nitok.jitsu.compiler.graph.elements
 
-import eu.nitok.jitsu.compiler.graph.IrStore
-import eu.nitok.jitsu.compiler.graph.SymbolID
 import eu.nitok.jitsu.compiler.graph.api.Element
 import eu.nitok.jitsu.compiler.graph.api.JitsuFile
 import eu.nitok.jitsu.compiler.graph.behaviour.ModuleAware

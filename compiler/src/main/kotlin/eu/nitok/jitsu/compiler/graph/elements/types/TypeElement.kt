@@ -1,12 +1,9 @@
 package eu.nitok.jitsu.compiler.graph.elements.types
 
-import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.compiler.graph.api.Element
 import eu.nitok.jitsu.compiler.graph.api.Type
-import eu.nitok.jitsu.compiler.graph.behaviour.Finalizable
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 
 
 internal typealias ResolveGenericFn = (TypeParameterElement) -> TypeElement
@@ -47,7 +44,7 @@ internal sealed class TypeElement: Element {
 
     fun acceptsInstanceOf(type: Type): ReasonedBoolean {
         return if (type is Undefined)
-            ReasonedBoolean.True("While UNDEFINED cannot be assigned to anything, the error lies in the definition of the type not its usage");
+            ReasonedBoolean.True("While UNDEFINED cannot be assigned to anything, the error lies in the definition of the type not its usage")
         else if (type is Union) {
             val optionAssignability = type.options.map { mapAssignabilityBoolean(acceptsInstanceOf(it), it, this) }
             if (optionAssignability.all { boolean -> boolean.value }) ReasonedBoolean.True(
@@ -56,7 +53,7 @@ internal sealed class TypeElement: Element {
             )
             else {
                 val assignWholeUnion = accepts(type)
-                if (assignWholeUnion.value) return assignWholeUnion;
+                if (assignWholeUnion.value) return assignWholeUnion
                 ReasonedBoolean.False(
                     "Not all types in the union ($type), nor the union itself are/is assignable to $this",
                     *(optionAssignability.filter { !it.value } + assignWholeUnion).toTypedArray()

@@ -5,8 +5,10 @@ import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.common.locating.locatedAt
-import eu.nitok.jitsu.compiler.graph.api.*
-import eu.nitok.jitsu.compiler.graph.api.Function
+import eu.nitok.jitsu.compiler.graph.api.Element
+import eu.nitok.jitsu.compiler.graph.api.Expression
+import eu.nitok.jitsu.compiler.graph.api.Instruction
+import eu.nitok.jitsu.compiler.graph.api.Type
 import eu.nitok.jitsu.compiler.graph.elements.AccessElement.FunctionAccessElement
 import eu.nitok.jitsu.compiler.graph.elements.types.TypeElement
 import eu.nitok.jitsu.compiler.graph.elements.types.Undefined
@@ -80,7 +82,7 @@ internal class FunctionCall private constructor(
     override val type: Type get() = super.type
     //Undefined here is only relevant for void methods/methods with no return
     override var typeElement: TypeElement = Undefined
-        private set;
+        private set
 
     override val children: List<Element> get() = callParameters.toList()
 

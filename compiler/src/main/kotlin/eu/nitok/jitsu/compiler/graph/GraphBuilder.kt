@@ -9,9 +9,6 @@ import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.compiler.analysis.AnalysisRepository
 import eu.nitok.jitsu.compiler.graph.ReferenceResolutionMode.RESOLVE
 import eu.nitok.jitsu.compiler.graph.ReferenceResolutionMode.RESTORE
-import eu.nitok.jitsu.compiler.graph.api.Attribute
-import eu.nitok.jitsu.compiler.graph.api.AttributeDefinition
-import eu.nitok.jitsu.compiler.graph.api.HasAttributes
 import eu.nitok.jitsu.compiler.graph.behaviour.Finalizable
 import eu.nitok.jitsu.compiler.graph.behaviour.Resolvable
 import eu.nitok.jitsu.compiler.graph.behaviour.Restorable
@@ -247,7 +244,7 @@ private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.Cla
             classNode.typeParameters.map { buildTypeParameterGraph(it) },
             fields,
             classNode.methods.map {
-                val base = buildFunctionGraph(it.function);
+                val base = buildFunctionGraph(it.function)
                 FunctionElement(
                     base.name,
                     base.returnTypeElement,
@@ -274,7 +271,7 @@ private fun GraphBuilder.buildInstructionGraph(statement: InstructionNode): Inst
         is AssignmentNode,
         is CodeBlockNode,
         is YieldStatement,
-        is SwitchNode -> TODO();
+        is SwitchNode -> TODO()
 
 
         is FunctionCallNode -> FunctionCall(
@@ -289,7 +286,7 @@ private fun GraphBuilder.buildInstructionGraph(statement: InstructionNode): Inst
         )
 
         is VariableDeclarationNode -> buildGraph(statement)
-        is LineCommentNode -> null;
+        is LineCommentNode -> null
         is FunctionDeclarationNode -> buildFunctionGraph(statement)
     }
 }
@@ -329,7 +326,7 @@ private fun GraphBuilder.buildGraph(
 ) = FunctionTypeSignature(
     it.returnType?.let { rawType(it) },
     it.parameters.map {
-        val type = rawType(it.type);
+        val type = rawType(it.type)
         FunctionTypeSignature.Parameter(it.name.located, type, false)
     }
 )
@@ -414,7 +411,7 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
         functionBody,
         functionNode.attributes.mapNotNull { buildAttributeUseGraph(it) },
         functionNode.name?.location ?: functionNode.keywordLocation
-    );
+    )
 }
 
 private fun GraphBuilder.buildCodeBlockGraph(statements: List<StatementNode>): CodeBlockElement {
@@ -429,7 +426,7 @@ private fun GraphBuilder.buildCodeBlockGraph(statements: List<StatementNode>): C
 private fun resolveConstantOperation(scope: Scope, expression: ExpressionNode.OperationNode): ConstantElement<Any>? {
 //    val left = resolveConstant(scope, expression.left, null)
 //    val right = resolveConstant(scope, expression.right, null)
-//    if (left == null || right == null) return null;
+//    if (left == null || right == null) return null
 //    val operator = expression.operator
 //    return when (operator) {
 //        BiOperator.ADDITION -> when (left) {
@@ -480,9 +477,9 @@ private fun resolveConstantOperation(scope: Scope, expression: ExpressionNode.Op
 //                    scope.errors.add(
 //                        Scope.Error("Cannot use math on ${left::class.simpleName}", expression.location)
 //                    )
-//                    return null;
+//                    return null
 //                }
-//            };
+//            }
 //            val rightInt = when (right) {
 //                is Constant.IntConstant -> right.value.toBigInteger()
 //                is Constant.UIntConstant -> right.value.toLong().toBigInteger()
@@ -490,9 +487,9 @@ private fun resolveConstantOperation(scope: Scope, expression: ExpressionNode.Op
 //                    scope.errors.add(
 //                        Scope.Error("Cannot use math on ${right::class.simpleName}", expression.location)
 //                    )
-//                    return null;
+//                    return null
 //                }
-//            };
+//            }
 //            return when (operator) {
 //                BiOperator.SUBTRACTION -> Constant.IntConstant((leftInt - rightInt).toLong())
 //                BiOperator.MODULO -> Constant.IntConstant((leftInt % rightInt).toLong())
@@ -510,9 +507,9 @@ private fun resolveConstantOperation(scope: Scope, expression: ExpressionNode.Op
 //                    scope.errors.add(
 //                        Scope.Error("Cannot use math on ${left::class.simpleName}", expression.location)
 //                    )
-//                    return null;
+//                    return null
 //                }
-//            };
+//            }
 //            val rightInt = when (right) {
 //                is Constant.IntConstant -> right.value.toBigInteger()
 //                is Constant.UIntConstant -> right.value.toLong().toBigInteger()
@@ -520,9 +517,9 @@ private fun resolveConstantOperation(scope: Scope, expression: ExpressionNode.Op
 //                    scope.errors.add(
 //                        Scope.Error("Cannot use math on ${right::class.simpleName}", expression.location)
 //                    )
-//                    return null;
+//                    return null
 //                }
-//            };
+//            }
 //            return Constant.BooleanConstant(
 //                when (operator) {
 //                    BiOperator.GREATER -> leftInt > rightInt
@@ -558,7 +555,7 @@ private fun resolveConstantOperation(scope: Scope, expression: ExpressionNode.Op
 //            null
 //        }
 //    }
-    TODO();
+    TODO()
 }
 
 private fun resolveIntConstant(
@@ -615,7 +612,7 @@ private fun GraphBuilder.rawType(type: TypeNode?): TypeElement {
 /**
  * @return null if the attribute has no name
  */
-private fun GraphBuilder.buildAttributeUseGraph(attribute: AttributeNode): AttributeElement? {
+private fun buildAttributeUseGraph(attribute: AttributeNode): AttributeElement? {
     val name = attribute.name?.located ?: return null
     val props = attribute.values.map { property ->
         AttributeElement.Property(property.name.located,property.value?.let { expression ->  buildExpressionGraph(expression) }?: UndefinedExpression(property.name.location))

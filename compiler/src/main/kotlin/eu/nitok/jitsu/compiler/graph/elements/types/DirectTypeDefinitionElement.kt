@@ -3,12 +3,10 @@ package eu.nitok.jitsu.compiler.graph.elements.types
 import eu.nitok.jitsu.compiler.graph.api.Access
 import eu.nitok.jitsu.compiler.graph.api.Accessible
 import eu.nitok.jitsu.compiler.graph.api.TypeDefinition
-import eu.nitok.jitsu.compiler.graph.elements.AccessibleElement
 import eu.nitok.jitsu.compiler.graph.elements.JitsuModule
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlin.Int
-import kotlin.properties.Delegates
 
 @Serializable
 internal sealed class DirectTypeDefinitionElement : TypeElement(), TypeDefinitionElement, Accessible<TypeDefinition> {
