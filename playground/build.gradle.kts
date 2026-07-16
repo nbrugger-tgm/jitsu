@@ -3,11 +3,11 @@ plugins {
 }
 
 dependencies {
-    implementation("io.ktor:ktor-server-core-jvm:2.3.4")
-    implementation("io.ktor:ktor-server-html-builder:2.3.4")
-    implementation("io.ktor:ktor-server-netty-jvm:2.3.4")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-    runtimeOnly("ch.qos.logback:logback-classic:1.5.13")
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.html.builder)
+    implementation(libs.ktor.server.netty)
+    implementation(libs.kotlinx.serialization.json)
+    runtimeOnly(libs.logback.classic)
     implementation(project(":compiler"))
     implementation(project(":parser"))
     implementation(project(":language-server"))

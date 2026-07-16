@@ -1,0 +1,15 @@
+[versions]
+ktor = "2.3.4"
+kotlinx-serialization = "1.7.3"
+logback = "1.5.13"
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm" }
+
+[libraries]
+lsp4j = "org.eclipse.lsp4j:org.eclipse.lsp4j:0.21.1"
+ktor-server-core = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
+ktor-server-html-builder = { module = "io.ktor:ktor-server-html-builder", version.ref = "ktor" }
+ktor-server-netty = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "ktor" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
