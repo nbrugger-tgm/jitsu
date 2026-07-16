@@ -1,21 +1,23 @@
 package eu.nitok.jitsu.compiler.graph
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
-import java.util.IdentityHashMap
+import eu.nitok.jitsu.compiler.graph.elements.AccessibleElement
 
-@Serializable
-internal class IrStore<T> {
-    @Transient private val funcIds = IdentityHashMap<T, Int>()
-    @Transient private var nextFuncId = 0;
-    private val db: MutableList<T> = mutableListOf()
+internal class IrStore<T: AccessibleElement> {
+    private val db: MutableMap<Int, T> = mutableMapOf()
+    private var nextId = 0;
     fun getSymbolId(func: T): Int {
-        return funcIds.getOrPut(func) {
-            db.add(func)
-            nextFuncId++
+        val existingID = func.symbolIndex
+        if(existingID == null) {
+            val newId = nextId++
+            db[newId] = func
+            func.symbolIndex = newId
+            return newId
         }
+        db.putIfAbsent(existingID, func)
+        return existingID
     }
+
     operator fun get(id: Int): T {
-        return db[id]
+        return db[id]!!
     }
 }

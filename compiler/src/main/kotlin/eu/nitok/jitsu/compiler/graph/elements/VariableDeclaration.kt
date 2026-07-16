@@ -24,7 +24,7 @@ internal data class VariableDeclaration(
     override val initialValueElement: ExpressionElement?,
 ) : AccessibleElement, VariableElement, InstructionElement, VariableDeclaration {
     override fun getSymbol(module: JitsuModule) = module.getSymbolID(this)
-    override var symbolIndex by Delegates.notNull<Int>()
+    override var symbolIndex: Int? = null
     @Transient override lateinit var module: JitsuModule
     override val implicitType: Type? get() = implicitTypeElement?.asType
     var implicitTypeElement: TypeElement? = null

@@ -14,7 +14,7 @@ import kotlin.properties.Delegates
 internal sealed class DirectTypeDefinitionElement : TypeElement(), TypeDefinitionElement, Accessible<TypeDefinition> {
     override fun getSymbol(module: JitsuModule) = module.getSymbolID(this)
     @Transient override lateinit var module: JitsuModule
-    override var symbolIndex by Delegates.notNull<Int>()
+    override var symbolIndex: Int? = null
 
     @Transient
     override val accessToSelf: MutableList<Access<TypeDefinition>> = mutableListOf()

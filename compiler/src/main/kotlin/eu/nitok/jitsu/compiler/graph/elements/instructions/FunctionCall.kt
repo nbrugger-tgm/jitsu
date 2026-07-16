@@ -78,7 +78,9 @@ internal class FunctionCall private constructor(
     }
 
     override val type: Type get() = super.type
-    override lateinit var typeElement: TypeElement private set;
+    //Undefined here is only relevant for void methods/methods with no return
+    override var typeElement: TypeElement = Undefined
+        private set;
 
     override val children: List<Element> get() = callParameters.toList()
 

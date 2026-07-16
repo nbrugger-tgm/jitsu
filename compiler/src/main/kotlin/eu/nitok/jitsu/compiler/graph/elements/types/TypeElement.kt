@@ -22,7 +22,6 @@ internal sealed class TypeElement: Element {
      */
     internal abstract fun rawType(resolveGeneric: ResolveGenericFn? = null): TypeElement
 
-
     val rawType: Type by lazy { rawTypeElement.asType }
 
     val rawTypeElement: TypeElement by lazy { rawType() }
@@ -71,7 +70,6 @@ internal sealed class TypeElement: Element {
             else reason
         }
     }
-
 
     abstract fun accepts(type: Type): ReasonedBoolean
 }

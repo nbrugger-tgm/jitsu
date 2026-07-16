@@ -31,7 +31,7 @@ internal sealed class ParameterizedTypeElement: AccessibleElement, TypeDefinitio
     abstract fun toType(typeParameters: Map<String, TypeElement>): TypeElement
 
     override fun getSymbol(module: JitsuModule) = module.getSymbolID(this)
-    override var symbolIndex by Delegates.notNull<Int>()
+    override var symbolIndex: Int? = null
     @Transient override lateinit var module: JitsuModule
 
 }
