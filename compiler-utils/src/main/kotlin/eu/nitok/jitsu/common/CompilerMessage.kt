@@ -30,7 +30,7 @@ data class CompilerMessage(
 
 fun CompilerMessage.format(type: String): String {
     val errorMark = this.location.mark(this.message)
-    return "$type: ${this.location.absolutePositionFormat()} ${this.message}\n" + errorMark + this.hints.joinToString("\t----\n") {
+    return "$type: ${this.location.absolutePositionFormat()} ${this.message}\n$errorMark\n\n" + this.hints.joinToString("\t----\n") {
         val hintMark = it.location.mark(it.message).replace(Regex("^", RegexOption.MULTILINE), "\t| ")
         hintMark
     }
