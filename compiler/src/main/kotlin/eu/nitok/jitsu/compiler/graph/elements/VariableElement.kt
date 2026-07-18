@@ -9,7 +9,7 @@ import eu.nitok.jitsu.compiler.graph.elements.types.TypeElement
 import kotlinx.serialization.Serializable
 
 @Serializable
-internal sealed interface VariableElement: ModuleAware, AccessibleElement {
+internal sealed interface VariableElement: ModuleAware, AccessibleElement<Variable> {
     val asVariable: Variable get() = when(this) {
         is FunctionElement.Parameter -> this
         is VariableDeclaration -> this
@@ -17,7 +17,7 @@ internal sealed interface VariableElement: ModuleAware, AccessibleElement {
     val initialValueElement: ExpressionElement?
     val declaredTypeElement: TypeElement?
 
-    val name: Located<String>
+    override val name: Located<String>
     val reassignable: Boolean
 
     val declaredType: Type? get() = declaredTypeElement?.asType

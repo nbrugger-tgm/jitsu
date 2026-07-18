@@ -2,28 +2,28 @@ package eu.nitok.jitsu.compiler.graph.elements
 
 import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.locating.Located
-import eu.nitok.jitsu.compiler.graph.*
+import eu.nitok.jitsu.compiler.graph.SymbolID
 import eu.nitok.jitsu.compiler.graph.api.*
+import eu.nitok.jitsu.compiler.graph.api.Function
 import eu.nitok.jitsu.compiler.graph.behaviour.ModuleAware
+import eu.nitok.jitsu.compiler.graph.behaviour.Resolvable
 import eu.nitok.jitsu.compiler.graph.behaviour.Restorable
 import eu.nitok.jitsu.compiler.graph.behaviour.ScopeAware
 import eu.nitok.jitsu.compiler.graph.elements.types.TypeDefinitionElement
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import eu.nitok.jitsu.compiler.graph.api.Function
-import eu.nitok.jitsu.compiler.graph.behaviour.Resolvable
 
 private typealias GetSymbolIdFn<T> = JitsuModule.(T) -> SymbolID
 
 /**
  * This whole structure is needed due to https://youtrack.jetbrains.com/issue/KT-83
  */
-internal interface AccessElement<T : Accessible<T>, TE : AccessibleElement> : Access<T>, ScopeAware, ModuleAware, Restorable {
+internal interface AccessElement<T : Accessible<T>, TE : AccessibleElement<T>> : Access<T>, ScopeAware, ModuleAware, Restorable {
     fun setResolvedTarget(target: TE)
     val targetElement: TE?
 
     @Serializable
-    abstract class AccessImpl<TE : AccessibleElement, T : Accessible<T>> : AccessElement<T, TE> {
+    abstract class AccessImpl<TE : AccessibleElement<T>, T : Accessible<T>> : AccessElement<T, TE> {
         var targetId: SymbolID? = null
 
         @Transient

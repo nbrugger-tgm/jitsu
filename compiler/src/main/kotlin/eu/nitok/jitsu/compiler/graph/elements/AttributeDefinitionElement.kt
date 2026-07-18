@@ -9,13 +9,12 @@ import eu.nitok.jitsu.compiler.graph.elements.types.Null
 import eu.nitok.jitsu.compiler.graph.elements.types.TypeElement
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlin.properties.Delegates
 
 @Serializable
 internal class AttributeDefinitionElement(
     override val name: Located<String>,
     override val properties: List<Property>
-): AttributeDefinition, AccessibleElement {
+): AttributeDefinition, AccessibleElement<AttributeDefinition> {
 
     override fun getSymbol(module: JitsuModule) = module.getSymbolID(this)
     override var symbolIndex: Int? = null

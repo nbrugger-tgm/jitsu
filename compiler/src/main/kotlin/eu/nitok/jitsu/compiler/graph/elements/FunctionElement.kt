@@ -4,16 +4,13 @@ import eu.nitok.jitsu.common.locating.Locatable
 import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.compiler.analysis.FunctionSummaryElement
 import eu.nitok.jitsu.compiler.graph.api.*
-import eu.nitok.jitsu.compiler.graph.api.CodeBlock
 import eu.nitok.jitsu.compiler.graph.api.Function
 import eu.nitok.jitsu.compiler.graph.behaviour.FunctionAware
-import eu.nitok.jitsu.compiler.graph.behaviour.ModuleAware
 import eu.nitok.jitsu.compiler.graph.behaviour.ScopeProvider
 import eu.nitok.jitsu.compiler.graph.elements.types.FunctionTypeSignature
 import eu.nitok.jitsu.compiler.graph.elements.types.TypeElement
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlin.properties.Delegates
 
 @Serializable
 internal class FunctionElement(
@@ -23,7 +20,7 @@ internal class FunctionElement(
     val bodyElement: BodyElement,
     override val attributes: List<AttributeElement>,
     val location: Locatable
-) : ScopeProvider, Function, InstructionElement, AccessibleElement {
+) : ScopeProvider, Function, InstructionElement, AccessibleElement<Function> {
     override fun getSymbol(module: JitsuModule) = module.getSymbolID(this)
     override var symbolIndex: Int? = null
     override val body: Function.Body = bodyElement.asBody
@@ -115,7 +112,7 @@ internal class FunctionElement(
         override val name: Located<String>,
         override val declaredTypeElement: TypeElement,
         override val initialValueElement: ExpressionElement?
-    ) : VariableElement, Function.Parameter, AccessibleElement {
+    ) : VariableElement, Function.Parameter, AccessibleElement<Variable> {
         override fun getSymbol(module: JitsuModule) = module.getSymbolID(this)
         override var symbolIndex: Int? = null
         @Transient

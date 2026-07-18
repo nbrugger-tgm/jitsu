@@ -10,7 +10,7 @@ import kotlinx.serialization.Transient
 import kotlin.Int
 
 @Serializable
-internal sealed class ParameterizedTypeElement: AccessibleElement, TypeDefinitionElement {
+internal sealed class ParameterizedTypeElement: AccessibleElement<TypeDefinition>, TypeDefinitionElement {
     @Transient
     override val accessToSelf: MutableList<Access<TypeDefinition>> = mutableListOf()
 

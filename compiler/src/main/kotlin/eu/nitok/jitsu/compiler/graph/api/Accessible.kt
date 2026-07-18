@@ -8,4 +8,5 @@ import eu.nitok.jitsu.common.locating.Located
 interface Accessible<T : Accessible<T>> {
     val accessToSelf: MutableList<Access<T>>
     val name: Located<String>?
+    val fullyQualifiedName: String?
 }

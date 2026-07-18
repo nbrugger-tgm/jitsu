@@ -9,7 +9,7 @@ import eu.nitok.jitsu.compiler.graph.elements.AccessibleElement
 import kotlinx.serialization.Serializable
 
 @Serializable
-internal sealed interface TypeDefinitionElement : Element, ModuleAware, AccessibleElement, Accessible<TypeDefinition> {
+internal sealed interface TypeDefinitionElement : Element, ModuleAware, AccessibleElement<TypeDefinition>, Accessible<TypeDefinition> {
     val asTypeDefinition: TypeDefinition
     override val name: Located<String>
 }

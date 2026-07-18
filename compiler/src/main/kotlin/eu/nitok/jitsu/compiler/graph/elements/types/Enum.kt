@@ -38,7 +38,7 @@ internal data class Enum(
 
     @Serializable
     internal data class Constant(override val name: Located<String>) :
-        TypeDefinition.DirectTypeDefinition.Enum.Constant {
+        TypeDefinition.DirectTypeDefinition.Enum.Constant, AccessibleElement<TypeDefinition.DirectTypeDefinition.Enum.Constant> {
         override val children: List<Element> get() = listOf()
 
         @Transient
@@ -47,6 +47,13 @@ internal data class Enum(
 
         @Transient
         override lateinit var enum: Enum
+        override var symbolIndex: Int? = null
+        @Transient
+        override lateinit var module: JitsuModule
+
+        override fun getSymbol(module: JitsuModule): Int {
+            TODO("Not yet implemented")
+        }
 
 
     }
