@@ -19,7 +19,7 @@ sealed interface LoweredBody {
     data class Implementation(val instructions: List<LowLevelInstruction>) : LoweredBody
 
     /** Native function - no instructions, just a native target string */
-    data class Native(val nativeTarget: String) : LoweredBody
+    object Native : LoweredBody
 }
 
 data class LoweredModule(val name: String, val functions: List<LoweredFunction>)

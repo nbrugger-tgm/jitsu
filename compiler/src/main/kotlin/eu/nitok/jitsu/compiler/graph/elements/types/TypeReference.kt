@@ -36,8 +36,7 @@ internal class TypeReference private constructor(
     )
 
     override fun rawType(resolveGeneric: ResolveGenericFn?): TypeElement {
-        val target = targetElement ?:
-        return Undefined
+        val target = targetElement ?: return Undefined
         val raw = when (target) {
             is ParameterizedTypeElement -> resolveParameterized(target)
             //TODO: this could be rawTypeElement, but depending on order it might not yet be set

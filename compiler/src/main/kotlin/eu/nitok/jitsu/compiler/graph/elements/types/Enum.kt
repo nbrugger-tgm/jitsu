@@ -11,7 +11,6 @@ import eu.nitok.jitsu.compiler.graph.elements.JitsuModule
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlin.Int
-import kotlin.properties.Delegates
 
 @Serializable
 internal data class Enum(

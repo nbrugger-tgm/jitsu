@@ -3,10 +3,11 @@ package eu.nitok.jitsu.backend.c
 import eu.nitok.jitsu.common.indent
 import eu.nitok.jitsu.compiler.bitcode.*
 import eu.nitok.jitsu.compiler.transpile.Backend
-import java.nio.file.OpenOption
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
-import kotlin.io.path.*
+import kotlin.io.path.bufferedWriter
+import kotlin.io.path.createFile
+import kotlin.io.path.createParentDirectories
+import kotlin.io.path.relativeTo
 
 class CBackend : Backend {
     override fun transpile(modules: Collection<LoweredModule>, dir: Path): List<Path> {
@@ -19,16 +20,23 @@ class CBackend : Backend {
         val code = dir.resolve("${module.name}.c").createParentDirectories()
         val headers = dir.resolve("${module.name}.h").createParentDirectories()
         val publicHeaders = dir.resolve("${module.name}.public.h").createParentDirectories()
-        try { code.createFile() } catch (_: FileAlreadyExistsException) {}
-        try { headers.createFile() } catch (_: FileAlreadyExistsException) {}
-        try { publicHeaders.createFile() } catch (_: FileAlreadyExistsException) {}
+        try {
+            code.createFile()
+        } catch (_: FileAlreadyExistsException) {
+        }
+        try {
+            headers.createFile()
+        } catch (_: FileAlreadyExistsException) {
+        }
+        try {
+            publicHeaders.createFile()
+        } catch (_: FileAlreadyExistsException) {
+        }
 
         val typeRegistry = TypeRegistry()
-        val functions = module.functions
-            .filter { it.body is LoweredBody.Implementation }
-            .map { fn ->
-                transpileFunction(typeRegistry, fn)
-            }
+        val functions = module.functions.map { fn ->
+            transpileFunction(typeRegistry, fn)
+        }
 
         headers.bufferedWriter().use { writer ->
             writer.write(typeRegistry.typeDefs)
@@ -39,12 +47,15 @@ class CBackend : Backend {
                 writer.newLine()
             }
         }
+
+        val implementedFunctions = functions.filter { it.impl != null }
+
         //TODO filter exported members
         publicHeaders.bufferedWriter().use { writer ->
             writer.write(typeRegistry.typeDefs)
             writer.newLine()
             writer.newLine()
-            functions.forEach {
+            implementedFunctions.forEach {
                 writer.write(it.def)
                 writer.newLine()
             }
@@ -53,31 +64,36 @@ class CBackend : Backend {
             writer.write("#include \"${headers.relativeTo(code.parent)}\"")
             writer.newLine()
             writer.newLine()
-            writer.write(functions.joinToString("\n"){it.impl})
+            writer.write(implementedFunctions.joinToString("\n") { it.impl!! })
             writer.flush()
         }
 
         return code
     }
-    private data class CFunc(val def: String, val impl: String)
+
+    private data class CFunc(val def: String, val impl: String?)
+
     private fun transpileFunction(
         typeRegistry: TypeRegistry,
         function: LoweredFunction
     ): CFunc {
         val returnType = function.returnType?.let { typeRegistry.getUniqueName(it) }
-        val body = function.body as LoweredBody.Implementation
-
         val def = "${returnType ?: "void"} ${function.name}(${
             function.parameters.joinToString(", ") { param ->
                 typeRegistry.formatType(param.name, param.type)
             }
         })"
-        return CFunc("$def;", """
+        if (function.body is LoweredBody.Native) {
+            return CFunc(def, null)
+        }
+        val body = function.body as LoweredBody.Implementation
+
+        val impl = """
 $def {
 ${indent(1, body.instructions.joinToString("\n") { instruct -> instruct.toCCode(typeRegistry) })}
 }
-
-""".trimIndent());
+""".trimIndent()
+        return CFunc("$def;", impl);
     }
 
     private fun LowLevelInstruction.toCCode(typeRegistry: TypeRegistry): String {
@@ -134,9 +150,14 @@ ${indent(1, body.joinToString("\n") { it.toCCode(typeRegistry) })}
                 val params = args.values.joinToString(", ") { it.toCCode(typeRegistry) }
                 "${functionName}($params)"
             }
+
             is LowLevelExpression.Compare -> "${left.toCCode(typeRegistry)} == ${right.toCCode(typeRegistry)}"
             is LowLevelExpression.AllocHeap -> "malloc(sizeof(${typeRegistry.getUniqueName(layout)}))"
-            is LowLevelExpression.AllocHeapArray -> "malloc(sizeof(${typeRegistry.getUniqueName(elementType)}) * ${size.toCCode(typeRegistry)})"
+            is LowLevelExpression.AllocHeapArray -> "malloc(sizeof(${typeRegistry.getUniqueName(elementType)}) * ${
+                size.toCCode(
+                    typeRegistry
+                )
+            })"
 
             is LowLevelExpression.CompareGreater -> "${left.toCCode(typeRegistry)} > ${right.toCCode(typeRegistry)}"
             is LowLevelExpression.ArraySlot -> "${this.array.toCCode(typeRegistry)}[${this.index.toCCode(typeRegistry)}]"

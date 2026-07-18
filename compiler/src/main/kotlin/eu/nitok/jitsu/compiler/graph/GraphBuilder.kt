@@ -356,7 +356,9 @@ private fun buildExpressionGraph(expression: ExpressionNode): ExpressionElement 
             )
         }
 
-        is ExpressionNode.StringLiteralNode -> ConstantElement.StringConstant(expression.toString(), expression.location)
+        is ExpressionNode.StringLiteralNode ->
+            //TODO reflect propper string literals in IR
+            ConstantElement.StringConstant(expression.toString(), expression.location)
         is ExpressionNode.VariableReferenceNode -> resolveVariableReference(expression)
         is ExpressionNode.FieldAccessNode -> TODO()
         is ExpressionNode.IndexAccessNode -> TODO()
@@ -397,6 +399,7 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
             it.defaultValue?.let { buildExpressionGraph(it) }
         )
     }
+    val attributes = functionNode.attributes.mapNotNull { buildAttributeUseGraph(it) }
     val functionBody = when (val body = functionNode.body) {
         is CodeBlockNode.SingleExpressionCodeBlock -> TODO()//buildExpressionGraph(body.expression, function.bodyScope)
         is CodeBlockNode.StatementsCodeBlock -> FunctionElement.BodyElement.Implementation(buildCodeBlockGraph(body.statements))
@@ -409,7 +412,7 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
         functionNode.returnType?.let { Located(rawType(it), it.location) },
         parameters,
         functionBody,
-        functionNode.attributes.mapNotNull { buildAttributeUseGraph(it) },
+        attributes,
         functionNode.name?.location ?: functionNode.keywordLocation
     )
 }

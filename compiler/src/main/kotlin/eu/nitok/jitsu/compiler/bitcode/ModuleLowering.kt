@@ -1,5 +1,6 @@
 package eu.nitok.jitsu.compiler.bitcode
 
+import eu.nitok.jitsu.compiler.graph.api.Expression
 import eu.nitok.jitsu.compiler.graph.api.Function
 import eu.nitok.jitsu.compiler.graph.api.JitsuModule
 import java.util.*
@@ -27,23 +28,51 @@ class ModuleLowering(private val module: JitsuModule) {
         module.allModules.forEach { collectModules(it) }
         val allFunctions = allRequiredModules.asSequence()
             .flatMap { it.files }
-            .flatMap { it.functions}
+            .flatMap { it.functions }
 
         val loweredFunctions = allFunctions
             .map { fn -> lowerFunction(fn) }
             .toList()
 
-        return LoweredModule(name = module.fullyQualifiedName,functions = loweredFunctions)
+        return LoweredModule(name = module.fullyQualifiedName, functions = loweredFunctions)
     }
 
     private fun getUniqueName(function: Function): String {
         return functionNames.computeIfAbsent(function) {
+            if (function.body is Function.Body.Native) {
+                return@computeIfAbsent function.getNativeFunctionName()
+            }
             val baseName = function.name?.value ?: "anon"
             if (functionNames.values.contains(baseName)) {
                 "${baseName}_${nameCounter++}"
             } else {
                 baseName
             }
+        }
+    }
+
+    val invalidFunctionChars = Regex("\\W")
+    private fun Function.getNativeFunctionName(): String {
+        val nativeAttribute = attributes.find {
+            it.target?.fullyQualifiedName == "jitsu.ffm.Native"
+        }
+        return when (val nameExpression = nativeAttribute?.getPropertyValue("name")) {
+            null -> {
+                "jitsu_${fullyQualifiedName?.replace(invalidFunctionChars, "_")?.lowercase()}_${
+                    parameters.joinToString("__") {
+                        it.type.toString().replace(
+                            invalidFunctionChars, "_"
+                        ).lowercase()
+                    }
+                }"
+            }
+
+            is Expression.Constant.StringConstant -> {
+                nameExpression.value
+            }
+
+            else -> error("The 'name' property of the Native attribute must be a string literal ${nameExpression.location}")
+
         }
     }
 
@@ -64,8 +93,9 @@ class ModuleLowering(private val module: JitsuModule) {
                 val lowering = FunctionLowering(::getUniqueName, function)
                 LoweredBody.Implementation(lowering.lower())
             }
-            is Function.Body.Native -> LoweredBody.Native("_jitsu_${function.name}_${function.parameters.joinToString("__") { it.type.toString().replace(Regex("\\W"), "_") }}")
-            is Function.Body.Missing -> LoweredBody.Implementation(emptyList())
+
+            is Function.Body.Native -> LoweredBody.Native
+            is Function.Body.Missing -> error("Function bodies should not be missing when transpiling")
         }
 
         return LoweredFunction(
