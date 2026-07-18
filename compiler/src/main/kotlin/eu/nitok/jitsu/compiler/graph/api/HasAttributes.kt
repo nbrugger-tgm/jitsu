@@ -5,4 +5,6 @@ package eu.nitok.jitsu.compiler.graph.api
  */
 sealed interface HasAttributes : Element {
     val attributes: List<Attribute>
+
+    fun getAttributes(attributeType: String) = attributes.filter { it.target?.fullyQualifiedName == attributeType }
 }
