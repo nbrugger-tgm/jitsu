@@ -87,12 +87,12 @@ internal fun parseStatements(
 }
 
 
-private fun parseSemicolonDelimited(tokens: Tokens, statmentFn: (Tokens) -> StatementNode?): StatementNode? {
+private fun <T: AstNode> parseSemicolonDelimited(tokens: Tokens, statmentFn: (Tokens) -> T?): T? {
     val res = statmentFn(tokens) ?: return null
     val endOfStatementPos = tokens.position.toLocation()
     tokens.skipWhitespace()
     val semicolon = tokens.peekOptional()
-    if (semicolon.map { it.type }.orElse(null) != DefaultToken.SEMICOLON) {
+    if (semicolon.map { it.type }.orElse(null) != SEMICOLON) {
         res.error(CompilerMessage("Expect semicolon at end of statement!", endOfStatementPos))
     } else {
         tokens.skip()
@@ -178,4 +178,29 @@ internal fun parseVariableDeclaration(tokens: Tokens): StatementNode.Instruction
         expression,
         kw
     ).withMessages(messages)
+}
+val moduleNameRegex = "[a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)*".toRegex()
+
+internal fun parseImports(tokens: Tokens): List<StatementNode.Declaration.ImportNode> {
+    return buildList {
+        while(tokens.hasNext()) {
+            tokens.skipWhitespace()
+            add(parseImport(tokens)?:break)
+        }
+    }
+}
+
+internal fun parseImport(tokens: Tokens): StatementNode.Declaration.ImportNode? {
+    return parseSemicolonDelimited(tokens) {
+        val kw = tokens.keyword("import") ?: return@parseSemicolonDelimited null
+        val messages = CompilerMessages()
+        tokens.skipWhitespace()
+        val module = tokens.until(SEMICOLON, NEW_LINE, WHITESPACE)
+        if(module.value.isEmpty()) {
+            messages.error("Missing module name to import", module.location)
+        } else if (!module.value.matches(moduleNameRegex)){
+            messages.error("Invalid module identifier. Module names may only contain alphanumeric chars and underscores",module.location)
+        }
+        StatementNode.Declaration.ImportNode(kw, module).withMessages(messages)
+    }
 }

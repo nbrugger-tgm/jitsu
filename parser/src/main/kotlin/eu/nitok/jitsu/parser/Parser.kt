@@ -12,8 +12,12 @@ import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.common.locating.Location
 import eu.nitok.jitsu.common.locating.Position
-import eu.nitok.jitsu.parser.ast.*
+import eu.nitok.jitsu.parser.ast.IdentifierNode
+import eu.nitok.jitsu.parser.ast.JitsuModuleAst
+import eu.nitok.jitsu.parser.ast.SourceFileNode
+import eu.nitok.jitsu.parser.ast.StatementNode
 import eu.nitok.jitsu.parser.parsers.parseIdentifier
+import eu.nitok.jitsu.parser.parsers.parseImports
 import eu.nitok.jitsu.parser.parsers.parseStatements
 import eu.nitok.jitsu.parser.tokenization.FileTokenStream
 import java.io.StringReader
@@ -21,6 +25,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.*
+import kotlin.jvm.optionals.getOrElse
 import kotlin.jvm.optionals.getOrNull
 import kotlin.streams.asSequence
 
@@ -42,6 +47,7 @@ fun parseJitsuFile(txt: String, uri: URI): SourceFileNode {
     val tokens = FileTokenStream(uri, TokenStream.of(tokenSource))
     val statements = mutableListOf<StatementNode>()
     val sourceFileNode = SourceFileNode(uri, statements)
+    statements.addAll(parseImports(tokens))
     parseStatements(tokens, statements, sourceFileNode::error)
     return sourceFileNode;
 }
@@ -193,6 +199,9 @@ internal fun Tokens.attempt(vararg tokens: DefaultToken): Located<AssignedToken<
     return null;
 }
 
+/**
+ * Attempts to parse, if it fails (the function returns null) the tokens are rolled back to their previous state
+ */
 internal fun <T> Tokens.attempt(function: ParserFn<T>): T? {
     if (!hasNext()) {
         return null
@@ -213,6 +222,17 @@ internal fun Tokens.keyword(s: String): Location? {
         return@attempt if (token == null) null
         else if (token.value == s) location
         else null
+    }
+}
+
+fun Tokens.until(
+    vararg stopAt: DefaultToken
+):Located<String> {
+    return range {
+        buildString {
+            while (peekOptional().map { !stopAt.contains(it.type) }.getOrElse { false })
+                this.append(next().value)
+        }
     }
 }
 
