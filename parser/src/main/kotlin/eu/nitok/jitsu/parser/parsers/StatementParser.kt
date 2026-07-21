@@ -1,6 +1,7 @@
 package eu.nitok.jitsu.parser.parsers
 
 import com.niton.jainparse.token.DefaultToken
+import com.niton.jainparse.token.DefaultToken.*
 import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.parser.*
@@ -14,22 +15,30 @@ import eu.nitok.jitsu.parser.ast.*
  *
  * @return The parsed statement node, or null if no valid statement starts at the current position.
  */
-internal fun parseStatement(tokens: Tokens, error: (CompilerMessage)->Unit): StatementNode? {
+internal fun parseStatement(tokens: Tokens, error: (CompilerMessage) -> Unit): StatementNode? {
     val attributes = parseAttributes(tokens)
-    val statement = parseFunction(tokens, attributes) ?: parseClass(tokens, attributes) ?: parseAttributeDeclaration(tokens, attributes) ?: parseSemicolonDelimited(tokens) {
-        parseVariableDeclaration(it) ?: parseReturnStatement(it) ?: parseTypeDeclaration(tokens, attributes)
-        ?: parseIdentifierBased(it) { tokens, id ->
-            parseAssignment(tokens, id) ?: parseFunctionCall(tokens, id)
+    val statement =
+        parseFunction(tokens, attributes) ?: parseClass(tokens, attributes) ?: parseAttributeDeclaration(
+            tokens,
+            attributes
+        ) ?: parseSemicolonDelimited(tokens) {
+            parseVariableDeclaration(it) ?: parseReturnStatement(it) ?: parseTypeDeclaration(tokens, attributes)
+            ?: parseIdentifierBased(it) { tokens, id ->
+                parseAssignment(tokens, id) ?: parseFunctionCall(tokens, id)
+            }
         }
-    }
     if (attributes.isNotEmpty()) {
-        if (statement == null) error(CompilerMessage(
-            "Dangling Attributes, attributes must be above a function, typedefinition or variable",
-            attributes.first().location.rangeTo(attributes.last())
-        )) else if (statement !is CanHaveAttributes) error(CompilerMessage(
-            "Statement type does not allow attributes (functions, type definition",
-            attributes.first().location.rangeTo(attributes.last())
-        ))
+        if (statement == null) error(
+            CompilerMessage(
+                "Dangling Attributes, attributes must be above a function, typedefinition or variable",
+                attributes.first().location.rangeTo(attributes.last())
+            )
+        ) else if (statement !is CanHaveAttributes) error(
+            CompilerMessage(
+                "Statement type does not allow attributes",
+                attributes.first().location.rangeTo(attributes.last())
+            )
+        )
     }
     return statement
 }
@@ -56,8 +65,6 @@ internal fun parseAssignment(tokens: Tokens, kw: IdentifierNode): StatementNode.
 
 /**
  * Parses multiple statements from the token stream until exhausted or an unrecoverable error.
- *
- * @param statements Accumulator list for parsed statements.
  */
 internal fun parseStatements(
     tokens: Tokens,
@@ -72,14 +79,14 @@ internal fun parseStatements(
                 tokens.skipWhitespace()
                 val lastToken = tokens.index()
                 val invalid = tokens.skipUntil(
-                    DefaultToken.ROUND_BRACKET_CLOSED,
-                    DefaultToken.SEMICOLON,
-                    DefaultToken.NEW_LINE
+                    ROUND_BRACKET_CLOSED,
+                    SEMICOLON,
+                    NEW_LINE
                 )
                 if (lastToken == tokens.index()) {
                     break
                 }
-                tokens.skip(DefaultToken.SEMICOLON)
+                tokens.skip(SEMICOLON)
                 error(CompilerMessage("Expected a statement", invalid))
             }
         }
@@ -112,9 +119,9 @@ internal fun parseFunctionCall(tokens: Tokens, id: IdentifierNode): StatementNod
     val messages = CompilerMessages()
     val params = tokens.nullableRange {
         enclosedRepetition(
-            DefaultToken.BRACKET_OPEN,
-            DefaultToken.COMMA,
-            DefaultToken.BRACKET_CLOSED,
+            BRACKET_OPEN,
+            COMMA,
+            BRACKET_CLOSED,
             messages,
             "parameter list",
             "parameter"
@@ -156,7 +163,7 @@ internal fun parseVariableDeclaration(tokens: Tokens): StatementNode.Instruction
     if (name == null) {
         messages.error("Expected variable name", tokens.position.toLocation())
         val invalid =
-            tokens.skipUntil(DefaultToken.SEMICOLON, DefaultToken.NEW_LINE, DefaultToken.EQUAL, DefaultToken.COLON)
+            tokens.skipUntil(SEMICOLON, NEW_LINE, DefaultToken.EQUAL, DefaultToken.COLON)
     } else {
         tokens.skipWhitespace()
     }

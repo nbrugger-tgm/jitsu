@@ -253,7 +253,6 @@ private fun parseBitsizedNumberType(tokens: Tokens): TypeNode? {
 
 private fun parseUnion(firstType: TypeNode, tokens: Tokens): TypeNode.UnionTypeNode? {
     if (!tokens.hasNext()) return null
-    tokens.skipWhitespace()
     val pipe = tokens.attempt {
         skipWhitespace()
         range { next().type == PIPE }.takeIf { it.value }
