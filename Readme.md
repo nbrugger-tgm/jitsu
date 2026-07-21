@@ -20,7 +20,7 @@ While this might seem like feature creep (might be) a high priority is that the 
 - [x] Fully (de)serializable IR/Graph 
 - [x] Gradle plugin
 - [x] Attributes
-- [ ] Modules with native parts/FFM
+- [x] Modules with native parts/FFM
 - [ ] Modules can depend on other modules
 - [ ] Modules can use the stdlib
 - [ ] Add math to stdlib

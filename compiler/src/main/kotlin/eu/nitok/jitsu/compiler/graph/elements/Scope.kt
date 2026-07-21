@@ -6,7 +6,6 @@ import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.compiler.analysis.FunctionSignatureMatch
 import eu.nitok.jitsu.compiler.analysis.matchFunctionSignatures
 import eu.nitok.jitsu.compiler.graph.SymbolID
-import eu.nitok.jitsu.compiler.graph.api.AttributeDefinition
 import eu.nitok.jitsu.compiler.graph.api.Type
 import eu.nitok.jitsu.compiler.graph.api.TypeDefinition
 import eu.nitok.jitsu.compiler.graph.api.Variable
@@ -25,8 +24,8 @@ internal class Scope(
 ) : eu.nitok.jitsu.compiler.graph.api.Scope {
     override var parent: Scope? = null
 
-    override val types: Map<String, TypeDefinition> by lazy { typeElements.mapValues { it.value.asTypeDefinition }}
-    override val variables: Map<String, Variable> by lazy { variableElements.mapValues{it.value.asVariable} }
+    override val types: Map<String, TypeDefinition> by lazy { typeElements.mapValues { it.value.asTypeDefinition } }
+    override val variables: Map<String, Variable> by lazy { variableElements.mapValues { it.value.asVariable } }
 
     fun resolveType(reference: Located<String>, messages: CompilerMessages): TypeDefinitionElement? {
         return typeElements[reference.value] ?: parent?.resolveType(reference, messages) ?: run {
@@ -108,26 +107,43 @@ internal class Scope(
     }
 
     fun restoreType(id: Located<SymbolID>, messages: CompilerMessages): TypeDefinitionElement? {
-       return restore(id, messages, JitsuModule::getType)
+        return restore(id, messages, JitsuModule::getType)
     }
+
     fun restoreFunction(id: Located<SymbolID>, messages: CompilerMessages): FunctionElement? {
         return restore(id, messages, JitsuModule::getFunction)
     }
+
     fun restoreVariable(id: Located<SymbolID>, messages: CompilerMessages): VariableElement? {
         return restore(id, messages, JitsuModule::getVariable)
     }
 
-    fun <T> restore(id: Located<SymbolID>, messages: CompilerMessages, getElement: JitsuModule.(Int)->T?): T? {
-        if(id.value.module == null) throw IllegalArgumentException("restore() requires module name to be set")
+    fun <T> restore(id: Located<SymbolID>, messages: CompilerMessages, getElement: JitsuModule.(Int) -> T?): T? {
+        if (id.value.module == null) throw IllegalArgumentException("restore() requires module name to be set")
         val import = resolveModule(id.value.module!!)
-        if(import == null) messages.error("Unable to restore symbol ${id.value}: Module ${id.value.module} not found", id)
+        if (import == null) messages.error(
+            "Unable to restore symbol ${id.value}: Module ${id.value.module} not found",
+            id
+        )
         return import?.target?.getElement(id.value.index)
     }
-    private fun resolveModule(module: String): Import? = imports.find { it.name.value == module }?: parent?.resolveModule(module)
+
+    private fun resolveModule(module: String): Import? =
+        imports.find { it.name.value == module } ?: parent?.resolveModule(module)
 
     fun resolveAttribute(reference: Located<String>, messages: CompilerMessages): AttributeDefinitionElement? {
         val self = attributes[reference.value]
         if (self != null) return self
+        val imports = merge(imports.mapNotNull { it.target?.allAttributes?.mapValues { (k, v) -> v to it } }) { a, b ->
+            messages.error(
+                "Attribute ${a.first.name} is imported from two modules (${a.first.fullyQualifiedName} and ${b.first.fullyQualifiedName})",
+                a.second.location,
+                CompilerMessage.Hint("Importing ${b.second.name} here", b.second.location)
+            )
+            null
+        }
+        val imported = imports[reference.value]
+        if (imported != null) return imported.first
         if (parent == null) {
             messages.error("No attribute named '${reference.value}'", reference.location)
             return null

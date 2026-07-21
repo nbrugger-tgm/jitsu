@@ -42,15 +42,12 @@ internal data class ModuleCompilationResult(
  */
 internal fun restoreJitsuModule(module: JitsuModule, dependencies: Map<String, JitsuModule> = mapOf()): CompilerMessages {
     val messages = CompilerMessages()
-    val moduleLookup = merge(dependencies, module.moduleLookup) { a, b ->
-        if (!(a.files.isEmpty() && b.files.isEmpty()))
-            messages.error(
-                "Module name conflict, ${a.fullyQualifiedName}, ${b.fullyQualifiedName}",
-                Position(1, 1, (a.files.getOrNull(0) ?: b.files[0]).uri)
-            )
-        a
-    }
-    populateReferences(module, messages, moduleLookup, resolutionMode = RESTORE)
+    if (dependencies.containsKey(module.fullyQualifiedName))
+        messages.error(
+            "Module name conflict: ${module.fullyQualifiedName}",
+            Position(1, 1, module.files.first().uri)
+        )
+    populateReferences(module, messages, dependencies, resolutionMode = RESTORE)
     return messages
 }
 
@@ -197,7 +194,7 @@ private fun GraphBuilder.processStatements(
             is InstructionNode -> instructionHandler(statement)
             is NamedTypeDeclarationNode.ClassDeclarationNode -> buildClassGraph(statement)?.let { types.add(it) }
             is Declaration.ImportNode -> {
-                if (allowImports) messages.error("This scope does not (yet) allow imports", statement)
+                if (!allowImports) messages.error("This scope does not (yet) allow imports", statement)
                 else if (imports[statement.moduleReference.value] != null) messages.warn(
                     "Duplicated import", statement.location, CompilerMessage.Hint(
                         "First occurence", imports[statement.moduleReference.value]!!
@@ -358,7 +355,7 @@ private fun buildExpressionGraph(expression: ExpressionNode): ExpressionElement 
 
         is ExpressionNode.StringLiteralNode ->
             //TODO reflect propper string literals in IR
-            ConstantElement.StringConstant(expression.toString(), expression.location)
+            ConstantElement.StringConstant(expression.toString().drop(1).dropLast(1), expression.location)
         is ExpressionNode.VariableReferenceNode -> resolveVariableReference(expression)
         is ExpressionNode.FieldAccessNode -> TODO()
         is ExpressionNode.IndexAccessNode -> TODO()

@@ -8,7 +8,7 @@ class TypeRegistry {
     private val typedefs = mutableListOf<String>()
     private var synthNameIdx = 0
 
-    fun getUniqueName(type: LowLevelType): String {
+    private fun getUniqueName(type: LowLevelType): String {
         return typeInfo[type]?:run {
             val name = "type${synthNameIdx++}"
             typedefs.add(toCTypedef(type, name))
@@ -17,9 +17,9 @@ class TypeRegistry {
         }
     }
 
-    val typeDefs: String get() = typedefs.joinToString ("\n\n")
+    val typeDefs: String get() = typedefs.joinToString("\n\n")
 
-    fun toCTypedef(type: LowLevelType, name: String): String {
+    private fun toCTypedef(type: LowLevelType, name: String): String {
         return when(type) {
             is LowLevelType.LLStruct -> "struct $name {\n ${type.fields.entries.joinToString("") {
                 "    ${formatType(it.key,it.value)};\n"
@@ -34,8 +34,8 @@ class TypeRegistry {
 
     fun formatType(variable: String, type: LowLevelType): String {
         return when(type) {
-            is LowLevelType.LLFixedArray -> formatType("($variable[])", type.elementType)
-            is LowLevelType.LLPointer<*> -> formatType("(*$variable)", type.pointeeType)
+            is LowLevelType.LLFixedArray -> formatType("$variable[]", type.elementType)
+            is LowLevelType.LLPointer<*> -> formatType("*$variable", type.pointeeType)
             is LowLevelType.LLStruct -> "struct ${getUniqueName(type)} $variable"
             is LowLevelType.LLBool -> "bool $variable"
             is LowLevelType.LLFloat -> "${formatFloat(type.size)} $variable"

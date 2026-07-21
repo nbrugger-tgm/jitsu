@@ -125,17 +125,18 @@ internal class JitsuModule internal constructor(
             return restoredDependencies
         }
 
-        private fun restoreDependencies(parsedDependencies: MutableList<JitsuModule>): Pair<Map<String, JitsuModule>, CompilerMessages> {
+        private fun restoreDependencies(parsedDependencies: List<JitsuModule>): Pair<Map<String, JitsuModule>, CompilerMessages> {
+            val dependenciesToRestore = parsedDependencies.flatMap { it.allModules }.toMutableList()
             val restoredDependencies = mutableMapOf<String, JitsuModule>()
             val messages = CompilerMessages()
-            while (parsedDependencies.isNotEmpty()) {
-                val dependenciesReadyToBeRestored = parsedDependencies.filter {
-                    it.dependencies.none { restoredDependencies[it] == null }
+            while (dependenciesToRestore.isNotEmpty()) {
+                val dependenciesReadyToBeRestored = dependenciesToRestore.filter { toRestore ->
+                    toRestore.dependencies.none { restoredDependencies[it] == null }
                 }
                 if (dependenciesReadyToBeRestored.isEmpty()) throw IllegalStateException("Circular dependency detected among ${parsedDependencies.map { it.fullyQualifiedName }}")
                 dependenciesReadyToBeRestored.forEach {
                     messages.add(restoreJitsuModule(it, restoredDependencies))
-                    parsedDependencies.remove(it)
+                    dependenciesToRestore.remove(it)
                     val prev = restoredDependencies.putIfAbsent(it.fullyQualifiedName, it)
                     if (prev != null) throw IllegalStateException("Duplicate dependency ${it.fullyQualifiedName}")
                 }
@@ -149,6 +150,10 @@ internal class JitsuModule internal constructor(
             result.messages.add(dependencyMessages)
             return JitsuModuleResultPublicApi(result.module, result.messages)
         }
+    }
+
+    override fun toString(): String {
+        return "JitsuMldule($fullyQualifiedName)"
     }
 }
 //Kotlin bug: https://discuss.kotlinlang.org/t/polymorphic-serialization-doesnt-work-for-deeper-sealed-class-hierarchies/20534

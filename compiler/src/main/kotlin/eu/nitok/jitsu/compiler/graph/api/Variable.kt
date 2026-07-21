@@ -8,5 +8,10 @@ sealed interface Variable : Accessible<Variable>, Element {
     override val name: Located<String>
     val reassignable: Boolean
     val declaredType: Type?
+
+    /**
+     * the type for this variable. [declaredType] if present, else the implicit type from initial value
+     */
+    val type: Type
     val initialValue: Expression?
 }

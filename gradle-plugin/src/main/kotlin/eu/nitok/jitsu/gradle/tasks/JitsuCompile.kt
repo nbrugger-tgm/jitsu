@@ -4,11 +4,9 @@ import eu.nitok.jitsu.common.CompilerMessage
 import eu.nitok.jitsu.common.format
 import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.compiler.graph.api.JitsuModule
-import eu.nitok.jitsu.gradle.json
 import eu.nitok.jitsu.parser.ast.JitsuModuleAst
 import eu.nitok.jitsu.parser.parseJitsuFile
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.encodeToString
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
@@ -57,6 +55,7 @@ abstract class JitsuCompile @Inject constructor() : DefaultTask() {
         moduleCache.createNewFile()
         graph.writeToFile(moduleCache.toPath())
         logger.info("Store module cache in $moduleCache")
+        logger.lifecycle("Compile Jitsu with dependencies: ${dependencies.files.joinToString(", ")}")
     }
     class ModuleDirectory(var name: String, var subModules: MutableList<ModuleDirectory>, var files: MutableList<Path>)
     protected fun parse(moduleName: String): Pair<JitsuModuleAst, List<CompilerMessage>> {

@@ -18,8 +18,8 @@ class CBackend : Backend {
 
     private fun transpile(module: LoweredModule, dir: Path): Path {
         val code = dir.resolve("${module.name}.c").createParentDirectories()
-        val headers = dir.resolve("${module.name}.h").createParentDirectories()
-        val publicHeaders = dir.resolve("${module.name}.public.h").createParentDirectories()
+        val headers = dir.resolve("${module.name}.private.h").createParentDirectories()
+        val publicHeaders = dir.resolve("headers").resolve("${module.name}.public.h").createParentDirectories()
         try {
             code.createFile()
         } catch (_: FileAlreadyExistsException) {
@@ -48,20 +48,22 @@ class CBackend : Backend {
             }
         }
 
-        val implementedFunctions = functions.filter { it.impl != null }
-
         //TODO filter exported members
         publicHeaders.bufferedWriter().use { writer ->
             writer.write(typeRegistry.typeDefs)
             writer.newLine()
             writer.newLine()
-            implementedFunctions.forEach {
+            functions.forEach {
                 writer.write(it.def)
                 writer.newLine()
             }
         }
+        val implementedFunctions = functions.filter { it.impl != null }
+
         code.bufferedWriter().use { writer ->
             writer.write("#include \"${headers.relativeTo(code.parent)}\"")
+            writer.newLine()
+            writer.write("#include <cstdlib>")
             writer.newLine()
             writer.newLine()
             writer.write(implementedFunctions.joinToString("\n") { it.impl!! })
@@ -77,14 +79,14 @@ class CBackend : Backend {
         typeRegistry: TypeRegistry,
         function: LoweredFunction
     ): CFunc {
-        val returnType = function.returnType?.let { typeRegistry.getUniqueName(it) }
-        val def = "${returnType ?: "void"} ${function.name}(${
+        val returnType = function.returnType
+        val def = "${returnType?.let { typeRegistry.formatType(function.name, it) } ?: "void ${function.name}"} (${
             function.parameters.joinToString(", ") { param ->
                 typeRegistry.formatType(param.name, param.type)
             }
         })"
         if (function.body is LoweredBody.Native) {
-            return CFunc(def, null)
+            return CFunc("$def;", null)
         }
         val body = function.body as LoweredBody.Implementation
 
@@ -152,11 +154,9 @@ ${indent(1, body.joinToString("\n") { it.toCCode(typeRegistry) })}
             }
 
             is LowLevelExpression.Compare -> "${left.toCCode(typeRegistry)} == ${right.toCCode(typeRegistry)}"
-            is LowLevelExpression.AllocHeap -> "malloc(sizeof(${typeRegistry.getUniqueName(layout)}))"
-            is LowLevelExpression.AllocHeapArray -> "malloc(sizeof(${typeRegistry.getUniqueName(elementType)}) * ${
-                size.toCCode(
-                    typeRegistry
-                )
+            is LowLevelExpression.AllocHeap -> "(${typeRegistry.formatType("", layout)} *) malloc(sizeof(${typeRegistry.formatType("",layout)}))"
+            is LowLevelExpression.AllocHeapArray -> "(${typeRegistry.formatType("", elementType)} *) malloc(sizeof(${typeRegistry.formatType("",elementType)}) * ${
+                size.toCCode(typeRegistry)
             })"
 
             is LowLevelExpression.CompareGreater -> "${left.toCCode(typeRegistry)} > ${right.toCCode(typeRegistry)}"

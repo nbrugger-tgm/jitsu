@@ -1,26 +1,24 @@
 package eu.nitok.jitsu.compiler.bitcode
 
 import eu.nitok.jitsu.common.BitSize
+import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.common.locating.Location
-import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.common.sequence
-import eu.nitok.jitsu.compiler.analysis.AbstractValueElement
-import eu.nitok.jitsu.compiler.analysis.FunctionSummaryElement
-import eu.nitok.jitsu.compiler.analysis.OwnershipState
-import eu.nitok.jitsu.compiler.analysis.ReturnSummaryElement
-import eu.nitok.jitsu.compiler.analysis.VariableSummaryElement
+import eu.nitok.jitsu.compiler.analysis.*
+import eu.nitok.jitsu.compiler.graph.buildJitsuModule
 import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.compiler.graph.elements.JitsuFile
-import eu.nitok.jitsu.compiler.graph.elements.types.Int
 import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
-import eu.nitok.jitsu.compiler.graph.buildJitsuModule
 import eu.nitok.jitsu.compiler.graph.elements.types.Boolean
+import eu.nitok.jitsu.compiler.graph.elements.types.Int
 import eu.nitok.jitsu.compiler.graph.elements.types.TypeElement
 import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 import java.net.URI
 
 @DisplayName("VariableRegistry")
@@ -94,7 +92,7 @@ class VariableRegistryTest {
         @Test
         fun `is empty when no variables have been registered`() {
             val fn = firstFunction("fn f() { }")
-            val registry = VariableRegistry(fn)
+            val registry = VariableRegistry(fn, mutableMapOf(), setOf())
 
             assertThat(registry.variablesToFree).isEmpty()
         }
@@ -103,7 +101,7 @@ class VariableRegistryTest {
         fun `is empty when all registered variables have requiresFree=false`() {
             val fn = firstFunction("fn f() { }")
             fn.withSummary(borrowedSummary("a", "b"))
-            val registry = VariableRegistry(fn)
+            val registry = VariableRegistry(fn, mutableMapOf(), setOf())
             registry.getEntry(variableDecl("a", Int(BitSize.BIT_32)))
             registry.getEntry(variableDecl("b", Int(BitSize.BIT_64)))
 
@@ -121,7 +119,7 @@ class VariableRegistryTest {
                     )
                 )
             )
-            val registry = VariableRegistry(fn)
+            val registry = VariableRegistry(fn, mutableMapOf(), setOf())
             val ownedDecl = variableDecl("owned", Int(BitSize.BIT_32))
             val borrowedDecl = variableDecl("borrowed", Int(BitSize.BIT_32))
             registry.getEntry(ownedDecl)
@@ -136,7 +134,7 @@ class VariableRegistryTest {
         fun `includes all owned variables when multiple are registered`() {
             val fn = firstFunction("fn f() { }")
             fn.withSummary(ownedSummary("x", "y", "z"))
-            val registry = VariableRegistry(fn)
+            val registry = VariableRegistry(fn, mutableMapOf(), setOf())
             registry.getEntry(variableDecl("x", Int(BitSize.BIT_32)))
             registry.getEntry(variableDecl("y", Int(BitSize.BIT_64)))
             registry.getEntry(variableDecl("z", Boolean))
@@ -157,7 +155,7 @@ class VariableRegistryTest {
                     )
                 )
             )
-            val registry = VariableRegistry(fn)
+            val registry = VariableRegistry(fn, mutableMapOf(), setOf())
             registry.getEntry(variableDecl("moved", Int(BitSize.BIT_32)))
             registry.getEntry(variableDecl("owned", Int(BitSize.BIT_32)))
 
@@ -173,7 +171,7 @@ class VariableRegistryTest {
         @Test
         fun `variable with Undefined type throws in TypeLowering`() {
             val fn = firstFunction("fn f() { }")
-            val registry = VariableRegistry(fn)
+            val registry = VariableRegistry(fn, mutableMapOf(), setOf())
             // declaredType=null and implicitType=null → type is Type.Undefined
             val decl = VariableDeclaration(
                 reassignable = false,
@@ -192,7 +190,7 @@ class VariableRegistryTest {
         fun `variablesToFree reflects new entries added after first access`() {
             val fn = firstFunction("fn f() { }")
             fn.withSummary(ownedSummary("a", "b"))
-            val registry = VariableRegistry(fn)
+            val registry = VariableRegistry(fn, mutableMapOf(), setOf())
 
             // Initially empty
             assertThat(registry.variablesToFree).isEmpty()
@@ -213,7 +211,7 @@ class VariableRegistryTest {
         @Test
         fun `registry is accessible via lowering variableRegistry`() {
             val fn = firstFunction("fn f(): i32 { var x: i32 = 1; return x; }")
-            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
             lowering.lower()
 
             assertThat(lowering.variableRegistry).isNotNull
@@ -223,7 +221,7 @@ class VariableRegistryTest {
         fun `registry tracks variable declared in function body`() {
             val file = buildFile("fn f(): i32 { var x: i32 = 5; return x; }")
             val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
             lowering.lower()
 
             val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
@@ -246,7 +244,7 @@ class VariableRegistryTest {
                 """.trimIndent()
             )
             val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
             lowering.lower()
 
             val decls = (fn.body as FunctionElement.BodyElement.Implementation).instructions
@@ -261,7 +259,7 @@ class VariableRegistryTest {
         @Test
         fun `variablesToFree only contains entries that appear in the function`() {
             val fn = firstFunction("fn f(): i32 { var x: i32 = 1; return x; }")
-            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
             lowering.lower()
 
             // variablesToFree must be a subset of all registered entries
@@ -276,7 +274,7 @@ class VariableRegistryTest {
         fun `registry getLowLevelType for array variable returns JitsuArray`() {
             val file = buildFile("fn f() { var arr: i32[] = [1, 2]; }")
             val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
             lowering.lower()
 
             val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions

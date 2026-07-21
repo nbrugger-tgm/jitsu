@@ -6,16 +6,18 @@ package eu.nitok.jitsu.gradle
 import eu.nitok.jitsu.gradle.tasks.CreateModuleInfo
 import eu.nitok.jitsu.gradle.tasks.JitsuCompile
 import eu.nitok.jitsu.gradle.tasks.JitsuTranspile
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.plugins.BasePlugin
-import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.bundling.Zip
 import org.gradle.internal.extensions.stdlib.capitalized
+import org.gradle.language.cpp.CppLibrary
+import org.gradle.language.cpp.plugins.CppLibraryPlugin
+import org.gradle.language.cpp.tasks.CppCompile
 
-@OptIn(ExperimentalSerializationApi::class)
 val json: Json = Json(
     builderAction = {
         prettyPrint = true;
@@ -24,6 +26,8 @@ val json: Json = Json(
 //        useArrayPolymorphism = true
     }
 )
+
+private const val DEFAULT_C_OUTPUT = "generated/jitsu-c"
 
 /**
  * A simple 'hello world' plugin.
@@ -39,72 +43,109 @@ class JitsuBasePlugin: Plugin<Project> {
         val main = project.registerJitsuSourceSet("main", extension, consumable = true)
         val test = project.registerJitsuSourceSet("test", extension, consumable = false)
 
-        project.tasks.findByName("build")?.dependsOn(main.map { it.transpileTasks })
+        project.tasks.findByName("build")?.dependsOn(main.transpileTasks)
         project.tasks.register("compileJitsu") {
-            it.dependsOn(main.map { it.compileTask })
+            it.dependsOn(main.compileTask)
         }
         project.tasks.register("transpileJitsu") {
-            it.dependsOn(main.map { it.transpileTasks })
+            it.dependsOn(main.transpileTasks)
         }
         project.tasks.register("createJitsuModuleInfo") {
             it.dependsOn(extension.sourceSets.map { it.moduleInfoTask })
         }
+
+        setupNativeCompilation(project, main)
     }
 
-    internal fun Project.registerJitsuSourceSet(string: String, extension: JitsuExtension, consumable: Boolean): Provider<JitsuSourceSet> {
-        val sourceDirectory: SourceDirectorySet = objects.sourceDirectorySet(string, "$string Jitsu source")
+    private fun setupNativeCompilation(project: Project, jitsuSourceSet: JitsuSourceSet) {
+        project.pluginManager.apply(CppLibraryPlugin::class.java)
+        project.extensions.configure(CppLibrary::class.java) { library ->
+            val transpileTask = jitsuSourceSet.transpileTasks.first()
+            val generatedCDir = project.provider { transpileTask.get().targetDirectory }
+
+            library.source.from(jitsuSourceSet.cSourceDirectory.srcDirs)
+            library.source.from(jitsuSourceSet.cclasspath)
+
+            library.privateHeaders.from(generatedCDir)
+            library.publicHeaders.from(generatedCDir.map { it.dir("headers") })
+
+            project.tasks.withType(CppCompile::class.java) {
+                it.source.from(library.source)
+                it.dependsOn(jitsuSourceSet.transpileTasks)
+            }
+        }
+    }
+
+    internal fun Project.registerJitsuSourceSet(name: String, extension: JitsuExtension, consumable: Boolean): JitsuSourceSet {
+        val sourceDirectory: SourceDirectorySet = objects.sourceDirectorySet(name, "$name Jitsu source")
         sourceDirectory.filter.include("**/*.jit")
-        sourceDirectory.srcDir("src/${string}/jitsu")
+        sourceDirectory.srcDir("src/${name}/jitsu")
 
-        val sourceSetName = if(string == "main") extension.moduleName else extension.moduleName.map { "$it.$string" }
+        val cSourceDirectory: SourceDirectorySet = objects.sourceDirectorySet(name, "$name C source")
+        cSourceDirectory.filter.include("**/*.c")
+        cSourceDirectory.srcDir("src/${name}/c")
 
-        val dependencies = configurations.dependencyScope("jitsu${string.capitalized()}")
-        val classpath = configurations.resolvable("${string}JitsuClasspath") {
+        val sourceSetName = if(name == "main") extension.moduleName else extension.moduleName.map { "$it.$name" }
+
+        val dependencies = configurations.dependencyScope("jitsu${name.capitalized()}")
+        val classpath = configurations.resolvable("${name}JitsuClasspath") {
             it.extendsFrom(dependencies.get())
             it.attributes.attribute(artifactType, JitsuArtifactType.IR)
+            it.attributes.attribute(Attribute.of("usage", String::class.java), "for-compilation")
+        }
+        val classpathBindings = configurations.resolvable("${name}JitsuCClasspath") {
+            it.extendsFrom(dependencies.get())
+            it.attributes.attribute(artifactType, JitsuArtifactType.C)
+            it.attributes.attribute(Attribute.of("usage", String::class.java), "for-compilation")
         }
 
-        val compileTask = tasks.register("compile${string.capitalized()}Jitsu", JitsuCompile::class.java) {
+        val compileTask = tasks.register("compile${name.capitalized()}Jitsu", JitsuCompile::class.java) {
             it.dependencies.from(classpath)
             it.sources.setFrom(sourceDirectory)
             it.moduleName.set(sourceSetName)
-            it.targetFile.set(project.layout.buildDirectory.file("modules/$string.jim"))
+            it.targetFile.set(project.layout.buildDirectory.file("modules/$name.jim"))
         }
-        val transpileCTask = tasks.register("transpile${string.capitalized()}JitsuToC", JitsuTranspile::class.java) {
+        val transpileCTask = tasks.register("transpile${name.capitalized()}JitsuToC", JitsuTranspile::class.java) {
             it.dependencies.setFrom(classpath)
             it.moduleFile.set(layout.file(compileTask.map { it.outputs.files.singleFile }))
 //            it.backend.set(CBackend())
-            it.targetDirectory.set(project.layout.buildDirectory.dir("generated/jitsu-c"))
+            it.targetDirectory.set(project.layout.buildDirectory.dir(DEFAULT_C_OUTPUT))
         }
+        cSourceDirectory.srcDir(transpileCTask.map { it.targetDirectory })
 
-        val moduleInfoTask = tasks.register("createJitsu${string.capitalized()}ModuleInfo", CreateModuleInfo::class.java) {
+        val moduleInfoTask = tasks.register("createJitsu${name.capitalized()}ModuleInfo", CreateModuleInfo::class.java) {
             it.moduleName.set(sourceSetName)
             it.moduleDir.set(sourceDirectory.sourceDirectories.singleFile)
         }
         if(consumable) {
-            val elements = configurations.consumable("${string}JitsuElements") {
+            val elements = configurations.consumable("${name}JitsuElements") {
                 it.extendsFrom(dependencies.get())
                 it.attributes.attribute(artifactType, JitsuArtifactType.IR)
             }
-            val c_elements = configurations.consumable("${string}JitsuCElements") {
+            val cElements = configurations.consumable("${name}JitsuCElements") {
                 it.extendsFrom(dependencies.get())
                 it.attributes.attribute(artifactType, JitsuArtifactType.C)
             }
+            val cSourcesArtifact = tasks.register("package${name}CSources", Zip::class.java) {
+                it.archiveClassifier.set("c-sources")
+                it.from(cSourceDirectory)
+            }
             artifacts.add(elements.name, compileTask.flatMap { it.targetFile })
-            artifacts.add(c_elements.name, transpileCTask.flatMap { it.targetDirectory })
+            artifacts.add(cElements.name, cSourcesArtifact)
         }
 
-        val sourceSetProvider = provider {
-            JitsuSourceSet(
-                sourceDirectory = sourceDirectory,
-                compileTask = compileTask,
-                transpileTasks = listOf(transpileCTask),
-                moduleInfoTask = moduleInfoTask,
-                classpath = classpath,
-                dependencyScope = dependencies
-            )
-        }
-        extension.sourceSets.addLater(sourceSetProvider)
+        val sourceSetProvider = JitsuSourceSet(
+            sourceDirectory = sourceDirectory,
+            cSourceDirectory = cSourceDirectory,
+            compileTask = compileTask,
+            transpileTasks = listOf(transpileCTask),
+            moduleInfoTask = moduleInfoTask,
+            classpath = classpath,
+            cclasspath = classpathBindings,
+            dependencyScope = dependencies
+        )
+
+        extension.sourceSets.add(sourceSetProvider)
         return sourceSetProvider
     }
 }

@@ -1,14 +1,16 @@
 package eu.nitok.jitsu.compiler.bitcode
 
-import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
-import eu.nitok.jitsu.compiler.bitcode.LowLevelExpression.*
-import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.common.sequence
+import eu.nitok.jitsu.compiler.bitcode.LowLevelExpression.*
+import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
 import eu.nitok.jitsu.compiler.graph.buildJitsuModule
+import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.compiler.graph.elements.JitsuFile
 import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 import java.net.URI
 
 @DisplayName("Function Lowering - Conversion Logic")
@@ -27,14 +29,14 @@ class FunctionLoweringConversionTest {
     private fun lower(source: String): List<LowLevelInstruction> {
         val file = buildFile(source)
         val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-        val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+        val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn,   mutableMapOf(), setOf())
         return lowering.lower()
     }
 
     private fun lowerFunction(source: String, name: String): List<LowLevelInstruction> {
         val file = buildFile(source)
         val fn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == name }
-        val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+        val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
         return lowering.lower()
     }
 

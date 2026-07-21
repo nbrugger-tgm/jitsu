@@ -1,0 +1,31 @@
+import jitsu.ffm;
+
+[Native(name="plus_i8")]
+native fn plus(a: i8, b: i8): i8
+
+[Native(name="plus_u8")]
+native fn plus(a: u8, b: u8): u8
+
+[Native(name="plus_i16")]
+native fn plus(a: i16, b: i16): i16
+
+[Native(name="plus_u16")]
+native fn plus(a: u16, b: u16): u16
+
+[Native(name="plus_i32")]
+native fn plus(a: i32, b: i32): i32
+
+[Native(name="plus_u32")]
+native fn plus(a: u32, b: u32): u32
+
+[Native(name="plus_i64")]
+native fn plus(a: i64, b: i64): i64
+
+[Native(name="plus_u64")]
+native fn plus(a: u64, b: u64): u64
+
+[Native(name="plus_f32")]
+native fn plus(a: f32, b: f32): f32
+
+[Native(name="plus_f64")]
+native fn plus(a: f64, b: f64): f64

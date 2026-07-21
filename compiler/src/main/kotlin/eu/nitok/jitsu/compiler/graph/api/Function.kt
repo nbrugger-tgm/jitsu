@@ -20,7 +20,7 @@ interface Function : Instruction, Element, Accessible<Function>, Accessor, HasAt
         /**
          * alias for [declaredType]
          */
-        val type: Type
+        override val type: Type
         override val declaredType: Type
     }
 }

@@ -3,6 +3,7 @@ package eu.nitok.jitsu.compiler.bitcode
 import eu.nitok.jitsu.compiler.graph.api.Expression
 import eu.nitok.jitsu.compiler.graph.api.Function
 import eu.nitok.jitsu.compiler.graph.api.JitsuModule
+import eu.nitok.jitsu.compiler.graph.api.Variable
 import java.util.*
 
 
@@ -29,10 +30,12 @@ class ModuleLowering(private val module: JitsuModule) {
         val allFunctions = allRequiredModules.asSequence()
             .flatMap { it.files }
             .flatMap { it.functions }
+            .toList()
+
+        val reservedNames = allFunctions.map { getUniqueName(it) }.toSet()
 
         val loweredFunctions = allFunctions
-            .map { fn -> lowerFunction(fn) }
-            .toList()
+            .map { fn -> lowerFunction(fn, reservedNames) }
 
         return LoweredModule(name = module.fullyQualifiedName, functions = loweredFunctions)
     }
@@ -76,21 +79,27 @@ class ModuleLowering(private val module: JitsuModule) {
         }
     }
 
-    private fun lowerFunction(function: Function): LoweredFunction {
+    private fun lowerFunction(function: Function, reservedNames: Set<String>): LoweredFunction {
         val name = getUniqueName(function)
+        val variableMappings = mutableMapOf<Variable, String>()
 
         val parameters = function.parameters.map { param ->
+            var name = param.name.value
+            while(reservedNames.contains(name) || variableMappings.values.contains(name)) {
+                name = "p_${name}"
+            }
+            variableMappings[param] = name
             LoweredParameter(
-                name = param.name.value,
+                name = name,
                 type = TypeLowering.lower(param.declaredType!!)
             )
         }
 
         val returnType = function.returnType?.value?.let { TypeLowering.lower(it) }
 
-        val body = when (val b = function.body) {
+        val body = when (function.body) {
             is Function.Body.Implementation -> {
-                val lowering = FunctionLowering(::getUniqueName, function)
+                val lowering = FunctionLowering(::getUniqueName, function, variableMappings, reservedNames)
                 LoweredBody.Implementation(lowering.lower())
             }
 

@@ -2,6 +2,7 @@ package eu.nitok.jitsu.compiler.bitcode
 
 import eu.nitok.jitsu.compiler.analysis.OwnershipState
 import eu.nitok.jitsu.compiler.graph.api.Function
+import eu.nitok.jitsu.compiler.graph.api.Variable
 import eu.nitok.jitsu.compiler.graph.api.VariableDeclaration
 
 /**
@@ -9,7 +10,14 @@ import eu.nitok.jitsu.compiler.graph.api.VariableDeclaration
  * Maps variable declarations to their low-level types and manages
  * ownership information for memory cleanup.
  */
-class VariableRegistry(val function: Function) {
+class VariableRegistry(val function: Function, variableMappings: MutableMap<Variable, String>, val reservedNames: Set<String>) {
+    private val entries = mutableMapOf<Variable, Entry>()
+
+    init {
+        variableMappings.forEach { (variable, name) ->
+            getEntry(variable, name)
+        }
+    }
     /**
      * Entry for a registered variable.
      */
@@ -23,26 +31,31 @@ class VariableRegistry(val function: Function) {
          */
         fun asVariable(): LowLevelExpression.Variable = LowLevelExpression.Variable(name)
     }
-
-    private val entries = mutableMapOf<VariableDeclaration, Entry>()
-
     /**
      * Get or create an entry for a variable declaration.
      */
-    fun getEntry(variable: VariableDeclaration): Entry {
+    fun getEntry(variable: Variable, forcedName: String? = null): Entry {
         return entries.getOrPut(variable) {
             val lowLevelType = TypeLowering.lower(variable.type)
             val varSummary = function.summary?.variableSummary
-                ?: throw IllegalStateException("Function ${function} has no summary - lowering not possible")
-            val declarationSummary = varSummary.get(variable.name.value)
+                ?: throw IllegalStateException("Function $function has no summary - lowering not possible")
+            val declarationSummary = varSummary[variable.name.value]
                 ?: throw IllegalStateException("Variable $variable has not variable state analysis in function $function! - lowering not possible")
             val requiresFree = declarationSummary.ownershipState == OwnershipState.OWNS
             Entry(
-                name = variable.name.value,
+                name = forcedName?: nonConflictingName(variable),
                 lowLevelType = lowLevelType,
                 requiresFree = requiresFree
             )
         }
+    }
+
+    private fun nonConflictingName(variable: Variable): String {
+        var name = variable.name.value
+        while(name in reservedNames || entries.values.any { it.name == name }) {
+            name = "var_$name"
+        }
+        return name
     }
 
     /**

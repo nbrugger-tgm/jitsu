@@ -3,8 +3,8 @@ package eu.nitok.jitsu.compiler.bitcode
 import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.common.sequence
 import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
-import eu.nitok.jitsu.compiler.graph.*
 import eu.nitok.jitsu.compiler.graph.api.Function
+import eu.nitok.jitsu.compiler.graph.buildJitsuModule
 import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.compiler.graph.elements.JitsuFile
 import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
@@ -14,7 +14,10 @@ import eu.nitok.jitsu.parser.parseJitsuFile
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.InstanceOfAssertFactories.map
 import org.assertj.core.api.InstanceOfAssertFactories.type
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 import java.net.URI
 
 /**
@@ -44,14 +47,14 @@ class LoweringEdgeCasesTest {
     private fun lower(source: String): List<LowLevelInstruction> {
         val file = buildFile(source)
         val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-        return FunctionLowering({ it.name?.value ?: "anon" }, fn).lower()
+        return FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf()).lower()
     }
 
     /** Lower the function named [name] inside [source]. */
     private fun lowerFunction(source: String, name: String): List<LowLevelInstruction> {
         val file = buildFile(source)
         val fn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == name }
-        return FunctionLowering({ it.name?.value ?: "anon" }, fn).lower()
+        return FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf()).lower()
     }
 
     /** Lower the first function with a custom name-resolver [namer]. */
@@ -61,7 +64,7 @@ class LoweringEdgeCasesTest {
     ): List<LowLevelInstruction> {
         val file = buildFile(source)
         val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-        return FunctionLowering(namer, fn).lower()
+        return FunctionLowering(namer, fn, mutableMapOf(), setOf()).lower()
     }
 
     @Nested
@@ -148,7 +151,7 @@ class LoweringEdgeCasesTest {
             """.trimIndent()
             val file = buildFile(source)
             val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
             lowering.lower()
             // Parameter of union type must lower to JitsuUnion
             val paramType = TypeLowering.lower(fn.parameters.first().declaredType!!)
@@ -163,7 +166,7 @@ class LoweringEdgeCasesTest {
         fun `array type with i64 elements resolves element type to LLInt(BIT_64)`() {
             val file = buildFile("fn f() { var x: i64[] = [1, 2]; }")
             val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
             lowering.lower()
 
             val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
@@ -330,7 +333,7 @@ class LoweringEdgeCasesTest {
             val source = "fn f(v: i64): i64 { return v; }"
             val file = buildFile(source)
             val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
             lowering.lower()
 
             val paramType = TypeLowering.lower(fn.parameters.first().declaredType!!)
@@ -728,7 +731,7 @@ class LoweringEdgeCasesTest {
                 .first { it.name?.value == "caller" }
 
             val instructions =
-                FunctionLowering({ fn -> "MOD::${fn.name?.value ?: "anon"}" }, callerFn).lower()
+                FunctionLowering({ fn -> "MOD::${fn.name?.value ?: "anon"}" }, callerFn, mutableMapOf(), setOf()).lower()
 
             val invokes = instructions.filterIsInstance<Invoke>()
             assertThat(invokes).anyMatch { it.functionName == "MOD::target" }
@@ -757,7 +760,7 @@ class LoweringEdgeCasesTest {
                 .first { it.name?.value == "caller" }
 
             val instructions =
-                FunctionLowering({ fn -> "NS_${fn.name?.value ?: "anon"}" }, callerFn).lower()
+                FunctionLowering({ fn -> "NS_${fn.name?.value ?: "anon"}" }, callerFn, mutableMapOf(), setOf()).lower()
 
             val invokeNames = instructions.filterIsInstance<Invoke>().map { it.functionName }
             assertThat(invokeNames).contains("NS_alpha", "NS_beta")
@@ -956,7 +959,11 @@ class LoweringEdgeCasesTest {
                 .first { it.name?.value == "ping" }
 
             val namingMap = mapOf(pingFn to "pkg.ping", pongFn to "pkg.pong")
-            val instructions = FunctionLowering({ fn -> namingMap[fn] ?: fn.name?.value ?: "anon" }, pongFn).lower()
+            val instructions = FunctionLowering(
+                { fn -> namingMap[fn] ?: fn.name?.value ?: "anon" },
+                pongFn,
+                mutableMapOf(), setOf()
+            ).lower()
 
             val invokes = instructions.filterIsInstance<Invoke>()
             assertThat(invokes).anyMatch { it.functionName == "pkg.ping" }
@@ -1004,7 +1011,7 @@ class LoweringEdgeCasesTest {
             // since we can't directly inspect the Return expression's type.
             val file = buildFile("fn f(): u32 { var x: u32 = 5; return x; }")
             val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
             lowering.lower()
 
             val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions

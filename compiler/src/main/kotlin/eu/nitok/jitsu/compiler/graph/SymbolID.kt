@@ -7,7 +7,6 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import java.awt.Color
 
 @Serializable(SymbolIDSerializer::class)
 data class SymbolID(val module: String?, val index: Int)
@@ -17,7 +16,7 @@ internal object SymbolIDSerializer : KSerializer<SymbolID> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("sid", PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: SymbolID) {
-        if(value.module != null) encoder.encodeString("${value.index}/${value.module}")
+        if(value.module != null) encoder.encodeString("${value.module}/${value.index}")
         else encoder.encodeString(value.index.toString(16))
     }
 

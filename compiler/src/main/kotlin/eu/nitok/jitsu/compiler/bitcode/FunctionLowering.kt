@@ -5,8 +5,8 @@ import eu.nitok.jitsu.compiler.bitcode.LowLevelInstruction.*
 import eu.nitok.jitsu.compiler.graph.api.*
 import eu.nitok.jitsu.compiler.graph.api.Expression.*
 import eu.nitok.jitsu.compiler.graph.api.Function
-import eu.nitok.jitsu.compiler.graph.api.Instruction.*
-import kotlin.collections.find
+import eu.nitok.jitsu.compiler.graph.api.Instruction.FunctionCall
+import eu.nitok.jitsu.compiler.graph.api.Variable
 
 /**
  * Result of lowering an expression.
@@ -30,9 +30,11 @@ data class LoweredExpression(
  */
 class FunctionLowering(
     val getUniqueName: (function: Function) -> String,
-    val function: Function
+    val function: Function,
+    val variableMappings: MutableMap<Variable, String>,
+    val reservedNames: Set<String>
 ) {
-    val variableRegistry = VariableRegistry(function)
+    val variableRegistry = VariableRegistry(function, variableMappings, reservedNames)
     val ctx = LoweringContext()
 
     fun lower(): List<LowLevelInstruction> {
@@ -77,7 +79,7 @@ class FunctionLowering(
 
         val returnValue = instruction?.value
         if (returnValue == null || expectedReturnType == null) {
-            return freeInstructions + LowLevelInstruction.Return(null)
+            return freeInstructions + Return(null)
         }
 
         // Pass expected return type as hint for type-predictive lowering
@@ -194,19 +196,10 @@ class FunctionLowering(
     }
 
     private fun lowerVariableReference(ref: VariableReference): LoweredExpression {
-        val variableName = ref.reference.value
-        val lowType = when (val target = ref.target) {
-            is Function.Parameter -> TypeLowering.lower(target.type)
+        val variable =  variableRegistry.getEntry(ref.target!!)
 
-            is VariableDeclaration -> {
-                variableRegistry.getLowLevelType(target)
-            }
-
-            else -> TODO("Unknown variable target type")
-        }
-
-        val varExpr = LowLevelExpression.Variable(variableName)
-        return LoweredExpression(varExpr, lowType, emptyList())
+        val varExpr = LowLevelExpression.Variable(variable.name)
+        return LoweredExpression(varExpr, variable.lowLevelType, emptyList())
     }
 
     /**

@@ -20,14 +20,14 @@ class FunctionLoweringTest {
     private fun lower(source: String): List<LowLevelInstruction> {
         val file = buildFile(source)
         val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-        val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+        val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
         return lowering.lower()
     }
 
     private fun lowerFunction(source: String, name: String): List<LowLevelInstruction> {
         val file = buildFile(source)
         val fn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == name }
-        val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+        val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
         return lowering.lower()
     }
 
@@ -254,7 +254,7 @@ class FunctionLoweringTest {
         fun `variable gets registered with correct I32 LowLevelType`() {
             val file = buildFile("fn f(): i32 { var x: i32 = 5; return x; }")
             val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
             lowering.lower()
 
             val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
@@ -267,7 +267,7 @@ class FunctionLoweringTest {
         fun `variable gets registered with correct I64 LowLevelType`() {
             val file = buildFile("fn f(): i64 { var x: i64 = 5; return x; }")
             val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
             lowering.lower()
 
             val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
@@ -280,7 +280,7 @@ class FunctionLoweringTest {
         fun `array variable gets registered with JitsuArray type`() {
             val file = buildFile("fn f() { var x: i32[] = [1]; }")
             val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
             lowering.lower()
 
             val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
@@ -293,7 +293,7 @@ class FunctionLoweringTest {
         fun `array variable element type is correct`() {
             val file = buildFile("fn f() { var x: i32[] = [1]; }")
             val fn = file.sequence().filterIsInstance<FunctionElement>().first()
-            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn)
+            val lowering = FunctionLowering({ it.name?.value ?: "anon" }, fn, mutableMapOf(), setOf())
             lowering.lower()
 
             val varDecl = (fn.body as FunctionElement.BodyElement.Implementation).instructions
@@ -425,7 +425,7 @@ class FunctionLoweringTest {
             )
             val mainFn = file.sequence().filterIsInstance<FunctionElement>().first { it.name?.value == "main" }
             // Use a custom naming scheme to verify it's being used
-            val lowering = FunctionLowering({ fn -> "PREFIX_${fn.name?.value ?: "anon"}" }, mainFn)
+            val lowering = FunctionLowering({ fn -> "PREFIX_${fn.name?.value ?: "anon"}" }, mainFn, mutableMapOf(), setOf())
             val instructions = lowering.lower()
             val invokes = instructions.filterIsInstance<Invoke>()
             assertThat(invokes.any { it.functionName == "PREFIX_helper" }).isTrue()
