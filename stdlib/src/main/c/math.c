@@ -1,3 +1,5 @@
+#include "jitsu.h"
+
 signed char plus_i8(signed char a, signed char b){
     return a + b;
 }
@@ -30,3 +32,10 @@ unsigned long long plus_u64(unsigned long long a, unsigned long long b){
     return a + b;
 }
 
+float plus_f32(float a, float b){
+    return a + b;
+}
+
+double plus_f64(double a, double b){
+    return a + b;
+}
