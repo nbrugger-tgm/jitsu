@@ -6,35 +6,36 @@ package eu.nitok.jitsu.gradle
 import eu.nitok.jitsu.gradle.tasks.CreateModuleInfo
 import eu.nitok.jitsu.gradle.tasks.JitsuCompile
 import eu.nitok.jitsu.gradle.tasks.JitsuTranspile
-import kotlinx.serialization.json.Json
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.Usage
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.plugins.BasePlugin
-import org.gradle.api.tasks.bundling.Zip
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.language.cpp.CppLibrary
+import org.gradle.language.cpp.CppSharedLibrary
+import org.gradle.language.cpp.CppStaticLibrary
+import org.gradle.language.cpp.plugins.CppBasePlugin
 import org.gradle.language.cpp.plugins.CppLibraryPlugin
 import org.gradle.language.cpp.tasks.CppCompile
-
-val json: Json = Json(
-    builderAction = {
-        prettyPrint = true;
-        classDiscriminator = "class"
-//        namingStrategy = JsonNamingStrategy { _, _, serialName -> serialName.split(".").last() }
-//        useArrayPolymorphism = true
-    }
-)
+import org.gradle.nativeplatform.Linkage
+import javax.inject.Inject
+import kotlin.jvm.java
 
 private const val DEFAULT_C_OUTPUT = "generated/jitsu-c"
 
 /**
  * A simple 'hello world' plugin.
  */
-class JitsuBasePlugin: Plugin<Project> {
+class JitsuBasePlugin : Plugin<Project> {
+    lateinit var cppCreator: CppLibraryCreator;
     override fun apply(project: Project) {
         project.plugins.apply(BasePlugin::class.java)
+        project.plugins.apply(CppBasePlugin::class.java)
+
+        cppCreator = project.objects.newInstance(CppLibraryCreator::class.java)
 
         val extension = project.extensions.create("jitsu", JitsuExtension::class.java).also {
             it.moduleName.convention(project.name)
@@ -43,7 +44,10 @@ class JitsuBasePlugin: Plugin<Project> {
         val main = project.registerJitsuSourceSet("main", extension, consumable = true)
         val test = project.registerJitsuSourceSet("test", extension, consumable = false)
 
-        project.tasks.findByName("build")?.dependsOn(main.transpileTasks)
+        val mainBindings = project.setupNativeBindings(main)
+        val nativeLib = project.setupNativeCompilation(main, extension, mainBindings)
+
+        project.tasks.findByName("build")
         project.tasks.register("compileJitsu") {
             it.dependsOn(main.compileTask)
         }
@@ -54,38 +58,114 @@ class JitsuBasePlugin: Plugin<Project> {
             it.dependsOn(extension.sourceSets.map { it.moduleInfoTask })
         }
 
-        setupNativeCompilation(project, main)
     }
 
-    private fun setupNativeCompilation(project: Project, jitsuSourceSet: JitsuSourceSet) {
-        project.pluginManager.apply(CppLibraryPlugin::class.java)
-        project.extensions.configure(CppLibrary::class.java) { library ->
-            val transpileTask = jitsuSourceSet.transpileTasks.first()
-            val generatedCDir = project.provider { transpileTask.get().targetDirectory }
+    private fun Project.setupNativeBindings(sourceSet: JitsuSourceSet): CppLibrary {
+        val transpileTask = sourceSet.transpileTasks.first()
+        val generatedCDir = provider { transpileTask.get().targetDirectory }
 
-            library.source.from(jitsuSourceSet.cSourceDirectory.srcDirs)
-            library.source.from(jitsuSourceSet.cclasspath)
+        val cBindingsDirectory: SourceDirectorySet = objects.sourceDirectorySet(sourceSet.name, "${sourceSet.name} C bindings")
+        cBindingsDirectory.filter.include("**/*.c")
+        cBindingsDirectory.srcDir("src/${sourceSet.name}/c")
 
-            library.privateHeaders.from(generatedCDir)
-            library.publicHeaders.from(generatedCDir.map { it.dir("headers") })
+        // Bindings are private to this module: they're only ever consumed directly by the
+        // main compilation below, never resolved as a project/publication variant.
+        val library = cppCreator.createCppLibrary(project, "${sourceSet.name}-bindings", forExternalConsumption = false)
+        // Build bindings as a static archive so their object code can be embedded directly
+        // into the main compilation's shared library (see setupNativeCompilation), instead of
+        // becoming a separate runtime dependency. Any shared-library dependencies a bindings
+        // author adds (via implementationDependencies below) still link dynamically as normal -
+        // only the bindings' own compiled code gets embedded.
+        library.linkage.set(setOf(Linkage.STATIC))
 
-            project.tasks.withType(CppCompile::class.java) {
-                it.source.from(library.source)
-                it.dependsOn(jitsuSourceSet.transpileTasks)
+        library.source.setFrom(cBindingsDirectory)
+        library.publicHeaders.from(generatedCDir.map { it.dir("bindings") })
+
+        library.implementationDependencies.extendsFrom(sourceSet.dependencyScope.get())
+
+        library.binaries.configureEach { binary ->
+            binary.compileTask.get().apply {
+                source.setFrom(library.source)
+                dependsOn(sourceSet.transpileTasks)
             }
         }
+
+        return library;
     }
 
-    internal fun Project.registerJitsuSourceSet(name: String, extension: JitsuExtension, consumable: Boolean): JitsuSourceSet {
+    /**
+     * Configures the compilation of the transpiled jitsu sources
+     */
+    private fun Project.setupNativeCompilation(
+        jitsuSourceSet: JitsuSourceSet,
+        extension: JitsuExtension,
+        bindings: CppLibrary
+    ): CppLibrary {
+        val transpileTask = jitsuSourceSet.transpileTasks.first()
+
+        val cSourceDirectory: SourceDirectorySet = objects.sourceDirectorySet(
+            jitsuSourceSet.name,
+            "${jitsuSourceSet.name} generated C sources"
+        )
+        cSourceDirectory.filter.include("**/*.c")
+        cSourceDirectory.srcDir(transpileTask.map { it.targetDirectory })
+
+
+        // This is the library that gets published/consumed by other modules.
+        val library = cppCreator.createCppLibrary(project, "jitsuTranspiled", forExternalConsumption = true)
+
+        extension.nativeCompilation = library
+        val generatedCDir = provider { transpileTask.get().targetDirectory }
+
+        library.source.setFrom(cSourceDirectory)
+        library.privateHeaders.from(generatedCDir)
+        library.publicHeaders.from(generatedCDir.map { it.dir("publicHeaders") })
+
+        // Propagate any external (dynamically linked) dependencies a bindings author declared -
+        // the bindings' own object code is embedded directly (see below), but its third-party
+        // dependencies still need to be resolved/linked when building the final library.
+        library.implementationDependencies.extendsFrom(bindings.implementationDependencies)
+
+        library.binaries.configureEach { binary ->
+            binary.compileTask.get().apply {
+                source.setFrom(library.source)
+                dependsOn(jitsuSourceSet.transpileTasks)
+                // Bindings are not consumable via Gradle configurations (they're internal-only),
+                // so headers/link libraries are wired directly by object reference instead.
+                includes.from(bindings.publicHeaderDirs)
+            }
+            if (binary is CppSharedLibrary) {
+                // Match the binding's static archive of the same build type (debug/release) and
+                // embed its object code directly into this shared library via --whole-archive,
+                // so all of its symbols (even unreferenced ones) end up exported here.
+                val matchingBindingsBinary = bindings.binaries.get()
+                    .filterIsInstance<CppStaticLibrary>()
+                    .firstOrNull { it.isOptimized == binary.isOptimized }
+                if (matchingBindingsBinary != null) {
+                    val linkTask = binary.linkTask.get()
+                    linkTask.dependsOn(matchingBindingsBinary.linkFileProducer)
+                    linkTask.linkerArgs.addAll(matchingBindingsBinary.linkFile.map { linkFile ->
+                        listOf("-Wl,--whole-archive", linkFile.asFile.absolutePath, "-Wl,--no-whole-archive")
+                    })
+                }
+            }
+        }
+        return library;
+    }
+
+    internal fun Project.registerJitsuSourceSet(
+        name: String,
+        extension: JitsuExtension,
+        consumable: Boolean
+    ): JitsuSourceSet {
         val sourceDirectory: SourceDirectorySet = objects.sourceDirectorySet(name, "$name Jitsu source")
         sourceDirectory.filter.include("**/*.jit")
         sourceDirectory.srcDir("src/${name}/jitsu")
 
-        val cSourceDirectory: SourceDirectorySet = objects.sourceDirectorySet(name, "$name C source")
-        cSourceDirectory.filter.include("**/*.c")
-        cSourceDirectory.srcDir("src/${name}/c")
+        val resourceDirectory: SourceDirectorySet = objects.sourceDirectorySet(name, "$name resources")
+        resourceDirectory.srcDir("src/${name}/resources")
 
-        val sourceSetName = if(name == "main") extension.moduleName else extension.moduleName.map { "$it.$name" }
+        val sourceSetName = if (name == "main") extension.moduleName else extension.moduleName.map { "$it.$name" }
 
         val dependencies = configurations.dependencyScope("jitsu${name.capitalized()}")
         val classpath = configurations.resolvable("${name}JitsuClasspath") {
@@ -93,10 +173,9 @@ class JitsuBasePlugin: Plugin<Project> {
             it.attributes.attribute(artifactType, JitsuArtifactType.IR)
             it.attributes.attribute(Attribute.of("usage", String::class.java), "for-compilation")
         }
-        val classpathBindings = configurations.resolvable("${name}JitsuCClasspath") {
+        val nativeBindingsClasspath = configurations.resolvable("${name}JitsuNativeClasspath") {
             it.extendsFrom(dependencies.get())
-            it.attributes.attribute(artifactType, JitsuArtifactType.C)
-            it.attributes.attribute(Attribute.of("usage", String::class.java), "for-compilation")
+            it.attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage::class.java, Usage.NATIVE_LINK))
         }
 
         val compileTask = tasks.register("compile${name.capitalized()}Jitsu", JitsuCompile::class.java) {
@@ -111,38 +190,31 @@ class JitsuBasePlugin: Plugin<Project> {
 //            it.backend.set(CBackend())
             it.targetDirectory.set(project.layout.buildDirectory.dir(DEFAULT_C_OUTPUT))
         }
-        cSourceDirectory.srcDir(transpileCTask.map { it.targetDirectory })
 
-        val moduleInfoTask = tasks.register("createJitsu${name.capitalized()}ModuleInfo", CreateModuleInfo::class.java) {
-            it.moduleName.set(sourceSetName)
-            it.moduleDir.set(sourceDirectory.sourceDirectories.singleFile)
-        }
-        if(consumable) {
+        val moduleInfoTask =
+            tasks.register("createJitsu${name.capitalized()}ModuleInfo", CreateModuleInfo::class.java) {
+                it.moduleName.set(sourceSetName)
+                it.moduleDir.set(sourceDirectory.sourceDirectories.singleFile)
+            }
+        if (consumable) {
             val elements = configurations.consumable("${name}JitsuElements") {
                 it.extendsFrom(dependencies.get())
                 it.attributes.attribute(artifactType, JitsuArtifactType.IR)
             }
-            val cElements = configurations.consumable("${name}JitsuCElements") {
-                it.extendsFrom(dependencies.get())
-                it.attributes.attribute(artifactType, JitsuArtifactType.C)
-            }
-            val cSourcesArtifact = tasks.register("package${name}CSources", Zip::class.java) {
-                it.archiveClassifier.set("c-sources")
-                it.from(cSourceDirectory)
-            }
+
             artifacts.add(elements.name, compileTask.flatMap { it.targetFile })
-            artifacts.add(cElements.name, cSourcesArtifact)
         }
 
         val sourceSetProvider = JitsuSourceSet(
-            sourceDirectory = sourceDirectory,
-            cSourceDirectory = cSourceDirectory,
+            jistuSources = sourceDirectory,
+            resourceSource = resourceDirectory,
+            nativeBindingsClasspath = nativeBindingsClasspath,
             compileTask = compileTask,
             transpileTasks = listOf(transpileCTask),
             moduleInfoTask = moduleInfoTask,
             classpath = classpath,
-            cclasspath = classpathBindings,
-            dependencyScope = dependencies
+            dependencyScope = dependencies,
+            consumable = consumable
         )
 
         extension.sourceSets.add(sourceSetProvider)

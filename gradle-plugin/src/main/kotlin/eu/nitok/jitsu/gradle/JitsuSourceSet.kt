@@ -7,18 +7,20 @@ import org.gradle.api.Named
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.TaskProvider
 
 class JitsuSourceSet(
-    val sourceDirectory: SourceDirectorySet,
-    val compileTask: Provider<JitsuCompile>,
-    val transpileTasks: List<Provider<JitsuTranspile>>,
+    val jistuSources: SourceDirectorySet,
+    val resourceSource: SourceDirectorySet,
+    val compileTask: TaskProvider<JitsuCompile>,
+    val transpileTasks: List<TaskProvider<JitsuTranspile>>,
     val moduleInfoTask: Provider<CreateModuleInfo>,
     val classpath: Provider<out Configuration>,
+    val nativeBindingsClasspath: Provider<out Configuration>,
     val dependencyScope: Provider<out Configuration>,
-    val cSourceDirectory: SourceDirectorySet,
-    val cclasspath: Provider<out Configuration>,
+    val consumable: Boolean
 ) : Named {
     override fun getName(): String {
-        return sourceDirectory.name
+        return jistuSources.name
     }
 }

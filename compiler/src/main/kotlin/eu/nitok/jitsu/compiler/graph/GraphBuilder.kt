@@ -116,10 +116,11 @@ private enum class ReferenceResolutionMode {
 private fun populateReferences(
     module: JitsuModule,
     messages: CompilerMessages,
-    moduleLookup: Map<String, JitsuModule>,
+    externalModules: Map<String, JitsuModule>,
     resolutionMode: ReferenceResolutionMode = RESOLVE
 ) {
     module.setScopes()
+    val moduleLookup = externalModules + module.moduleLookup
     module.sequence().forEach {
         if (it is Import) {
             it.resolve(messages, moduleLookup)

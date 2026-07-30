@@ -3,10 +3,9 @@ package eu.nitok.jitsu.backend.c
 import eu.nitok.jitsu.common.indent
 import eu.nitok.jitsu.compiler.bitcode.*
 import eu.nitok.jitsu.compiler.transpile.Backend
+import java.io.BufferedWriter
 import java.nio.file.Path
 import kotlin.io.path.bufferedWriter
-import kotlin.io.path.createFile
-import kotlin.io.path.createParentDirectories
 import kotlin.io.path.relativeTo
 
 class CBackend : Backend {
@@ -17,60 +16,84 @@ class CBackend : Backend {
     }
 
     private fun transpile(module: LoweredModule, dir: Path): Path {
-        val code = dir.resolve("${module.name}.c").createParentDirectories()
-        val headers = dir.resolve("${module.name}.private.h").createParentDirectories()
-        val publicHeaders = dir.resolve("headers").resolve("${module.name}.public.h").createParentDirectories()
-        try {
-            code.createFile()
-        } catch (_: FileAlreadyExistsException) {
-        }
-        try {
-            headers.createFile()
-        } catch (_: FileAlreadyExistsException) {
-        }
-        try {
-            publicHeaders.createFile()
-        } catch (_: FileAlreadyExistsException) {
-        }
+        val code = createOutputFile(createOutputFile(dir.resolve("${module.name}.c")))
+        val headers = createOutputFile(dir.resolve("${module.name}.private.h"))
+        val publicHeaders = createOutputFile(dir.resolve("publicHeaders").resolve("${module.name}.h"))
+        val bindingHeaders = createOutputFile(dir.resolve("bindings").resolve("${module.name}.h"))
 
         val typeRegistry = TypeRegistry()
         val functions = module.functions.map { fn ->
             transpileFunction(typeRegistry, fn)
         }
 
-        headers.bufferedWriter().use { writer ->
-            writer.write(typeRegistry.typeDefs)
-            writer.newLine()
-            writer.newLine()
+        headers.bufferedWriter().writeHeaders {
+            write(typeRegistry.typeDefs)
+            newLine()
+            newLine()
             functions.forEach {
-                writer.write(it.def)
-                writer.newLine()
+                write(it.def)
+                newLine()
             }
         }
 
         //TODO filter exported members
-        publicHeaders.bufferedWriter().use { writer ->
-            writer.write(typeRegistry.typeDefs)
-            writer.newLine()
-            writer.newLine()
+        publicHeaders.bufferedWriter().writeHeaders {
+            write(typeRegistry.typeDefs)
+            newLine()
+            newLine()
             functions.forEach {
-                writer.write(it.def)
-                writer.newLine()
+                 write(it.def)
+                 newLine()
             }
         }
-        val implementedFunctions = functions.filter { it.impl != null }
+
+        // function.impl == null -> Binding/native function
+        val (implementedFunction, nativeBindings) = functions.groupBy { it.impl != null }.run {
+            (get(true)?:listOf()) to (get(false)?:listOf())
+        }
+
+        bindingHeaders.bufferedWriter().writeHeaders {
+            write(typeRegistry.typeDefs)
+            newLine()
+            newLine()
+            nativeBindings.forEach {
+                write(it.def)
+                newLine()
+            }
+        }
 
         code.bufferedWriter().use { writer ->
             writer.write("#include \"${headers.relativeTo(code.parent)}\"")
             writer.newLine()
-            writer.write("#include <cstdlib>")
+            writer.write("#include <stdlib.h>")
             writer.newLine()
             writer.newLine()
-            writer.write(implementedFunctions.joinToString("\n") { it.impl!! })
-            writer.flush()
+            writer.write(implementedFunction.joinToString("\n") { it.impl!! })
         }
 
         return code
+    }
+
+    private fun BufferedWriter.writeHeaders(headers: BufferedWriter.() -> Unit) {
+        write("#ifdef __cplusplus")
+        newLine()
+        write("extern \"C\" {")
+        newLine()
+        write("#endif")
+        newLine()
+        newLine()
+
+        headers(this)
+
+        newLine()
+        newLine()
+        write("#ifdef __cplusplus")
+        newLine()
+        write("}")
+        newLine()
+        write("#endif")
+        newLine()
+        flush()
     }
 
     private data class CFunc(val def: String, val impl: String?)
@@ -154,8 +177,19 @@ ${indent(1, body.joinToString("\n") { it.toCCode(typeRegistry) })}
             }
 
             is LowLevelExpression.Compare -> "${left.toCCode(typeRegistry)} == ${right.toCCode(typeRegistry)}"
-            is LowLevelExpression.AllocHeap -> "(${typeRegistry.formatType("", layout)} *) malloc(sizeof(${typeRegistry.formatType("",layout)}))"
-            is LowLevelExpression.AllocHeapArray -> "(${typeRegistry.formatType("", elementType)} *) malloc(sizeof(${typeRegistry.formatType("",elementType)}) * ${
+            is LowLevelExpression.AllocHeap -> "(${
+                typeRegistry.formatType(
+                    "",
+                    layout
+                )
+            } *) malloc(sizeof(${typeRegistry.formatType("", layout)}))"
+
+            is LowLevelExpression.AllocHeapArray -> "(${
+                typeRegistry.formatType(
+                    "",
+                    elementType
+                )
+            } *) malloc(sizeof(${typeRegistry.formatType("", elementType)}) * ${
                 size.toCCode(typeRegistry)
             })"
 
