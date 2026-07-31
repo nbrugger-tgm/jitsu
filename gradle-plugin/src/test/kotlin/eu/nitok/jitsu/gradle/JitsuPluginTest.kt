@@ -5,6 +5,8 @@ package eu.nitok.jitsu.gradle
 
 import org.assertj.core.api.Assertions.assertThat
 import org.gradle.testfixtures.ProjectBuilder
+import org.gradle.language.cpp.CppApplication
+import org.gradle.language.cpp.CppLibrary
 import org.junit.jupiter.api.Test
 
 /**
@@ -22,6 +24,13 @@ class JitsuPluginTest {
         assertThat(project.tasks.findByName("compileJitsu")).isNotNull()
     }
 
+    @Test fun `lib-plugin exposes a CppLibrary native compilation`() {
+        val project = ProjectBuilder.builder().build()
+        project.plugins.apply("eu.nitok.jitsu-lib")
+
+        assertThat(project.extensions.getByType(JitsuExtension::class.java).nativeCompilation).isInstanceOf(CppLibrary::class.java)
+    }
+
     @Test fun `app-plugin registers task`() {
         // Create a test project and apply the plugin
         val project = ProjectBuilder.builder().build()
@@ -31,5 +40,12 @@ class JitsuPluginTest {
         assertThat(project.tasks.findByName("compileMainJitsu")).isNotNull()
         assertThat(project.tasks.findByName("compileJitsu")).isNotNull()
         assertThat(project.tasks.findByName("compileTestJitsu")).isNotNull()
+    }
+
+    @Test fun `app-plugin exposes a CppApplication native compilation`() {
+        val project = ProjectBuilder.builder().build()
+        project.plugins.apply("eu.nitok.jitsu-app")
+
+        assertThat(project.extensions.getByType(JitsuExtension::class.java).nativeCompilation).isInstanceOf(CppApplication::class.java)
     }
 }

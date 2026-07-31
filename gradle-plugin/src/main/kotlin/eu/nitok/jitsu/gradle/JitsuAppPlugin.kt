@@ -3,14 +3,45 @@
  */
 package eu.nitok.jitsu.gradle
 
-import org.gradle.api.Project
 import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.file.SourceDirectorySet
+import org.gradle.language.cpp.CppApplication
+import org.gradle.language.cpp.plugins.CppApplicationPlugin
 
 /**
- * A simple 'hello world' plugin.
+ * Builds a Jitsu module as a native executable.
  */
-class JitsuAppPlugin: Plugin<Project> {
+class JitsuAppPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         project.plugins.apply(JitsuBasePlugin::class.java)
+        project.plugins.apply(CppApplicationPlugin::class.java)
+
+        val extension = project.extensions.getByType(JitsuExtension::class.java)
+        val main = extension.sourceSets.getByName("main")
+        val application = project.setupNativeApplicationCompilation(main)
+
+        application.attachBindings(main)
+
+    }
+
+    private fun Project.setupNativeApplicationCompilation(
+        main: JitsuSourceSet
+    ): CppApplication {
+        val application = extensions.getByType(CppApplication::class.java)
+        val cSourceDirectory: SourceDirectorySet = objects.sourceDirectorySet(
+            main.name,
+            "${main.name} generated C sources"
+        )
+        cSourceDirectory.filter.include("**/*.c")
+        cSourceDirectory.srcDir(main.transpileTask.map { it.targetDirectory })
+
+        main.nativeCompilation = application
+        application.source.setFrom(cSourceDirectory)
+
+
+        application.privateHeaders.from(main.transpileTask.map { it.targetDirectory })
+        application.implementationDependencies.extendsFrom(main.nativeBindings.implementationDependencies)
+        return application
     }
 }

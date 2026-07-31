@@ -3,17 +3,8 @@ package eu.nitok.jitsu.gradle
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ConfigurablePublishArtifact
-import org.gradle.api.internal.artifacts.dsl.LazyPublishArtifact
 import org.gradle.api.internal.attributes.AttributesFactory
-import org.gradle.api.internal.project.ProjectInternal
-import org.gradle.api.plugins.AppliedPlugin
-import org.gradle.api.services.ServiceReference
-import org.gradle.api.tasks.bundling.Zip
-import org.gradle.language.cpp.CppBinary
-import org.gradle.language.cpp.CppLibrary
-import org.gradle.language.cpp.CppPlatform
-import org.gradle.language.cpp.CppSharedLibrary
-import org.gradle.language.cpp.CppStaticLibrary
+import org.gradle.language.cpp.*
 import org.gradle.language.cpp.internal.DefaultCppLibrary
 import org.gradle.language.cpp.internal.DefaultCppPlatform
 import org.gradle.language.internal.NativeComponentFactory
@@ -25,7 +16,6 @@ import org.gradle.nativeplatform.Linkage
 import org.gradle.nativeplatform.TargetMachineFactory
 import org.gradle.nativeplatform.platform.internal.Architectures
 import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
-import java.io.File
 import java.util.concurrent.Callable
 import java.util.stream.Stream
 import javax.inject.Inject

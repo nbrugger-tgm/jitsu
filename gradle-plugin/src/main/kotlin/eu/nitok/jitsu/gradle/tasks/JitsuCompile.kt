@@ -55,7 +55,7 @@ abstract class JitsuCompile @Inject constructor() : DefaultTask() {
         moduleCache.createNewFile()
         graph.writeToFile(moduleCache.toPath())
         logger.info("Store module cache in $moduleCache")
-        logger.lifecycle("Compile Jitsu with dependencies: ${dependencies.files.joinToString(", ")}")
+        logger.info("Compile Jitsu with dependencies: ${dependencies.files.joinToString(", ")}")
     }
     class ModuleDirectory(var name: String, var subModules: MutableList<ModuleDirectory>, var files: MutableList<Path>)
     protected fun parse(moduleName: String): Pair<JitsuModuleAst, List<CompilerMessage>> {
