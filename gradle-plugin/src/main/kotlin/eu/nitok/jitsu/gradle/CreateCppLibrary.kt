@@ -26,7 +26,12 @@ open class CppLibraryCreator @Inject constructor(
     val attributesFactory: AttributesFactory,
     val targetMachineFactory: TargetMachineFactory
 ) {
-    fun createCppLibrary(project: Project, name: String, forExternalConsumption:Boolean): CppLibrary {
+    fun createCppLibrary(
+        project: Project,
+        name: String,
+        publishedArtifactKind: String? = null,
+        publishedCapability: Any? = null
+    ): CppLibrary {
         val library = componentFactory.newInstance(
             CppLibrary::class.java,
             DefaultCppLibrary::class.java,
@@ -116,10 +121,11 @@ open class CppLibraryCreator @Inject constructor(
             apiElements.outgoing.artifact(
                 publicHeaders,
                 Action { it: ConfigurablePublishArtifact? -> it!!.builtBy(*arrayOf<Any?>(library.publicHeaderDirs)) })
-            if (!forExternalConsumption) {
-                // Bindings are only meant to be consumed directly (by object reference) from the
-                // main compilation task within this same build, not resolved as a Gradle variant.
-                apiElements.isCanBeConsumed = false
+            if (publishedArtifactKind != null) {
+                apiElements.attributes.attribute(nativeArtifactKind, publishedArtifactKind)
+                if (publishedCapability != null) {
+                    apiElements.outgoing.capability(publishedCapability)
+                }
             }
 //            project.project.pluginManager.withPlugin("maven-publish", Action { appliedPlugin: AppliedPlugin? ->
 //                val headersZip = project.tasks.register<Zip?>("cppHeaders", Zip::class.java, Action { task: Zip? ->
@@ -132,11 +138,20 @@ open class CppLibraryCreator @Inject constructor(
 //                library.mainPublication.addArtifact(headersZip)
 //            })
             library.binaries.realizeNow()
-            if (!forExternalConsumption) {
-                // hiding the elements from public consumption
+            if (publishedArtifactKind != null) {
                 library.binaries.get().forEach { binary ->
-                    (binary as? ComponentWithLinkUsage)?.linkElements?.orNull?.isCanBeConsumed = false
-                    (binary as? ComponentWithRuntimeUsage)?.runtimeElements?.orNull?.isCanBeConsumed = false
+                    (binary as? ComponentWithLinkUsage)?.linkElements?.orNull?.apply {
+                        attributes.attribute(nativeArtifactKind, publishedArtifactKind)
+                        if (publishedCapability != null) {
+                            outgoing.capability(publishedCapability)
+                        }
+                    }
+                    (binary as? ComponentWithRuntimeUsage)?.runtimeElements?.orNull?.apply {
+                        attributes.attribute(nativeArtifactKind, publishedArtifactKind)
+                        if (publishedCapability != null) {
+                            outgoing.capability(publishedCapability)
+                        }
+                    }
                 }
             }
         }

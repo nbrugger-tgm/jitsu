@@ -39,7 +39,7 @@ class JitsuLibPlugin : Plugin<Project> {
         cSourceDirectory.filter.include("**/*.c")
         cSourceDirectory.srcDir(transpileTask.map { it.targetDirectory })
 
-        val library = cppCreator.createCppLibrary(this, sourceSet.name, forExternalConsumption = true)
+        val library = cppCreator.createCppLibrary(this, sourceSet.name)
         sourceSet.nativeCompilation = library
         val generatedCDir = provider { transpileTask.get().targetDirectory }
 

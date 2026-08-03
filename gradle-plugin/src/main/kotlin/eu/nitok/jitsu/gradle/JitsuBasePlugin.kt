@@ -31,6 +31,8 @@ class JitsuBasePlugin : Plugin<Project> {
     override fun apply(project: Project) {
         project.plugins.apply(BasePlugin::class.java)
         project.plugins.apply(CppBasePlugin::class.java)
+        project.dependencies.attributesSchema.attribute(nativeArtifactKind)
+        project.dependencies.attributesSchema.attribute(artifactType)
 
         val extension = project.extensions.create("jitsu", JitsuExtension::class.java).also {
             it.moduleName.convention(project.name)
@@ -85,7 +87,12 @@ internal fun Project.setupNativeBindings(
     cBindingsSourceDirs.filter.include("**/*.c")
     cBindingsSourceDirs.srcDir("src/${sourceSetName}/c")
 
-    val library = cppCreator.createCppLibrary(project, "${sourceSetName}-bindings", forExternalConsumption = false)
+    val library = cppCreator.createCppLibrary(
+        project,
+        "${sourceSetName}-bindings",
+        publishedArtifactKind = BINDINGS_NATIVE_ARTIFACT,
+        publishedCapability = if (sourceSetName == "test") testFixtureCapability else null
+    )
     library.linkage.set(setOf(Linkage.STATIC))
     library.source.setFrom(cBindingsSourceDirs)
     library.publicHeaders.from(transpileTask.map { it.targetDirectory.dir("bindings") })
@@ -140,28 +147,12 @@ internal fun Project.registerJitsuSourceSet(
 
 internal fun CppComponent.attachBindings(main: JitsuSourceSet) {
     val bindings = main.nativeBindings
+    source.from(bindings.source)
+    privateHeaders.from(bindings.publicHeaders)
     binaries.configureEach { binary ->
         binary.compileTask.get().apply {
             source.setFrom(this@attachBindings.source)
             dependsOn(main.transpileTask)
-            includes.from(bindings.publicHeaderDirs)
-        }
-        if (binary is ComponentWithSharedLibrary) {
-            val matchingBindingsBinary = bindings.binaries.get()
-                .filterIsInstance<CppStaticLibrary>()
-                .firstOrNull { it.isOptimized == (binary as ComponentWithSharedLibrary).isOptimized }
-            if (matchingBindingsBinary != null) {
-                val linkTask = binary.linkTask.get()
-                linkTask.dependsOn(matchingBindingsBinary.linkFileProducer)
-                linkTask.linkerArgs.addAll(matchingBindingsBinary.linkFile.map { linkFile ->
-                    if (linkFile.asFile.exists()) listOf(
-                        "-Wl,--whole-archive",
-                        linkFile.asFile.absolutePath,
-                        "-Wl,--no-whole-archive"
-                    )
-                    else listOf()
-                })
-            }
         }
     }
 }
