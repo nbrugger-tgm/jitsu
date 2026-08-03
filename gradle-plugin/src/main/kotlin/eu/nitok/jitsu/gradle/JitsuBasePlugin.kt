@@ -11,15 +11,17 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ConsumableConfiguration
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ExternalModuleDependency
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.language.cpp.CppComponent
 import org.gradle.language.cpp.CppLibrary
-import org.gradle.language.cpp.CppStaticLibrary
 import org.gradle.language.cpp.plugins.CppBasePlugin
-import org.gradle.language.nativeplatform.ComponentWithSharedLibrary
 import org.gradle.nativeplatform.Linkage
 
 internal const val DEFAULT_C_OUTPUT = "generated/jitsu-c"
