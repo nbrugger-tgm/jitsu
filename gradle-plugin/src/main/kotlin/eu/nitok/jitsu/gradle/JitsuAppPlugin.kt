@@ -20,9 +20,6 @@ class JitsuAppPlugin : Plugin<Project> {
         val extension = project.extensions.getByType(JitsuExtension::class.java)
         val main = extension.sourceSets.getByName("main")
         val application = project.setupNativeApplicationCompilation(main)
-
-        application.attachBindings(main)
-
     }
 
     private fun Project.setupNativeApplicationCompilation(
@@ -41,7 +38,8 @@ class JitsuAppPlugin : Plugin<Project> {
 
 
         application.privateHeaders.from(main.transpileTask.map { it.targetDirectory })
-        application.implementationDependencies.extendsFrom(main.nativeBindings.implementationDependencies)
+        attachBindingsDependencies(application, main.dependencyScope.get())
+        application.attachBindings(main)
         return application
     }
 }

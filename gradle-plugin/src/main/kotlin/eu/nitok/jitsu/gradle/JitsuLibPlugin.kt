@@ -48,7 +48,7 @@ class JitsuLibPlugin : Plugin<Project> {
 
 
         library.privateHeaders.from(generatedCDir)
-        library.implementationDependencies.extendsFrom(sourceSet.nativeBindings.implementationDependencies)
+        attachBindingsDependencies(library, sourceSet.dependencyScope.get())
 
         library.attachBindings(sourceSet)
         return library

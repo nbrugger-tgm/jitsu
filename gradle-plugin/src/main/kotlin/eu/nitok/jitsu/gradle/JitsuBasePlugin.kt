@@ -67,16 +67,20 @@ class JitsuBasePlugin : Plugin<Project> {
         return configurations.consumable("testJitsuElements") {
             it.extendsFrom(sourceSet.get().classpath.get())
             it.attributes.attribute(artifactType, JitsuArtifactType.IR)
-            it.outgoing.capability(testFixtureName)
+            it.outgoing.capability(testFixtureCapability)
             it.outgoing.artifact(sourceSet.get().compileTask.flatMap { it.targetFile })
         }
     }
 
-    private val Project.testFixtureName: String
-        get() = "${
-            group.toString().ifEmpty { path.removePrefix(":").replace(":", ".") }.ifEmpty { "default" }
-        }:${name}-testfixtures:${version}"
 }
+
+internal val Project.testFixtureName: String
+    get() = "${
+        group.toString().ifEmpty { path.removePrefix(":").replace(":", ".") }.ifEmpty { "default" }
+    }:${name}-testfixtures:${version}"
+
+internal val Project.testFixtureCapability: Any
+    get() = providers.provider { testFixtureName }
 
 internal fun Project.setupNativeBindings(
     sourceSetName: String,
@@ -147,10 +151,49 @@ internal fun Project.registerJitsuSourceSet(
     sourceSet.nativeBindings = setupNativeBindings(sourceSet.name, transpileCTask, dependencies.get())
 }
 
+internal fun Project.attachBindingsDependencies(component: CppComponent, dependencyScope: Configuration) {
+    dependencyScope.dependencies.configureEach { dependency ->
+        copyDependencyForBindings(dependency, requireTestFixtures = false)?.let { bindingDependency ->
+            component.implementationDependencies.dependencies.add(bindingDependency)
+        }
+    }
+}
+
+private fun Project.copyDependencyForBindings(
+    dependency: Dependency,
+    requireTestFixtures: Boolean
+): Dependency? {
+    val copy = when (dependency) {
+        is ProjectDependency -> dependencies.project(mapOf("path" to dependency.path))
+        is ExternalModuleDependency -> dependencies.create(
+            mapOf(
+                "group" to dependency.group,
+                "name" to dependency.name,
+                "version" to dependency.version
+            )
+        )
+        else -> dependency.copy()
+    }
+
+    if (copy is ModuleDependency) {
+        copy.attributes {
+            it.attribute(nativeArtifactKind, BINDINGS_NATIVE_ARTIFACT)
+        }
+        if (requireTestFixtures) {
+            copy.capabilities {
+                it.requireCapability(testFixtureCapability)
+            }
+        }
+    }
+
+    return copy
+}
+
 internal fun CppComponent.attachBindings(main: JitsuSourceSet) {
     val bindings = main.nativeBindings
     source.from(bindings.source)
     privateHeaders.from(bindings.publicHeaders)
+    implementationDependencies.extendsFrom(bindings.implementationDependencies)
     binaries.configureEach { binary ->
         binary.compileTask.get().apply {
             source.setFrom(this@attachBindings.source)
