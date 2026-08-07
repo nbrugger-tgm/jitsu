@@ -16,7 +16,7 @@ internal object SymbolIDSerializer : KSerializer<SymbolID> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("sid", PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: SymbolID) {
-        if(value.module != null) encoder.encodeString("${value.module}/${value.index}")
+        if(value.module != null) encoder.encodeString("${value.module}/${value.index.toString(16)}")
         else encoder.encodeString(value.index.toString(16))
     }
 
