@@ -7,6 +7,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.language.cpp.CppApplication
+import org.gradle.language.cpp.ProductionCppComponent
 import org.gradle.language.cpp.plugins.CppApplicationPlugin
 
 /**
@@ -18,28 +19,8 @@ class JitsuAppPlugin : Plugin<Project> {
         project.plugins.apply(CppApplicationPlugin::class.java)
 
         val extension = project.extensions.getByType(JitsuExtension::class.java)
-        val main = extension.sourceSets.getByName("main")
-        val application = project.setupNativeApplicationCompilation(main)
-    }
 
-    private fun Project.setupNativeApplicationCompilation(
-        main: JitsuSourceSet
-    ): CppApplication {
-        val application = extensions.getByType(CppApplication::class.java)
-        val cSourceDirectory: SourceDirectorySet = objects.sourceDirectorySet(
-            main.name,
-            "${main.name} generated C sources"
-        )
-        cSourceDirectory.filter.include("**/*.c")
-        cSourceDirectory.srcDir(main.transpileTask.map { it.targetDirectory })
-
-        main.nativeCompilation = application
-        application.source.setFrom(cSourceDirectory)
-
-
-        application.privateHeaders.from(main.transpileTask.map { it.targetDirectory })
-        attachBindingsDependencies(application, main.dependencyScope.get())
-        application.attachBindings(main)
-        return application
+        val cppApp = project.extensions.getByType(CppApplication::class.java)
+        extension.sourceSets.main.get().setupNativeCompilation(cppApp, project)
     }
 }

@@ -21,7 +21,7 @@ open class JitsuSourceSet(
     val name: String,
     private val tasks: TaskContainer,
     private val configurations: ConfigurationContainer,
-    private val objects: ObjectFactory
+    objects: ObjectFactory
 ) : Named {
 
     val jistuSources: SourceDirectorySet = objects.sourceDirectorySet("jitsu$name", "$name Jitsu source").apply {
@@ -54,10 +54,12 @@ open class JitsuSourceSet(
     val transpileTask: TaskProvider<JitsuTranspile> get() = tasks.named(transpileTaskName, JitsuTranspile::class.java)
     val moduleInfoTaskName: String = "createJitsu${name.capitalized()}ModuleInfo"
     val moduleInfoTask: Provider<CreateModuleInfo> get() = tasks.named(moduleInfoTaskName, CreateModuleInfo::class.java)
-    val classpathName: String = "${name}JitsuClasspath"
-    val classpath: NamedDomainObjectProvider<out Configuration> get() = configurations.named(classpathName)
+    val moduleClasspathName: String = "${name}JitsuModuleClasspath"
+    val moduleClasspath: NamedDomainObjectProvider<out Configuration> get() = configurations.named(moduleClasspathName)
     val dependencyScopeName: String = "jitsu${name.capitalized()}"
     val dependencyScope: NamedDomainObjectProvider<out Configuration> get() = configurations.named(dependencyScopeName)
+    val nativeDependencyScopeName: String = "jitsu${name.capitalized()}Bindings"
+    val nativeDependencyScope: NamedDomainObjectProvider<out Configuration> get() = configurations.named(nativeDependencyScopeName)
 
     override fun getName(): String {
         return name

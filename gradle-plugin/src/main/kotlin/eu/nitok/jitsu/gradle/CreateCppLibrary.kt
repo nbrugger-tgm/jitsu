@@ -30,7 +30,7 @@ open class CppLibraryCreator @Inject constructor(
         project: Project,
         name: String,
         publishedArtifactKind: String? = null,
-        publishedCapability: Any? = null
+        publishedCapability: String? = null
     ): CppLibrary {
         val library = componentFactory.newInstance(
             CppLibrary::class.java,
@@ -123,9 +123,9 @@ open class CppLibraryCreator @Inject constructor(
                 Action { it: ConfigurablePublishArtifact? -> it!!.builtBy(*arrayOf<Any?>(library.publicHeaderDirs)) })
             if (publishedArtifactKind != null) {
                 apiElements.attributes.attribute(nativeArtifactKind, publishedArtifactKind)
-                if (publishedCapability != null) {
-                    apiElements.outgoing.capability(publishedCapability)
-                }
+            }
+            if (publishedCapability != null) {
+                apiElements.outgoing.capability(project.createCapability(publishedCapability))
             }
 //            project.project.pluginManager.withPlugin("maven-publish", Action { appliedPlugin: AppliedPlugin? ->
 //                val headersZip = project.tasks.register<Zip?>("cppHeaders", Zip::class.java, Action { task: Zip? ->
@@ -138,19 +138,21 @@ open class CppLibraryCreator @Inject constructor(
 //                library.mainPublication.addArtifact(headersZip)
 //            })
             library.binaries.realizeNow()
-            if (publishedArtifactKind != null) {
-                library.binaries.get().forEach { binary ->
-                    (binary as? ComponentWithLinkUsage)?.linkElements?.orNull?.apply {
+            library.binaries.get().forEach { binary ->
+                (binary as? ComponentWithLinkUsage)?.linkElements?.orNull?.apply {
+                    if (publishedArtifactKind != null) {
                         attributes.attribute(nativeArtifactKind, publishedArtifactKind)
-                        if (publishedCapability != null) {
-                            outgoing.capability(publishedCapability)
-                        }
                     }
-                    (binary as? ComponentWithRuntimeUsage)?.runtimeElements?.orNull?.apply {
+                    if (publishedCapability != null) {
+                        outgoing.capability(project.createCapability(publishedCapability))
+                    }
+                }
+                (binary as? ComponentWithRuntimeUsage)?.runtimeElements?.orNull?.apply {
+                    if (publishedArtifactKind != null) {
                         attributes.attribute(nativeArtifactKind, publishedArtifactKind)
-                        if (publishedCapability != null) {
-                            outgoing.capability(publishedCapability)
-                        }
+                    }
+                    if (publishedCapability != null) {
+                        outgoing.capability(project.createCapability(publishedCapability))
                     }
                 }
             }

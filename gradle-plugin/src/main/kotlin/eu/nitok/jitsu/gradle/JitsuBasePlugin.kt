@@ -11,16 +11,12 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ConsumableConfiguration
-import org.gradle.api.artifacts.Dependency
-import org.gradle.api.artifacts.ExternalModuleDependency
-import org.gradle.api.artifacts.ModuleDependency
-import org.gradle.api.artifacts.ProjectDependency
-import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.language.cpp.CppComponent
 import org.gradle.language.cpp.CppLibrary
+import org.gradle.language.cpp.ProductionCppComponent
 import org.gradle.language.cpp.plugins.CppBasePlugin
 import org.gradle.nativeplatform.Linkage
 
@@ -44,10 +40,10 @@ class JitsuBasePlugin : Plugin<Project> {
             project.registerJitsuSourceSet(it, extension)
         }
 
-        val main = extension.sourceSets.register("main")
-        val test = extension.sourceSets.register("test")
+        val main = extension.sourceSets.register(MAIN_SOURCESET_NAME)
+        val test = extension.sourceSets.register(TEST_SOURCESET_NAME)
 
-        project.provideTestFixtures(test)
+        project.createConsumableArtifact(test, testFixtureCapability)
 
 
         project.tasks.register("compileJitsu") {
@@ -61,27 +57,22 @@ class JitsuBasePlugin : Plugin<Project> {
         }
     }
 
-    private fun Project.provideTestFixtures(
-        sourceSet: NamedDomainObjectProvider<JitsuSourceSet>
-    ): NamedDomainObjectProvider<ConsumableConfiguration> {
-        return configurations.consumable("testJitsuElements") {
-            it.extendsFrom(sourceSet.get().classpath.get())
-            it.attributes.attribute(artifactType, JitsuArtifactType.IR)
-            it.outgoing.capability(testFixtureCapability)
-            it.outgoing.artifact(sourceSet.get().compileTask.flatMap { it.targetFile })
-        }
-    }
-
 }
 
-internal val Project.testFixtureName: String
-    get() = "${
-        group.toString().ifEmpty { path.removePrefix(":").replace(":", ".") }.ifEmpty { "default" }
-    }:${name}-testfixtures:${version}"
+internal const val testFixtureCapability: String = "testfixtures"
 
-internal val Project.testFixtureCapability: Any
-    get() = providers.provider { testFixtureName }
 
+fun Project.createConsumableArtifact(
+    sourceSet: NamedDomainObjectProvider<JitsuSourceSet>,
+    capability: String? = null
+): NamedDomainObjectProvider<ConsumableConfiguration> {
+    return configurations.consumable("${sourceSet.name}JitsuElements") {
+        it.extendsFrom(sourceSet.get().moduleClasspath.get())
+        it.attributes.attribute(artifactType, JitsuArtifactType.IR)
+        it.outgoing.artifact(sourceSet.get().compileTask.flatMap { it.targetFile })
+        if(capability != null) it.outgoing.capability(createCapability(capability))
+    }
+}
 internal fun Project.setupNativeBindings(
     sourceSetName: String,
     transpileTask: TaskProvider<JitsuTranspile>,
@@ -97,12 +88,13 @@ internal fun Project.setupNativeBindings(
         project,
         "${sourceSetName}-bindings",
         publishedArtifactKind = BINDINGS_NATIVE_ARTIFACT,
-        publishedCapability = if (sourceSetName == "test") testFixtureCapability else null
+        publishedCapability = if (sourceSetName == TEST_SOURCESET_NAME) testFixtureCapability else null
     )
     library.linkage.set(setOf(Linkage.STATIC))
     library.source.setFrom(cBindingsSourceDirs)
     library.publicHeaders.from(transpileTask.map { it.targetDirectory.dir("bindings") })
     library.implementationDependencies.extendsFrom(dependencies)
+
 
     library.binaries.configureEach { binary ->
         binary.compileTask.get().apply {
@@ -122,24 +114,21 @@ internal fun Project.registerJitsuSourceSet(
         if (sourceSet.name == "main") extension.moduleName else extension.moduleName.map { "$it.${sourceSet.name}" }
 
     val dependencies = configurations.dependencyScope(sourceSet.dependencyScopeName)
-    val classpath = configurations.resolvable(sourceSet.classpathName) {
+    val bindingDependencies = configurations.dependencyScope(sourceSet.nativeDependencyScopeName)
+
+    val jitsuClasspath = configurations.resolvable(sourceSet.moduleClasspathName) {
         it.extendsFrom(dependencies.get())
         it.attributes.attribute(artifactType, JitsuArtifactType.IR)
-        it.attributes.attribute(Attribute.of("usage", String::class.java), "for-compilation")
     }
-//    val nativeBindingsClasspath = configurations.resolvable("${name}JitsuNativeClasspath") {
-//        it.extendsFrom(dependencies.get())
-//        it.attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage::class.java, Usage.NATIVE_LINK))
-//    }
 
     val compileTask = tasks.register(sourceSet.compileTaskName, JitsuCompile::class.java) {
-        it.dependencies.from(classpath)
+        it.dependencies.from(jitsuClasspath)
         it.sources.setFrom(sourceSet.jistuSources)
         it.moduleName.set(sourceSetName)
         it.targetFile.set(sourceSetName.flatMap { project.layout.buildDirectory.file("modules/$it.jim") })
     }
     val transpileCTask = tasks.register(sourceSet.transpileTaskName, JitsuTranspile::class.java) {
-        it.dependencies.setFrom(classpath)
+        it.dependencies.setFrom(jitsuClasspath)
         it.moduleFile.set(layout.file(compileTask.map { it.outputs.files.singleFile }))
         it.targetDirectory.set(project.layout.buildDirectory.dir("$DEFAULT_C_OUTPUT/${sourceSet.name}"))
     }
@@ -148,56 +137,44 @@ internal fun Project.registerJitsuSourceSet(
         it.moduleName.set(sourceSetName)
         it.moduleDir.set(sourceSet.jistuSources.sourceDirectories.singleFile)
     }
-    sourceSet.nativeBindings = setupNativeBindings(sourceSet.name, transpileCTask, dependencies.get())
+    sourceSet.nativeBindings = setupNativeBindings(sourceSet.name, transpileCTask, bindingDependencies.get())
 }
 
-internal fun Project.attachBindingsDependencies(component: CppComponent, dependencyScope: Configuration) {
-    dependencyScope.dependencies.configureEach { dependency ->
-        copyDependencyForBindings(dependency, requireTestFixtures = false)?.let { bindingDependency ->
-            component.implementationDependencies.dependencies.add(bindingDependency)
-        }
-    }
-}
+internal fun CppComponent.attachBindings(sourceSet: JitsuSourceSet) {
 
-private fun Project.copyDependencyForBindings(
-    dependency: Dependency,
-    requireTestFixtures: Boolean
-): Dependency? {
-    val copy = when (dependency) {
-        is ProjectDependency -> dependencies.project(mapOf("path" to dependency.path))
-        is ExternalModuleDependency -> dependencies.create(
-            mapOf(
-                "group" to dependency.group,
-                "name" to dependency.name,
-                "version" to dependency.version
-            )
-        )
-        else -> dependency.copy()
-    }
-
-    if (copy is ModuleDependency) {
-        copy.attributes {
-            it.attribute(nativeArtifactKind, BINDINGS_NATIVE_ARTIFACT)
-        }
-        if (requireTestFixtures) {
-            copy.capabilities {
-                it.requireCapability(testFixtureCapability)
-            }
-        }
-    }
-
-    return copy
-}
-
-internal fun CppComponent.attachBindings(main: JitsuSourceSet) {
-    val bindings = main.nativeBindings
+    val bindings = sourceSet.nativeBindings
     source.from(bindings.source)
     privateHeaders.from(bindings.publicHeaders)
     implementationDependencies.extendsFrom(bindings.implementationDependencies)
+    fun attachDependencyBindings(config: Configuration?) {
+        val bindingRestricted = config?.copy()
+        bindingRestricted?.attributes?.attribute(nativeArtifactKind, BINDINGS_NATIVE_ARTIFACT)
+        bindingRestricted?.extendsFrom(sourceSet.dependencyScope.get())
+        config?.extendsFrom(bindingRestricted)
+    }
+
     binaries.configureEach { binary ->
+        attachDependencyBindings(binary.compileIncludePath as? Configuration)
+        attachDependencyBindings(binary.runtimeLibraries as? Configuration)
+        attachDependencyBindings(binary.linkLibraries as? Configuration)
         binary.compileTask.get().apply {
             source.setFrom(this@attachBindings.source)
-            dependsOn(main.transpileTask)
+            dependsOn(sourceSet.transpileTask)
         }
     }
+}
+internal fun JitsuSourceSet.setupNativeCompilation(
+    cppComponent: ProductionCppComponent,
+    project: Project
+) {
+    val cSourceDirectory: SourceDirectorySet = project.objects.sourceDirectorySet(
+        name,
+        "$name generated C sources"
+    )
+    cSourceDirectory.filter.include("**/*.c")
+    cSourceDirectory.srcDir(transpileTask.map { it.targetDirectory })
+    nativeCompilation = cppComponent
+    cppComponent.source.setFrom(cSourceDirectory)
+    cppComponent.privateHeaders.setFrom(transpileTask.map { it.targetDirectory })
+    cppComponent.attachBindings(this)
 }

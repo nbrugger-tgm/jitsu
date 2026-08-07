@@ -5,52 +5,24 @@ package eu.nitok.jitsu.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.file.SourceDirectorySet
-import org.gradle.language.cpp.CppLibrary
 
 class JitsuLibPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         project.plugins.apply(JitsuBasePlugin::class.java)
 
         val extension = project.extensions.getByType(JitsuExtension::class.java)
-        val cppCreator = project.objects.newInstance(CppLibraryCreator::class.java)
 
-        val main = extension.sourceSets.getByName("main")
-        project.configurations.consumable("mainJitsuElements") {
-            it.extendsFrom(main.classpath.get())
-            it.attributes.attribute(artifactType, JitsuArtifactType.IR)
-            it.outgoing.artifact(main.compileTask.flatMap { it.targetFile })
-        }
-
-
-        project.setupNativeLibraryCompilation(main, cppCreator)
+        val main = extension.sourceSets.main
+        project.createConsumableArtifact(main)
+        project.setupNativeLibraryCompilation(main.get())
     }
 
     private fun Project.setupNativeLibraryCompilation(
-        sourceSet: JitsuSourceSet,
-        cppCreator: CppLibraryCreator
-    ): CppLibrary {
-        val transpileTask = sourceSet.transpileTask
-
-        val cSourceDirectory: SourceDirectorySet = objects.sourceDirectorySet(
-            sourceSet.name,
-            "${sourceSet.name} generated C sources"
-        )
-        cSourceDirectory.filter.include("**/*.c")
-        cSourceDirectory.srcDir(transpileTask.map { it.targetDirectory })
-
+        sourceSet: JitsuSourceSet
+    ) {
+        val cppCreator = project.objects.newInstance(CppLibraryCreator::class.java)
         val library = cppCreator.createCppLibrary(this, sourceSet.name)
-        sourceSet.nativeCompilation = library
-        val generatedCDir = provider { transpileTask.get().targetDirectory }
-
-        library.source.setFrom(cSourceDirectory)
-        library.publicHeaders.from(generatedCDir.map { it.dir("publicHeaders") })
-
-
-        library.privateHeaders.from(generatedCDir)
-        attachBindingsDependencies(library, sourceSet.dependencyScope.get())
-
-        library.attachBindings(sourceSet)
-        return library
+        library.publicHeaders.from(sourceSet.transpileTask.map { it.targetDirectory.dir("publicHeaders") })
+        sourceSet.setupNativeCompilation(library, this)
     }
 }

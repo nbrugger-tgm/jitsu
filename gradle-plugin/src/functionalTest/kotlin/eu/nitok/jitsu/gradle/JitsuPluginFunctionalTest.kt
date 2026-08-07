@@ -6,6 +6,8 @@ package eu.nitok.jitsu.gradle
 import org.assertj.core.api.Assertions.assertThat
 import java.io.File
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.TaskOutcome
+import org.gradle.testkit.runner.UnexpectedBuildFailure
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
@@ -20,6 +22,12 @@ class JitsuPluginFunctionalTest {
     private val buildFile by lazy { projectDir.resolve("build.gradle") }
     private val settingsFile by lazy { projectDir.resolve("settings.gradle") }
 
+    private fun writeFile(path: String, content: String) {
+        val file = projectDir.resolve(path)
+        file.parentFile.mkdirs()
+        file.writeText(content)
+    }
+
     @Test fun `can run task`() {
         // Set up the test build
         settingsFile.writeText("")
@@ -33,11 +41,200 @@ class JitsuPluginFunctionalTest {
         val runner = GradleRunner.create()
         runner.forwardOutput()
         runner.withPluginClasspath()
-        runner.withArguments("compileJitsuTest")
+        runner.withArguments("compileTestJitsu")
         runner.withProjectDir(projectDir)
-        val result = runner.build()
+        runner.build()
+    }
 
-        // Verify the result
-//        assertThat(result.output).contains("Hello from plugin 'org.example.greeting'")
+    @Test fun `jitsu consumers resolve bindings while plain native consumers resolve main library`() {
+        settingsFile.writeText(
+            """
+            rootProject.name = 'test-root'
+            include('producer', 'jitsuConsumer', 'nativeConsumer')
+            """.trimIndent()
+        )
+
+        writeFile(
+            "producer/build.gradle",
+            """
+            plugins {
+                id('eu.nitok.jitsu-lib')
+            }
+
+            group = 'eu.nitok.test'
+            version = '1.0'
+            """.trimIndent()
+        )
+        writeFile("producer/src/main/jitsu/main.jit", "fn main(): i16 { return 0; }")
+        writeFile("producer/src/main/c/bindings.c", "int producer_binding() { return 1; }")
+
+        writeFile(
+            "jitsuConsumer/build.gradle",
+            """
+            plugins {
+                id('eu.nitok.jitsu-lib')
+            }
+
+            group = 'eu.nitok.test'
+            version = '1.0'
+
+            dependencies {
+                jitsuMain project(':producer')
+            }
+
+            def debugConfig = configurations.create('resolveDebugBindings') {
+                canBeConsumed = false
+                canBeResolved = true
+                attributes {
+                    attribute(org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE, objects.named(org.gradle.api.attributes.Usage, org.gradle.api.attributes.Usage.NATIVE_LINK))
+                    attribute(org.gradle.language.cpp.CppBinary.DEBUGGABLE_ATTRIBUTE, true)
+                    attribute(org.gradle.language.cpp.CppBinary.OPTIMIZED_ATTRIBUTE, false)
+                    attribute(org.gradle.language.cpp.CppBinary.LINKAGE_ATTRIBUTE, org.gradle.nativeplatform.Linkage.STATIC)
+                    attribute(org.gradle.api.attributes.Attribute.of('eu.nitok.jitsu.nativeArtifactKind', String), 'bindings')
+                    attribute(org.gradle.nativeplatform.OperatingSystemFamily.OPERATING_SYSTEM_ATTRIBUTE, objects.named(org.gradle.nativeplatform.OperatingSystemFamily, org.gradle.nativeplatform.platform.internal.DefaultNativePlatform.host().operatingSystem.toFamilyName()))
+                    attribute(org.gradle.nativeplatform.MachineArchitecture.ARCHITECTURE_ATTRIBUTE, objects.named(org.gradle.nativeplatform.MachineArchitecture, org.gradle.nativeplatform.platform.internal.DefaultNativePlatform.host().architecture.name))
+                }
+            }
+
+            dependencies {
+                add('resolveDebugBindings', project(':producer'))
+            }
+
+            tasks.register('printBindingsArtifact') {
+                doLast {
+                    println('BINDINGS_ARTIFACT=' + configurations.resolveDebugBindings.singleFile.name)
+                }
+            }
+            """.trimIndent()
+        )
+        writeFile("jitsuConsumer/src/main/jitsu/main.jit", "fn main():i16 { return 0; }")
+
+        writeFile(
+            "nativeConsumer/build.gradle",
+            """
+            plugins {
+                id('cpp-library')
+            }
+
+            library {
+                linkage = [org.gradle.nativeplatform.Linkage.SHARED]
+                dependencies {
+                    implementation project(':producer')
+                }
+            }
+
+            def debugConfig = configurations.create('resolveDebugMain') {
+                canBeConsumed = false
+                canBeResolved = true
+                attributes {
+                    attribute(org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE, objects.named(org.gradle.api.attributes.Usage, org.gradle.api.attributes.Usage.NATIVE_LINK))
+                    attribute(org.gradle.language.cpp.CppBinary.DEBUGGABLE_ATTRIBUTE, true)
+                    attribute(org.gradle.language.cpp.CppBinary.OPTIMIZED_ATTRIBUTE, false)
+                    attribute(org.gradle.language.cpp.CppBinary.LINKAGE_ATTRIBUTE, org.gradle.nativeplatform.Linkage.SHARED)
+                    attribute(org.gradle.nativeplatform.OperatingSystemFamily.OPERATING_SYSTEM_ATTRIBUTE, objects.named(org.gradle.nativeplatform.OperatingSystemFamily, org.gradle.nativeplatform.platform.internal.DefaultNativePlatform.host().operatingSystem.toFamilyName()))
+                    attribute(org.gradle.nativeplatform.MachineArchitecture.ARCHITECTURE_ATTRIBUTE, objects.named(org.gradle.nativeplatform.MachineArchitecture, org.gradle.nativeplatform.platform.internal.DefaultNativePlatform.host().architecture.name))
+                }
+            }
+
+            dependencies {
+                add('resolveDebugMain', project(':producer'))
+            }
+
+            tasks.register('printMainArtifact') {
+                doLast {
+                    println('MAIN_ARTIFACT=' + configurations.resolveDebugMain.singleFile.name)
+                }
+            }
+            """.trimIndent()
+        )
+
+        val result = GradleRunner.create()
+            .forwardOutput()
+            .withPluginClasspath()
+            .withArguments(":jitsuConsumer:printBindingsArtifact", ":nativeConsumer:printMainArtifact")
+            .withProjectDir(projectDir)
+            .build()
+
+        assertThat(result.task(":jitsuConsumer:printBindingsArtifact")?.outcome).isEqualTo(TaskOutcome.SUCCESS)
+        assertThat(result.task(":nativeConsumer:printMainArtifact")?.outcome).isEqualTo(TaskOutcome.SUCCESS)
+        assertThat(result.output).contains("BINDINGS_ARTIFACT=libproducer.a")
+        assertThat(result.output).contains("MAIN_ARTIFACT=libproducer.so")
+    }
+
+    @Test fun `bindings classpath can be underconstrained and fail variant selection`() {
+        settingsFile.writeText(
+            """
+            rootProject.name = 'test-root'
+            include('producer', 'consumer')
+            """.trimIndent()
+        )
+
+        writeFile(
+            "producer/build.gradle",
+            """
+            plugins {
+                id('eu.nitok.jitsu-lib')
+            }
+
+            group = 'eu.nitok.test'
+            version = '1.0'
+            """.trimIndent()
+        )
+        writeFile(
+            "producer/src/main/jitsu/main.jit",
+            """
+            import jitsu;
+
+            fn main():i16 {
+                return 1;
+            }
+            """.trimIndent()
+        )
+        writeFile("producer/src/main/c/bindings.c", "int producer_binding() { return 1; }")
+
+        writeFile(
+            "consumer/build.gradle",
+            """
+            plugins {
+                id('eu.nitok.jitsu-app')
+            }
+
+            group = 'eu.nitok.test'
+            version = '1.0'
+
+            dependencies {
+                jitsuMain project(':producer')
+            }
+
+            tasks.register('resolveBindingsClasspath') {
+                doLast {
+                    configurations.mainJitsuBindingsClasspath.files
+                }
+            }
+            """.trimIndent()
+        )
+        writeFile(
+            "consumer/src/main/jitsu/main.jit",
+            """
+            import jitsu;
+
+            fn main():i16 {
+                return 2;
+            }
+            """.trimIndent()
+        )
+
+        val failure = org.junit.jupiter.api.assertThrows<UnexpectedBuildFailure> {
+            GradleRunner.create()
+                .forwardOutput()
+                .withPluginClasspath()
+                .withArguments(":consumer:resolveBindingsClasspath")
+                .withProjectDir(projectDir)
+                .build()
+        }
+
+        assertThat(failure.message).contains("Could not resolve all files for configuration ':consumer:mainJitsuBindingsClasspath'")
+        assertThat(failure.message).contains("we cannot choose between the following variants of project :producer")
+        assertThat(failure.message).contains("Doesn't say anything about eu.nitok.jitsu.nativeArtifactKind")
     }
 }
