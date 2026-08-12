@@ -120,7 +120,7 @@ class ExpressionParserTest : ParsingTest() {
     }
 
     @Nested
-    @DisplayName("parseStringLiteral() (via parseExpression)")
+    @DisplayName("parseStringLiteral()")
     inner class ParseStringLiteral : MethodTest<StringLiteralNode>() {
 
         override fun parseMethod(input: String) = parseExpression(tokenize(input)) as? StringLiteralNode
@@ -279,9 +279,40 @@ class ExpressionParserTest : ParsingTest() {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // parseExpression
-    // ─────────────────────────────────────────────────────────────────────────
+    @Nested
+    @DisplayName("parseIndexAccess()")
+    inner class ParseIndexAccess : MethodTest<ExpressionNode.IndexAccessNode>() {
+        override fun parseMethod(input: String): ExpressionNode.IndexAccessNode? {
+            val parsedExpression = parseExpression(tokenize(input))
+            assertThat(parsedExpression)
+                .isInstanceOf(ExpressionNode.IndexAccessNode::class.java)
+            return parsedExpression as? ExpressionNode.IndexAccessNode
+        }
+
+        override fun fullyValidInputs() = listOf(
+            "someArray[0]",
+            "someArray[20 + 30]",
+            "someArray[index()]",
+            "someArray[indexVar]",
+            "someArray[\"this is a string\"]",
+            "someArray[indexVar - indexOffset()]",
+            "someArray  [\n\t 0 \n]",
+            "thisReturnsAnArray()[12]",
+            "12 + 12[12]",
+            "\"some-string\"[30]"
+        )
+
+        override fun invalidInputs(): List<String> = listOf()
+
+        override fun partiallyValidInputs() = listOf(
+            Input("someArray[0", 1),
+            Input("someArray[]", 1),
+            Input("someArray[", 2),
+            Input("someArray[not an expression]", 1),
+            Input("someArray[not an expression",1),//' an expression' is not part of the indexed access and therfore not relevant
+        )
+
+    }
 
     @Nested
     @DisplayName("parseExpression()")
@@ -455,10 +486,6 @@ class ExpressionParserTest : ParsingTest() {
                 .isInstanceOf(ExpressionNode.OperationNode::class.java)
         }
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // parseOperation
-    // ─────────────────────────────────────────────────────────────────────────
 
     @Nested
     @DisplayName("parseOperation()")

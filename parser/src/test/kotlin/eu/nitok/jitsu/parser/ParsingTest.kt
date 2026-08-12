@@ -93,7 +93,7 @@ abstract class ParsingTest {
                 messages.warnings.clear()
                 val output = parseMethod(input)
                 assertThat(output)
-                    .`as`("The input '$input' is partially valid and produce a valid AST node with errors attached")
+                    .`as`("The input '$input' is partially valid and produces a valid AST node with errors attached")
                     .isNotNull()
                 output?.walk {
                     messages.warnings.addAll(it.warnings)

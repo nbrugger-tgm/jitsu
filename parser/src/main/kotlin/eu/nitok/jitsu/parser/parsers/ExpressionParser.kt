@@ -11,6 +11,7 @@ import eu.nitok.jitsu.compiler.model.BiOperator
 import eu.nitok.jitsu.parser.*
 import eu.nitok.jitsu.parser.ast.ExpressionNode
 import eu.nitok.jitsu.parser.ast.ExpressionNode.StringLiteralNode
+import eu.nitok.jitsu.parser.ast.IdentifierNode
 import eu.nitok.jitsu.parser.ast.withMessages
 import kotlin.jvm.optionals.getOrNull
 
@@ -34,12 +35,58 @@ internal fun parseExpression(tokens: Tokens): ExpressionNode? {
 private fun parseCompositExpression(
     tokens: Tokens,
     expressionNode: ExpressionNode
-) = parseOperation(tokens, expressionNode)
+) = parseOperation(tokens, expressionNode)?: parseArrayIndexAccess(tokens, expressionNode)
 
 private fun parseSingleExpression(tokens: Tokens) =
     parseIntLiteral(tokens) ?: parseStringLiteral(tokens) ?: parseArrayLiteral(tokens)?: parseIdentifierBased(tokens) { tokens, identifier ->
         parseFunctionCall(tokens, identifier) ?: ExpressionNode.VariableReferenceNode(identifier)
     }
+
+fun parseArrayIndexAccess(tokens: Tokens, left: ExpressionNode): ExpressionNode? {
+    val openBracket = tokens.attempt {
+        skipWhitespace()
+        attempt(SQUARE_BRACKET_OPEN)?.location
+    } ?: return null
+
+    val messages = CompilerMessages()
+
+    val indexExpr = tokens.attempt {
+        skipWhitespace()
+        parseExpression(this)
+    }
+    if(indexExpr == null){
+        messages.error("Expected index expression", tokens.position)
+    }
+
+    var closedBracket = tokens.attempt {
+        skipWhitespace()
+        attempt(SQUARE_BRACKET_CLOSED)?.location
+    }
+    if(closedBracket == null){
+        val (unexpectedContent, close) = tokens.attempt {
+            val unexpectedContent = tokens.until(SQUARE_BRACKET_CLOSED, COMMA, BRACKET_CLOSED, NEW_LINE)
+            val terminatingSymbol = tokens.nullableRange { nextOptional().getOrNull() }
+            if (terminatingSymbol?.value?.type == SQUARE_BRACKET_CLOSED) {
+                unexpectedContent to terminatingSymbol.location
+            } else {
+                null
+            }
+        } ?: (null to null)
+
+        if (close != null && unexpectedContent != null) {
+            messages.error("Invalid index expression", unexpectedContent,
+                Hint("Opened here", openBracket)
+            )
+            closedBracket = close
+        } else {
+            messages.error("Expected closing ']'", tokens.position,
+                Hint("Opened here", openBracket)
+            )
+        }
+    }
+    return ExpressionNode.IndexAccessNode(left, indexExpr, left.location.rangeTo(closedBracket?:indexExpr?.location?:openBracket))
+        .withMessages(messages)
+}
 
 private fun parseStringLiteral(stream: Tokens): ExpressionNode? {
     val openingQuote = stream.attempt(DOUBLEQUOTE) ?: return null;
