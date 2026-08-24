@@ -2,10 +2,8 @@ package eu.nitok.jitsu.compiler.graph.api
 
 import eu.nitok.jitsu.common.BitSize
 import eu.nitok.jitsu.common.ReasonedBoolean
-import eu.nitok.jitsu.common.locating.Located
-import eu.nitok.jitsu.compiler.graph.api.TypeDefinition.ParameterizedType.Struct
+import eu.nitok.jitsu.compiler.graph.api.TypeDefinition.ParameterizedType.*
 import kotlinx.serialization.Contextual
-import kotlinx.serialization.Serializable
 
 sealed interface Type : Element {
     /**
@@ -24,12 +22,13 @@ sealed interface Type : Element {
     interface Boolean : Primitive
 
     interface Null : Type
+
     /**
      * This type is not usable in the language. It is the type used at compile time when a type is not resolvable/errornous
      */
     interface Undefined : Type
 
-    interface Value: Type {
+    interface Value : Type {
         val value: Expression.Constant<@Contextual Any>
     }
 
@@ -40,26 +39,22 @@ sealed interface Type : Element {
         val sizeType: Type
     }
 
-    interface FunctionTypeSignature : Type {
-        val returnType: Type?
-        val parameters: List<Parameter>
+    interface FunctionSignature : Type, Function.Signature
 
-        interface Parameter : Element {
-            val name: Located<String>
-            val type: Type
-            val optional: kotlin.Boolean
-        }
-    }
-
-    interface TypeReference : Type, Access.TypeAccess {
-        val genericParameters: List<Located<Type>>
-    }
+    interface TypeReference : Type, Access.TypeAccess
+    interface ParameterizedTypeReference<S>: Type, AccessWithParameters<TypeDefinition.ParameterizedType, S>
+            where S : Specialized<TypeDefinition.ParameterizedType>,
+                  S : Type
 
     interface Union : Type {
         val options: List<Type>
     }
 
     interface StructuralInterface : Type {
-        val fields: Map<String, Struct.Field>
+        val fields: Map<String, TypeStructure.Struct.Field>
     }
+
+    interface Class : Type, Specialized<ClassDefinition>, TypeStructure.Class
+    interface Interface : Type, Specialized<InterfaceDefinition>, TypeStructure.Interface
+    interface Struct : Type, Specialized<StructDefinition>, TypeStructure.Struct
 }

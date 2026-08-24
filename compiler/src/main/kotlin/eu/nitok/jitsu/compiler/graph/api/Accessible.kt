@@ -5,8 +5,8 @@ import eu.nitok.jitsu.common.locating.Located
 /**
  * An element with a name that maybe referenced by other [Access] elements by that name
  */
-interface Accessible<T : Accessible<T>> {
-    val accessToSelf: MutableList<Access<T>>
+interface Accessible<out T : Accessible<T>> {
+    val accessToSelf: List<Access<T>>
     val name: Located<String>?
     val fullyQualifiedName: String?
 }
