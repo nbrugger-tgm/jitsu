@@ -1,12 +1,11 @@
 package eu.nitok.jitsu.compiler.graph.api
 
-import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.locating.Located
 
 /**
  * A template for a [eu.nitok.jitsu.compiler.graph.api.Type] not a type by itself
  */
-sealed interface TypeDefinition : Accessible<TypeDefinition>, Element {
+sealed interface TypeDefinition<T: TypeDefinition<T>> : Accessible<T>, Element {
     override val name: Located<String>
     /**
      * A type that may not directly usable since it may parameterized
@@ -20,49 +19,22 @@ sealed interface TypeDefinition : Accessible<TypeDefinition>, Element {
      *
      * To form a [eu.nitok.jitsu.compiler.graph.api.Type] from a [ParameterizedType] you need a [eu.nitok.jitsu.compiler.graph.api.Type.TypeReference]
      */
-    sealed interface ParameterizedType: TypeDefinition {
-        val generics: List<DirectTypeDefinition.TypeParameter>
+    sealed interface ParameterizedType: TypeDefinition<ParameterizedType>, Parameterized {
 
-        interface Struct : ParameterizedType {
-            /**
-             * Fields declared in this struct plus all fields from [embedded][embedded] Structs
-             */
-            val allFields: Set<Field>
+        interface Struct : StructStructure, ParameterizedType
 
-            /**
-             * Fields declared directly in this struct
-             */
-            val fields: Set<Field>
+        interface Interface : InterfaceStructure, ParameterizedType
 
-            /**
-             * Structs that are embedded in this struct. Their fields are "copied" to this struct
-             */
-            val embedded: Set<Lazy<Struct>>
-
-            interface Field : Element, Accessible<Field> {
-                val mutable: Boolean
-                val type: Type
-                override val name: Located<String>
-            }
-        }
+        interface Class : ClassStructure, ParameterizedType
 
         interface Alias : ParameterizedType {
             val type: Type
-        }
-
-        interface Interface : ParameterizedType {
-            val methods: Map<String, List<NamedFunctionSignature>>
-        }
-
-        interface Class : ParameterizedType {
-            val fields: List<Struct.Field>
-            val methods: List<Function>
         }
     }
     /**
      * A [eu.nitok.jitsu.compiler.graph.api.Type] template that is specific enough to be a type by itself
      */
-    sealed interface DirectTypeDefinition : TypeDefinition, Type {
+    sealed interface DirectTypeDefinition : TypeDefinition<DirectTypeDefinition>, Type {
         interface TypeParameter : DirectTypeDefinition
         interface Enum : DirectTypeDefinition {
             val constants: List<Constant>

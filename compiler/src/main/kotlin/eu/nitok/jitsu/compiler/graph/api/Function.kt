@@ -3,7 +3,7 @@ package eu.nitok.jitsu.compiler.graph.api
 import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.compiler.graph.api.analysis.FunctionSummary
 
-interface Function : Instruction, Element, Accessible<Function>, Accessor, HasAttributes {
+interface Function : Instruction, Element, Accessible<Function>, Accessor, HasAttributes, Parameterized, Specialized<Function> {
     val returnType: Located<Type>?
     val parameters: List<Parameter>
     val body: Body

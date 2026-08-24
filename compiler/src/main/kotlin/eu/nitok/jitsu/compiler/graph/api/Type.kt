@@ -29,6 +29,18 @@ sealed interface Type : Element {
      */
     interface Undefined : Type
 
+    interface SpecializedType: Type, Specialized<TypeDefinition.ParameterizedType> {
+        override val specializedFrom: TypeDefinition.ParameterizedType
+        interface Class: ClassStructure, SpecializedType
+        interface Interface: InterfaceStructure, SpecializedType
+        interface Struct: StructStructure, SpecializedType{
+            override val embedded: Set<Lazy<SpecializedType.Struct>>
+        }
+        interface Alias: SpecializedType {
+            val type: Type
+        }
+    }
+
     interface Value: Type {
         val value: Expression.Constant<@Contextual Any>
     }
@@ -55,11 +67,13 @@ sealed interface Type : Element {
         val genericParameters: List<Located<Type>>
     }
 
+    interface ParameterizedTypeReference : Type, Access.ParameterizedTypeAccess
+
     interface Union : Type {
         val options: List<Type>
     }
 
     interface StructuralInterface : Type {
-        val fields: Map<String, Struct.Field>
+        val fields: Map<String, StructStructure.Field>
     }
 }

@@ -5,11 +5,11 @@ import eu.nitok.jitsu.common.locating.Located
 /**
  * Element that expresses access to another element through a name
  */
-interface Access<T : Accessible<T>>{
+interface Access<out T : Accessible<T>>{
     val target: T?
     val reference: Located<String>
 
-    interface FunctionAccess : Access<Function>
+    interface FunctionAccess : AccessWithParameters<Function, Function>
     interface VariableAccess : Access<Variable> {
         val accessKind : AccessKind
         enum class AccessKind {
@@ -25,6 +25,7 @@ interface Access<T : Accessible<T>>{
             MOVE
         }
     }
-    interface TypeAccess : Access<TypeDefinition>
+    interface TypeAccess : Access<TypeDefinition<*>>
+    interface ParameterizedTypeAccess : AccessWithParameters<TypeDefinition.ParameterizedType, Type.SpecializedType>
 }
 
