@@ -3,5 +3,7 @@ import jitsu;
 fn main():i16 {
     var input:i16 = 10;
     var testArray : int[] = [1,3,4];
-    return input + input;
+    print(input + input);
+    println();
+    return 0;
 }

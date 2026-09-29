@@ -1,0 +1,28 @@
+import jitsu.ffm;
+
+[Native(name="print_i8")]
+native fn print(number: i8)
+
+[Native(name="print_i16")]
+native fn print(number: i16)
+
+[Native(name="print_i32")]
+native fn print(number: i32)
+
+[Native(name="print_i64")]
+native fn print(number: i64)
+
+[Native(name="print_u8")]
+native fn print(number: u8)
+
+[Native(name="print_u16")]
+native fn print(number: u16)
+
+[Native(name="print_u32")]
+native fn print(number: u32)
+
+[Native(name="print_u64")]
+native fn print(number: u64)
+
+[Native(name="println")]
+native fn println()
