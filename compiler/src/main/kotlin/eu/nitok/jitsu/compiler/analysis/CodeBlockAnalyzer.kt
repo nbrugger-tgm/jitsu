@@ -5,19 +5,10 @@ import eu.nitok.jitsu.common.CompilerMessages
 import eu.nitok.jitsu.common.ReasonedBoolean
 import eu.nitok.jitsu.common.ReasonedBoolean.False
 import eu.nitok.jitsu.common.ReasonedBoolean.True
-import eu.nitok.jitsu.compiler.graph.api.*
+import eu.nitok.jitsu.compiler.graph.api.Access
+import eu.nitok.jitsu.compiler.graph.api.Type
 import eu.nitok.jitsu.compiler.graph.api.analysis.ParameterMode
-import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
-import eu.nitok.jitsu.compiler.graph.elements.VariableDeclaration
-import eu.nitok.jitsu.compiler.graph.elements.ArrayLiteral
-import eu.nitok.jitsu.compiler.graph.elements.ConstantElement
-import eu.nitok.jitsu.compiler.graph.elements.ExpressionElement
-import eu.nitok.jitsu.compiler.graph.elements.VariableReference
-import eu.nitok.jitsu.compiler.graph.elements.FunctionCall
-import eu.nitok.jitsu.compiler.graph.elements.InstructionElement
-import eu.nitok.jitsu.compiler.graph.elements.Return
-import eu.nitok.jitsu.compiler.graph.elements.UndefinedExpression
-import eu.nitok.jitsu.compiler.graph.elements.VariableElement
+import eu.nitok.jitsu.compiler.graph.elements.*
 import eu.nitok.jitsu.compiler.graph.elements.types.TypeElement
 import eu.nitok.jitsu.compiler.graph.elements.types.Undefined
 
@@ -324,9 +315,13 @@ internal class CodeBlockAnalyzer(
         )
     }
 
-    private fun processFunctionCall(call: FunctionCall): FunctionElement? {
+    private fun processFunctionCall(call: FunctionCall): Pair<FunctionElement?, List<ExpressionResult>> {
         val target = call.targetElement ?: call.resolveTarget(typeContext, messages)
         val targetSummary = target?.let { calleeOracle(it) }
+        val argumentExpressions = call.callParameterElements.mapIndexed { index, expression ->
+            if (target != null) analyzeExpression(expression, target.parameters.getOrNull(index)?.declaredTypeElement)
+            else analyzeExpression(expression, null)
+        }
         if (target != null) {
             call.setResolvedTarget(target)
             callees.add(target)
@@ -350,17 +345,12 @@ internal class CodeBlockAnalyzer(
                 ReasonedBoolean.False("Unresolved target '${call.reference.value}'")
             )
         }
-        return target
+        return (target to argumentExpressions)
     }
 
     private fun analyzeFunctionCallExpression(call: FunctionCall, typeHint: TypeElement?): ExpressionResult {
-        val target = processFunctionCall(call)
+        val (target, argumentExpressions) = processFunctionCall(call)
         val targetSummary = target?.let { calleeOracle(it) }
-        val argumentExpressions = call.callParameterElements.mapIndexed { index, expression ->
-            if (target != null) analyzeExpression(expression, target.parameters.getOrNull(index)?.declaredTypeElement)
-            else analyzeExpression(expression, null)
-        }
-
 
         val outputInfluencingParams = target?.summary?.let { targetSummary ->
             targetSummary.returnSummary?.dependsOnParameters
