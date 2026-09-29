@@ -16,14 +16,14 @@ internal object SymbolIDSerializer : KSerializer<SymbolID> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("sid", PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: SymbolID) {
-        if(value.module != null) encoder.encodeString("${value.module}/${value.index.toString(16)}")
-        else encoder.encodeString(value.index.toString(16))
+        if(value.module != null) encoder.encodeString("${value.module}/${value.index.toString(36)}")
+        else encoder.encodeString(value.index.toString(36))
     }
 
     override fun deserialize(decoder: Decoder): SymbolID {
         val string = decoder.decodeString()
         val split = string.indexOf('/')
-        return if(split != -1) SymbolID(string.substring(0, split), string.substring(split+1).toInt(16))
-        else SymbolID(null, string.toInt(16))
+        return if(split != -1) SymbolID(string.substring(0, split), string.substring(split+1).toInt(36))
+        else SymbolID(null, string.toInt(36))
     }
 }
