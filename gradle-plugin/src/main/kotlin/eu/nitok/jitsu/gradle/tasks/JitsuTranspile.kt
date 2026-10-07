@@ -5,6 +5,7 @@ import eu.nitok.jitsu.common.format
 import eu.nitok.jitsu.compiler.bitcode.lower
 import eu.nitok.jitsu.compiler.graph.api.JitsuModule
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileSystemOperations
@@ -33,6 +34,9 @@ abstract class JitsuTranspile @Inject constructor(
         val readResult = JitsuModule.readModule(moduleFile.get().asFile.toPath(), dependencies.files.map { it.toPath() })
         readResult.messages.errors.forEach { error ->
             logger.error(error.format("e"))
+        }
+        if(readResult.messages.errors.isNotEmpty()) {
+            throw GradleException("Jitsu transpilation failed")
         }
         val modules = readResult.module.lower()
         val files = CBackend().run {
