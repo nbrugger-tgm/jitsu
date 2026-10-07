@@ -44,8 +44,8 @@ private fun parseSingleExpression(tokens: Tokens) =
 private fun parseStringLiteral(stream: Tokens): ExpressionNode? {
     val openingQuote = stream.attempt(DOUBLEQUOTE) ?: return null;
     var termination: Location? = null;
-    var string = mutableListOf<StringLiteralNode.StringPart>()
-    var messages = CompilerMessages()
+    val string = mutableListOf<StringLiteralNode.StringPart>()
+    val messages = CompilerMessages()
     while (true) {
         val terminationChar = stream.attempt(DOUBLEQUOTE, EOF, NEW_LINE);
         if (terminationChar != null) {
@@ -87,10 +87,10 @@ internal fun parseStringPart(stream: Tokens): StringLiteralNode.StringPart? {
  * Parses an escape sequence in a string literal (e.g., `\n`, `\\`, `\t`).
  */
 internal fun parseEscapeCharacterStringPart(stream: Tokens): StringLiteralNode.StringPart? {
-    var kw = stream.attempt(BACK_SLASH) ?: return null;
-    var escaped = stream.nullableRange { splice(1) }
+    val kw = stream.attempt(BACK_SLASH) ?: return null;
+    val escaped = stream.nullableRange { splice(1) }
 
-    var escape = StringLiteralNode.StringPart.EscapeSequence(
+    val escape = StringLiteralNode.StringPart.EscapeSequence(
         escaped?.value?.value ?: "",
         kw.location.rangeTo(escaped?.location ?: kw.location)
     )
@@ -120,7 +120,7 @@ internal fun parseCharSequenceStringPart(stream: Tokens): StringLiteralNode.Stri
 
 private fun Tokens.captureUntil(vararg token: DefaultToken): Located<String> {
     return range {
-        var builder = StringBuilder()
+        val builder = StringBuilder()
         while (peekOptional().getOrNull()?.type?.let { token.contains(it) } == false) {
             builder.append(next().value)
         }

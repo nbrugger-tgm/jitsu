@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 import java.lang.reflect.ParameterizedType
 
 @Serializable
-data class Located<T>(val value: T, override val location: Location) : HasLocation {
+data class Located<out T>(val value: T, override val location: Location) : HasLocation {
     inline fun <N> map(fn: (T)->N): Located<N> {
         return Located(fn(value), location)
     }

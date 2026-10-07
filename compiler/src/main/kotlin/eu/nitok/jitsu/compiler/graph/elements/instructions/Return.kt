@@ -1,12 +1,10 @@
 package eu.nitok.jitsu.compiler.graph.elements
 
 import eu.nitok.jitsu.common.locating.Location
-import eu.nitok.jitsu.compiler.graph.elements.FunctionElement
 import eu.nitok.jitsu.compiler.graph.api.Element
 import eu.nitok.jitsu.compiler.graph.api.Expression
 import eu.nitok.jitsu.compiler.graph.api.Instruction
 import eu.nitok.jitsu.compiler.graph.behaviour.FunctionAware
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 

@@ -1,7 +1,6 @@
 package eu.nitok.jitsu.compiler.graph.api.analysis
 
 import eu.nitok.jitsu.common.ReasonedBoolean
-import eu.nitok.jitsu.compiler.analysis.AbstractValueElement
 import eu.nitok.jitsu.compiler.analysis.OwnershipState
 import eu.nitok.jitsu.compiler.graph.api.Type
 
