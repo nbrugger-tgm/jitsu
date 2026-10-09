@@ -28,10 +28,8 @@ include(
     "compiler-utils",
     "parser",
     "compiler",
-    "playground",
     "language-server",
     "gradle-plugin",
-    "cli"
 )
 
 include(

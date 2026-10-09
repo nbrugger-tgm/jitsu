@@ -7,7 +7,6 @@ import org.assertj.core.api.Assertions.assertThat
 import java.io.File
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
-import org.gradle.testkit.runner.UnexpectedBuildFailure
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
@@ -90,14 +89,15 @@ class JitsuPluginFunctionalTest {
                     attribute(org.gradle.language.cpp.CppBinary.DEBUGGABLE_ATTRIBUTE, true)
                     attribute(org.gradle.language.cpp.CppBinary.OPTIMIZED_ATTRIBUTE, false)
                     attribute(org.gradle.language.cpp.CppBinary.LINKAGE_ATTRIBUTE, org.gradle.nativeplatform.Linkage.STATIC)
-                    attribute(org.gradle.api.attributes.Attribute.of('eu.nitok.jitsu.nativeArtifactKind', String), 'bindings')
                     attribute(org.gradle.nativeplatform.OperatingSystemFamily.OPERATING_SYSTEM_ATTRIBUTE, objects.named(org.gradle.nativeplatform.OperatingSystemFamily, org.gradle.nativeplatform.platform.internal.DefaultNativePlatform.host().operatingSystem.toFamilyName()))
                     attribute(org.gradle.nativeplatform.MachineArchitecture.ARCHITECTURE_ATTRIBUTE, objects.named(org.gradle.nativeplatform.MachineArchitecture, org.gradle.nativeplatform.platform.internal.DefaultNativePlatform.host().architecture.name))
                 }
             }
 
             dependencies {
-                add('resolveDebugBindings', project(':producer'))
+                add('resolveDebugBindings', project(':producer')) {
+                    capabilities { requireFeature('bindings') }
+                }
             }
 
             tasks.register('printBindingsArtifact') {
@@ -161,7 +161,7 @@ class JitsuPluginFunctionalTest {
         assertThat(result.output).contains("MAIN_ARTIFACT=libproducer.so")
     }
 
-    @Test fun `bindings classpath can be underconstrained and fail variant selection`() {
+    @Test fun `jitsuMain dependency wires the producer bindings into the consumers native compilation`() {
         settingsFile.writeText(
             """
             rootProject.name = 'test-root'
@@ -206,9 +206,12 @@ class JitsuPluginFunctionalTest {
                 jitsuMain project(':producer')
             }
 
-            tasks.register('resolveBindingsClasspath') {
+            tasks.register('printResolution') {
+                def link = configurations.nativeLinkDebug
+                def ir = configurations.mainJitsuModuleClasspath
                 doLast {
-                    configurations.mainJitsuBindingsClasspath.files
+                    link.files.each { println('LINK=' + it.name) }
+                    ir.files.each { println('IR=' + it.name) }
                 }
             }
             """.trimIndent()
@@ -224,17 +227,80 @@ class JitsuPluginFunctionalTest {
             """.trimIndent()
         )
 
-        val failure = org.junit.jupiter.api.assertThrows<UnexpectedBuildFailure> {
-            GradleRunner.create()
-                .forwardOutput()
-                .withPluginClasspath()
-                .withArguments(":consumer:resolveBindingsClasspath")
-                .withProjectDir(projectDir)
-                .build()
-        }
+        val result = GradleRunner.create()
+            .forwardOutput()
+            .withPluginClasspath()
+            .withArguments(":consumer:printResolution")
+            .withProjectDir(projectDir)
+            .build()
 
-        assertThat(failure.message).contains("Could not resolve all files for configuration ':consumer:mainJitsuBindingsClasspath'")
-        assertThat(failure.message).contains("we cannot choose between the following variants of project :producer")
-        assertThat(failure.message).contains("Doesn't say anything about eu.nitok.jitsu.nativeArtifactKind")
+        assertThat(result.task(":consumer:printResolution")?.outcome).isEqualTo(TaskOutcome.SUCCESS)
+        // the consumer re-generates the producer's C from its IR, so it must link the producer's
+        // hand written bindings only - never the producer's compiled generated code
+        assertThat(result.output).contains("LINK=libproducer.a")
+        assertThat(result.output).doesNotContain("LINK=libproducer.so")
+        assertThat(result.output).contains("IR=producer.jim")
+    }
+
+    @Test fun `bindings of transitive jitsu modules reach the consumer`() {
+        settingsFile.writeText(
+            """
+            rootProject.name = 'test-root'
+            include('base', 'mid', 'app')
+            """.trimIndent()
+        )
+
+        // base has hand written C, mid deliberately has none: a module without src/main/c must
+        // still produce a linkable bindings archive, otherwise consumers fail with
+        // "cannot find libmid.a"
+        listOf("base", "mid").forEach { name ->
+            writeFile(
+                "$name/build.gradle",
+                """
+                plugins {
+                    id('eu.nitok.jitsu-lib')
+                }
+
+                group = 'eu.nitok.test'
+                version = '1.0'
+                ${if (name == "mid") "dependencies { jitsuMain project(':base') }" else ""}
+                """.trimIndent()
+            )
+            writeFile("$name/src/main/jitsu/main.jit", "fn ${name}Fn():i16 { return 1; }")
+        }
+        writeFile("base/src/main/c/base.c", "int base_binding() { return 1; }")
+
+        writeFile(
+            "app/build.gradle",
+            """
+            plugins {
+                id('eu.nitok.jitsu-app')
+            }
+
+            group = 'eu.nitok.test'
+            version = '1.0'
+
+            dependencies {
+                jitsuMain project(':mid')
+            }
+
+            tasks.register('printResolution') {
+                def link = configurations.nativeLinkDebug
+                doLast { link.files.each { println('LINK=' + it.name) } }
+            }
+            """.trimIndent()
+        )
+        writeFile("app/src/main/jitsu/main.jit", "fn main():i16 { return 0; }")
+
+        val result = GradleRunner.create()
+            .forwardOutput()
+            .withPluginClasspath()
+            .withArguments(":app:printResolution")
+            .withProjectDir(projectDir)
+            .build()
+
+        // app only declares ':mid', but its generated C inlines base's code too
+        assertThat(result.output).contains("LINK=libmid.a")
+        assertThat(result.output).contains("LINK=libbase.a")
     }
 }

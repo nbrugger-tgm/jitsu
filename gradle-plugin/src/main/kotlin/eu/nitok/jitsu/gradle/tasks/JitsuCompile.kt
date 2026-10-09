@@ -83,9 +83,9 @@ abstract class JitsuCompile @Inject constructor() : DefaultTask() {
                     val mod = mods.getOrPut(it.path) {
                         ModuleDirectory(it.name, mutableListOf(), mutableListOf())
                     }
-                    (mods[it.relativePath.parent.pathString] ?: rootMod).subModules.add(mod)
+                    (mods[it.relativePath.parent?.pathString] ?: rootMod).subModules.add(mod)
                 } else {
-                    (mods[it.relativePath.parent.pathString] ?: rootMod).files.add(it.file.toPath())
+                    (mods[it.relativePath.parent?.pathString] ?: rootMod).files.add(it.file.toPath())
                 }
             }
         }

@@ -3,6 +3,7 @@
  */
 package eu.nitok.jitsu.gradle
 
+import eu.nitok.jitsu.gradle.tasks.CreateBindingsPlaceholder
 import eu.nitok.jitsu.gradle.tasks.CreateModuleInfo
 import eu.nitok.jitsu.gradle.tasks.JitsuCompile
 import eu.nitok.jitsu.gradle.tasks.JitsuTranspile
@@ -11,12 +12,15 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ConsumableConfiguration
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.attributes.Usage
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.language.cpp.CppComponent
 import org.gradle.language.cpp.CppLibrary
 import org.gradle.language.cpp.ProductionCppComponent
+import org.gradle.internal.extensions.stdlib.capitalized
 import org.gradle.language.cpp.plugins.CppBasePlugin
 import org.gradle.nativeplatform.Linkage
 
@@ -29,7 +33,6 @@ class JitsuBasePlugin : Plugin<Project> {
     override fun apply(project: Project) {
         project.plugins.apply(BasePlugin::class.java)
         project.plugins.apply(CppBasePlugin::class.java)
-        project.dependencies.attributesSchema.attribute(nativeArtifactKind)
         project.dependencies.attributesSchema.attribute(artifactType)
 
         val extension = project.extensions.create("jitsu", JitsuExtension::class.java).also {
@@ -61,6 +64,25 @@ class JitsuBasePlugin : Plugin<Project> {
 
 internal const val testFixtureCapability: String = "testfixtures"
 
+/**
+ * Feature name under which the Jitsu IR of [sourceSet] is published, or `null` for the default
+ * capability.
+ */
+internal fun irFeatureOf(sourceSet: String): String? = when (sourceSet) {
+    MAIN_SOURCESET_NAME -> null
+    TEST_SOURCESET_NAME -> testFixtureCapability
+    else -> sourceSet
+}
+
+/**
+ * Feature name under which the native bindings of [sourceSet] are published.
+ *
+ * Derived from [irFeatureOf] so that the IR and the bindings of one source set stay recognisably
+ * paired: `main` publishes its IR under the default capability and its bindings under `bindings`,
+ * `test` publishes `testfixtures` and `testfixtures-bindings`.
+ */
+internal fun bindingsFeatureOf(sourceSet: String): String =
+    irFeatureOf(sourceSet)?.let { "$it-$BINDINGS_FEATURE" } ?: BINDINGS_FEATURE
 
 fun Project.createConsumableArtifact(
     sourceSet: NamedDomainObjectProvider<JitsuSourceSet>,
@@ -69,41 +91,76 @@ fun Project.createConsumableArtifact(
     return configurations.consumable("${sourceSet.name}JitsuElements") {
         it.extendsFrom(sourceSet.get().moduleClasspath.get())
         it.attributes.attribute(artifactType, JitsuArtifactType.IR)
+        it.attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage::class.java, JITSU_IR_USAGE))
         it.outgoing.artifact(sourceSet.get().compileTask.flatMap { it.targetFile })
-        if(capability != null) it.outgoing.capability(createCapability(capability))
+        if (capability != null) it.outgoing.capability(featureCapability(capability))
     }
 }
+
 internal fun Project.setupNativeBindings(
-    sourceSetName: String,
+    sourceSet: JitsuSourceSet,
     transpileTask: TaskProvider<JitsuTranspile>,
     dependencies: Configuration
 ): CppLibrary {
+    val sourceSetName = sourceSet.name
     val cppCreator = project.objects.newInstance(CppLibraryCreator::class.java)
+
+    val placeholder = tasks.register(
+        "create${sourceSetName.capitalized()}BindingsPlaceholder",
+        CreateBindingsPlaceholder::class.java
+    ) {
+        it.moduleName.set("${project.name}-$sourceSetName")
+        it.outputFile.set(layout.buildDirectory.file("$DEFAULT_C_OUTPUT/$sourceSetName-placeholder/placeholder.c"))
+    }
 
     val cBindingsSourceDirs: SourceDirectorySet = objects.sourceDirectorySet(sourceSetName, "$sourceSetName C bindings")
     cBindingsSourceDirs.filter.include("**/*.c")
     cBindingsSourceDirs.srcDir("src/${sourceSetName}/c")
+    cBindingsSourceDirs.srcDir(placeholder.map { it.outputFile.get().asFile.parentFile })
 
-    val library = cppCreator.createCppLibrary(
+    val bindingLib = cppCreator.createCppLibrary(
         project,
         "${sourceSetName}-bindings",
-        publishedArtifactKind = BINDINGS_NATIVE_ARTIFACT,
-        publishedCapability = if (sourceSetName == TEST_SOURCESET_NAME) testFixtureCapability else null
+        publishedCapability = bindingsFeatureOf(sourceSetName)
     )
-    library.linkage.set(setOf(Linkage.STATIC))
-    library.source.setFrom(cBindingsSourceDirs)
-    library.publicHeaders.from(transpileTask.map { it.targetDirectory.dir("bindings") })
-    library.implementationDependencies.extendsFrom(dependencies)
+    bindingLib.linkage.set(setOf(Linkage.STATIC))
+    bindingLib.source.setFrom(cBindingsSourceDirs)
+    bindingLib.publicHeaders.from(transpileTask.map { it.targetDirectory.dir("bindings") })
+    bindingLib.implementationDependencies.extendsFrom(dependencies)
+    bindingLib.declareDependencyBindings(sourceSet)
 
 
-    library.binaries.configureEach { binary ->
+    bindingLib.binaries.configureEach { binary ->
         binary.compileTask.get().apply {
-            source.setFrom(library.source)
+            source.setFrom(bindingLib.source)
             dependsOn(transpileTask)
         }
     }
 
-    return library
+    return bindingLib
+}
+
+/**
+ * Mirrors the Jitsu module dependencies of [sourceSet] onto this component, requiring the
+ * [BINDINGS_FEATURE] variant of each.
+ *
+ * A Jitsu consumer re-generates the C of its dependencies from their IR, so it must link only the
+ * hand written C of a dependency - never the dependency's compiled generated code, which would
+ * duplicate every symbol.
+ *
+ * This is deliberately not a separate dependency scope: it is internal plumbing derived from
+ * `jitsu<SourceSet>`, not something a build script should add to. Declare Jitsu modules in
+ * `jitsu<SourceSet>` and plain native libraries needed by your own C in
+ * `jitsu<SourceSet>Bindings`.
+ */
+private fun CppLibrary.declareDependencyBindings(sourceSet: JitsuSourceSet) {
+    val target = implementationDependencies.dependencies
+    // live view: picks up dependencies declared after this plugin ran as well
+    sourceSet.dependencyScope.get().allDependencies.withType(ModuleDependency::class.java).all { dependency ->
+        target.add(dependency.copy().also { copy ->
+            copy.capabilities { it.requireFeature(BINDINGS_FEATURE) }
+        })
+    }
 }
 
 internal fun Project.registerJitsuSourceSet(
@@ -119,6 +176,7 @@ internal fun Project.registerJitsuSourceSet(
     val jitsuClasspath = configurations.resolvable(sourceSet.moduleClasspathName) {
         it.extendsFrom(dependencies.get())
         it.attributes.attribute(artifactType, JitsuArtifactType.IR)
+        it.attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage::class.java, JITSU_IR_USAGE))
     }
 
     val compileTask = tasks.register(sourceSet.compileTaskName, JitsuCompile::class.java) {
@@ -137,32 +195,30 @@ internal fun Project.registerJitsuSourceSet(
         it.moduleName.set(sourceSetName)
         it.moduleDir.set(sourceSet.jistuSources.sourceDirectories.singleFile)
     }
-    sourceSet.nativeBindings = setupNativeBindings(sourceSet.name, transpileCTask, bindingDependencies.get())
+    sourceSet.nativeBindings = setupNativeBindings(sourceSet, transpileCTask, bindingDependencies.get())
 }
 
-internal fun CppComponent.attachBindings(sourceSet: JitsuSourceSet) {
 
+/**
+ * Adds the native bindings (c/cpp) of [sourceSet] to the [CppComponent]
+ */
+internal fun CppComponent.attachBindings(sourceSet: JitsuSourceSet) {
     val bindings = sourceSet.nativeBindings
     source.from(bindings.source)
     privateHeaders.from(bindings.publicHeaders)
+    // also carries the dependency bindings declared by `declareDependencyBindings`
     implementationDependencies.extendsFrom(bindings.implementationDependencies)
-    fun attachDependencyBindings(config: Configuration?) {
-        val bindingRestricted = config?.copy()
-        bindingRestricted?.attributes?.attribute(nativeArtifactKind, BINDINGS_NATIVE_ARTIFACT)
-        bindingRestricted?.extendsFrom(sourceSet.dependencyScope.get())
-        config?.extendsFrom(bindingRestricted)
-    }
 
     binaries.configureEach { binary ->
-        attachDependencyBindings(binary.compileIncludePath as? Configuration)
-        attachDependencyBindings(binary.runtimeLibraries as? Configuration)
-        attachDependencyBindings(binary.linkLibraries as? Configuration)
+        // CppComponent#getCppSource() only matches C++ extensions, so the C sources of this
+        // component have to be handed to the compile task explicitly.
         binary.compileTask.get().apply {
             source.setFrom(this@attachBindings.source)
             dependsOn(sourceSet.transpileTask)
         }
     }
 }
+
 internal fun JitsuSourceSet.setupNativeCompilation(
     cppComponent: ProductionCppComponent,
     project: Project

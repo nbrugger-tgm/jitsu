@@ -5,9 +5,7 @@ package eu.nitok.jitsu.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.file.SourceDirectorySet
 import org.gradle.language.cpp.CppApplication
-import org.gradle.language.cpp.ProductionCppComponent
 import org.gradle.language.cpp.plugins.CppApplicationPlugin
 
 /**
