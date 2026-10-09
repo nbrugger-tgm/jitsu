@@ -100,7 +100,7 @@ internal sealed class ConstantElement<out T> : ExpressionElement {
     internal data class StringConstant(override val value: String, override val location: Location) : ConstantElement<String>(),
         Expression.Constant.StringConstant {
         override val asConstant: Expression.Constant<String> get() = this
-        override val typeElement = TypeReference(Located("String", location), listOf())
+        override val typeElement = TypeReference(Located("String", location))
         override val type: Type get() = typeElement.asType
         override val literal: String get() = "\"${value}\""
 

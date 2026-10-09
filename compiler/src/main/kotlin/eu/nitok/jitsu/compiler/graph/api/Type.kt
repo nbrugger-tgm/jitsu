@@ -63,9 +63,7 @@ sealed interface Type : Element {
         }
     }
 
-    interface TypeReference : Type, Access.TypeAccess {
-        val genericParameters: List<Located<Type>>
-    }
+    interface TypeReference : Type, Access.TypeAccess
 
     interface ParameterizedTypeReference : Type, Access.ParameterizedTypeAccess
 

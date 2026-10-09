@@ -9,6 +9,7 @@ import eu.nitok.jitsu.compiler.graph.behaviour.FunctionAware
 import eu.nitok.jitsu.compiler.graph.behaviour.ScopeProvider
 import eu.nitok.jitsu.compiler.graph.elements.types.FunctionTypeSignature
 import eu.nitok.jitsu.compiler.graph.elements.types.TypeElement
+import eu.nitok.jitsu.compiler.graph.elements.types.TypeParameterElement
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -19,14 +20,24 @@ internal class FunctionElement(
     override val parameters: List<Parameter>,
     val bodyElement: BodyElement,
     override val attributes: List<AttributeElement>,
-    val location: Locatable
+    val location: Locatable,
+    override val typeParameters: List<TypeParameterElement> = emptyList()
 ) : ScopeProvider, Function, InstructionElement, AccessibleElement<Function> {
     override fun getSymbol(module: JitsuModule) = module.getSymbolID(this)
     override var symbolIndex: Int? = null
     override val body: Function.Body = bodyElement.asBody
 
     @Transient
-    override val scope = Scope(variableElements = parameters.associateBy { it.name.value })
+    override val scope = Scope(
+        typeElements = typeParameters.associateBy { it.name.value },
+        variableElements = parameters.associateBy { it.name.value }
+    )
+
+    /**
+     * Functions are currently only created from declarations.
+     * TODO: set for functions created by specializing a parameterized function
+     */
+    override val specializedFrom: Function? get() = null
 
     @Transient
     override val returnType = returnTypeElement?.map { it.asType }
@@ -79,7 +90,7 @@ internal class FunctionElement(
         parameters.map { FunctionTypeSignature.Parameter(it.name, it.declaredTypeElement, it.initialValue != null) }
     )
 
-    override val children: List<Element> get() = listOfNotNull(returnType?.value) + parameters + body + attributes
+    override val children: List<Element> get() = typeParameters + listOfNotNull(returnType?.value) + parameters + body + attributes
 
     @Transient
     override val accessToSelf: MutableList<Access<Function>> = mutableListOf()

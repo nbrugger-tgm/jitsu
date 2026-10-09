@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 internal data class Interface(
     override val name: Located<String>,
-    override val generics: List<TypeParameterElement>,
+    override val typeParameters: List<TypeParameterElement>,
     override val methods: Map<String, List<NamedFunctionSignature>>
 ) : ParameterizedTypeElement(), TypeDefinition.ParameterizedType.Interface {
     constructor(
@@ -18,7 +18,7 @@ internal data class Interface(
         methods: List<NamedFunctionSignature>
     ) : this(name, generics, methods.groupBy { it.name.value })
 
-    override val children: List<Element> get() = methods.values.flatten()
+    override val children: List<Element> get() = methods.values.flatten() + typeParameters
     override fun toType(
         typeParameters: Map<String, TypeElement>
     ): TypeElement {

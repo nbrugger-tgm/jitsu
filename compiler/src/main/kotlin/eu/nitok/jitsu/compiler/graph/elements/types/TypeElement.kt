@@ -34,6 +34,7 @@ internal sealed class TypeElement: Element {
             is Int -> this
             is StructuralInterface -> this
             is TypeReference -> this
+            is ParameterizedTypeReference -> this
             is UInt -> this
             is Union -> this
             is Enum -> this
@@ -59,7 +60,7 @@ internal sealed class TypeElement: Element {
                     *(optionAssignability.filter { !it.value } + assignWholeUnion).toTypedArray()
                 )
             }
-        } else if (type is Type.TypeReference) {
+        } else if (type is Type.TypeReference || type is Type.ParameterizedTypeReference) {
             acceptsInstanceOf(type.rawType)
         } else {
             val reason = accepts(type)

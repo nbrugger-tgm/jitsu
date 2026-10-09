@@ -191,6 +191,7 @@ sealed interface StatementNode : AstNode {
     sealed interface Declaration : StatementNode {
         class FunctionDeclarationNode(
             val name: IdentifierNode?,
+            val typeParameters: List<IdentifierNode>,
             val parameters: List<ParameterNode>,
             val returnType: TypeNode?,
             val body: FunctionBodyNode?,
@@ -199,7 +200,7 @@ sealed interface StatementNode : AstNode {
         ) : AstNodeImpl(), Declaration, InstructionNode, ExpressionNode,
             CanHaveAttributes {
             override val children: List<AstNode>
-                get() = parameters + listOfNotNull(name, returnType, body) + attributes
+                get() = typeParameters + parameters + listOfNotNull(name, returnType, body) + attributes
             override val location: Location = keywordLocation.rangeTo(
                 body?.location ?: returnType?.location ?: parameters.lastOrNull()?.location ?: name?.location
                 ?: keywordLocation

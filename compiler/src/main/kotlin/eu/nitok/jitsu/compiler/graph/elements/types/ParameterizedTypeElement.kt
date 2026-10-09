@@ -1,7 +1,6 @@
 package eu.nitok.jitsu.compiler.graph.elements.types
 
 import eu.nitok.jitsu.compiler.graph.api.Access
-import eu.nitok.jitsu.compiler.graph.api.TypeDefinition
 import eu.nitok.jitsu.compiler.graph.api.TypeDefinition.ParameterizedType
 import eu.nitok.jitsu.compiler.graph.elements.AccessibleElement
 import eu.nitok.jitsu.compiler.graph.elements.JitsuModule
@@ -10,12 +9,11 @@ import kotlinx.serialization.Transient
 import kotlin.Int
 
 @Serializable
-internal sealed class ParameterizedTypeElement: AccessibleElement<TypeDefinition>, TypeDefinitionElement {
+internal sealed class ParameterizedTypeElement : TypeDefinitionElement, AccessibleElement<ParameterizedType> {
     @Transient
-    override val accessToSelf: MutableList<Access<TypeDefinition>> = mutableListOf()
+    override val accessToSelf: MutableList<Access<ParameterizedType>> = mutableListOf()
 
-
-    abstract val generics: List<TypeParameterElement>
+    abstract val typeParameters: List<TypeParameterElement>
 
     @Transient
     override val asTypeDefinition: ParameterizedType = when(this) {
@@ -25,10 +23,13 @@ internal sealed class ParameterizedTypeElement: AccessibleElement<TypeDefinition
         is Struct -> this
         is TypeAlias -> this
     }
+
+    /**
+     * @param typeParameters complete mapping from the names of [typeParameters] to the types they are substituted with
+     */
     abstract fun toType(typeParameters: Map<String, TypeElement>): TypeElement
 
     override fun getSymbol(module: JitsuModule) = module.getSymbolID(this)
     override var symbolIndex: Int? = null
     @Transient override lateinit var module: JitsuModule
-
 }

@@ -89,7 +89,9 @@ internal fun parseTypeParameterDefinition(tokens: Tokens, messages: CompilerMess
         DefaultToken.BIGGER,
         messages,
         "generics",
-        "type parameter"
+        "type parameter",
+        //recovery must not swallow what follows the type parameter list (e.g. the parameters of a function)
+        doNotSkip = setOf(DefaultToken.SEMICOLON, DefaultToken.NEW_LINE, DefaultToken.BRACKET_OPEN, DefaultToken.ROUND_BRACKET_OPEN)
     ) {
         parseIdentifier(it)
     }?.elements

@@ -54,7 +54,7 @@ class TypeLoweringTest {
 
     private fun genericUnion(): TypeCase {
         return typeCase(
-            TypeReference(
+            ParameterizedTypeReference(
                 locatedName("Or"),
                 listOf(UInt(BIT_64).locatedAt(dummyLocation), Boolean.locatedAt(dummyLocation))
             ).also {
@@ -86,7 +86,7 @@ class TypeLoweringTest {
     inner class Lower {
         @TestFactory
         fun `should preserve original type`(): Stream<DynamicTest> {
-            return exampleTypes.filter { it.graph !is TypeReference }.map { type ->
+            return exampleTypes.filter { it.graph !is ParameterizedTypeReference }.map { type ->
                 DynamicTest.dynamicTest(type.graph.toString()) {
                     val result = TypeLowering.lower(type.graph)
                     assertThat(result.graphType).isSameAs(type.graph)
@@ -686,10 +686,7 @@ class TypeLoweringTest {
 
         // Creates a TypeReference with the resolvedCache pre-populated
         private fun makeTypeRef(name: String, resolved: TypeElement): TypeReference {
-            val ref = TypeReference(
-                reference = locatedName(name),
-                genericParameters = emptyList()
-            )
+            val ref = TypeReference(reference = locatedName(name))
             ref.setEnclosingModule(dummyModule)
             ref.setResolvedTarget(TypeAlias("".locatedAt(dummyLocation),listOf(),resolved).also { it.setEnclosingModule(dummyModule) })
             ref.resolve(CompilerMessages())

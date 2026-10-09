@@ -28,7 +28,7 @@ interface JitsuModule : Element {
     val allFunctions: Map<String, List<Function>>
 
     @Transient
-    val allTypes: Map<String, TypeDefinition>
+    val allTypes: Map<String, TypeDefinition<*>>
 
     @Transient
     val scope: Scope

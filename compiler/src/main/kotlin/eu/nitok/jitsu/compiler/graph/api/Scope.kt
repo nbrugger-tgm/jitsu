@@ -4,7 +4,7 @@ import eu.nitok.jitsu.compiler.merge
 
 interface Scope {
     val parent: Scope?
-    val types: Map<String, TypeDefinition>
+    val types: Map<String, TypeDefinition<*>>
     val functions: Map<String, List<Function>>
     val variables: Map<String, Variable>
     val imports: List<Import>
@@ -16,7 +16,7 @@ interface Scope {
             parent?.allFunctions ?: emptyMap(),
             *imports.mapNotNull { it.target?.exportScope?.functions }.toTypedArray()
         ) { a, b -> a + b }
-    val allTypes: Map<String, TypeDefinition>
+    val allTypes: Map<String, TypeDefinition<*>>
         get() = merge(
             types,
             parent?.allTypes ?: emptyMap(),

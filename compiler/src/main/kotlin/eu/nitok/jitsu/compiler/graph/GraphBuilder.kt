@@ -249,13 +249,18 @@ private fun GraphBuilder.buildClassGraph(classNode: NamedTypeDeclarationNode.Cla
                     listOf(
                         FunctionElement.Parameter(
                             Located("this", name.location),
-                            TypeReference(name.located, listOf()),
+                            if (classNode.typeParameters.isEmpty()) TypeReference(name.located)
+                            else ParameterizedTypeReference(
+                                name.located,
+                                classNode.typeParameters.map { Located(TypeReference(it.located), it.location) }
+                            ),
                             null
                         )
                     ) + base.parameters,
                     base.bodyElement,
                     it.function.attributes.mapNotNull { buildAttributeUseGraph(it) },
-                    base.location
+                    base.location,
+                    base.typeParameters
                 )
             }
         )
@@ -411,7 +416,8 @@ private fun GraphBuilder.buildFunctionGraph(functionNode: FunctionDeclarationNod
         parameters,
         functionBody,
         attributes,
-        functionNode.name?.location ?: functionNode.keywordLocation
+        functionNode.name?.location ?: functionNode.keywordLocation,
+        functionNode.typeParameters.map { buildTypeParameterGraph(it) }
     )
 }
 
@@ -586,12 +592,11 @@ private fun GraphBuilder.rawType(type: TypeNode?): TypeElement {
 
         is TypeNode.FloatTypeNode -> Float(type.bitSize)
         is TypeNode.IntTypeNode -> Int(type.bitSize)
-        is TypeNode.NameTypeNode -> TypeReference(type.name.located, type.genericTypes.map {
-            Located(
-                rawType(it),
-                it.location
-            )
-        })
+        is TypeNode.NameTypeNode ->
+            if (type.genericTypes.isEmpty()) TypeReference(type.name.located)
+            else ParameterizedTypeReference(type.name.located, type.genericTypes.map {
+                Located(rawType(it), it.location)
+            })
 
         is TypeNode.StructuralInterfaceTypeNode -> StructuralInterface(type.fields.map {
             Field(

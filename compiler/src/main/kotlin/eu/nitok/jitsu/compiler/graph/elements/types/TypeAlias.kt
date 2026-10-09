@@ -13,12 +13,12 @@ import kotlinx.serialization.Transient
 @Serializable
 internal data class TypeAlias(
     override val name: Located<String>,
-    override val generics: List<TypeParameterElement>,
+    override val typeParameters: List<TypeParameterElement>,
     var typeElement: TypeElement
 ) : ParameterizedTypeElement(), TypeDefinition.ParameterizedType.Alias,
     ScopeProvider, ScopeAware  {
     override val type: Type get() = typeElement.asType
-    override val children: List<Element> get() = listOf(type) + generics
+    override val children: List<Element> get() = listOf(type) + typeParameters
     override fun toType(typeParameters: Map<String, TypeElement>): TypeElement {
         return typeElement.rawType { generic ->
             typeParameters[generic.name.value]
@@ -27,13 +27,13 @@ internal data class TypeAlias(
     }
 
     @Transient
-    override val scope: Scope = Scope(typeElements = generics.associateBy { it.name.value })
+    override val scope: Scope = Scope(typeElements = typeParameters.associateBy { it.name.value })
 
     override fun setEnclosingScope(parent: Scope) {
         scope.parent = parent
     }
 
     override fun toString(): String {
-        return "${name.value}${if (generics.isNotEmpty()) "<${generics.joinToString(", ")}>" else ""}"
+        return "${name.value}${if (typeParameters.isNotEmpty()) "<${typeParameters.joinToString(", ")}>" else ""}"
     }
 }

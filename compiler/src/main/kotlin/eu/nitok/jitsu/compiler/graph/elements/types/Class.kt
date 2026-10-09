@@ -9,12 +9,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 internal data class Class(
     override val name: Located<String>,
-    override val generics: List<TypeParameterElement>,
+    override val typeParameters: List<TypeParameterElement>,
     override val fields: List<Struct.Field>,
     override val methods: List<FunctionElement>
 ) : ParameterizedTypeElement(), TypeDefinition.ParameterizedType.Class {
     override val children: List<Element>
-        get() = fields + methods // + generics
+        get() = fields + methods + typeParameters
 
     override fun toType(
         typeParameters: Map<String, TypeElement>

@@ -24,7 +24,7 @@ internal class Scope(
 ) : eu.nitok.jitsu.compiler.graph.api.Scope {
     override var parent: Scope? = null
 
-    override val types: Map<String, TypeDefinition> by lazy { typeElements.mapValues { it.value.asTypeDefinition } }
+    override val types: Map<String, TypeDefinition<*>> by lazy { typeElements.mapValues { it.value.asTypeDefinition } }
     override val variables: Map<String, Variable> by lazy { variableElements.mapValues { it.value.asVariable } }
 
     fun resolveType(reference: Located<String>, messages: CompilerMessages): TypeDefinitionElement? {

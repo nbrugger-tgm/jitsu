@@ -23,10 +23,11 @@ private val fnKeywords = listOf(fnKeyword, "fun", "func", "function")
 /**
  * Parses a function declaration starting with `fn` (or similar keywords).
  *
- * Syntax: `[native] fn <name>([params])[: returnType] [{ body }]`
+ * Syntax: `[native] fn <name>[<typeParameters>]([params])[: returnType] [{ body }]`
  *
  * Examples:
  * - `fn foo() {}`
+ * - `fn foo<T>(x: T) {}`
  * - `fn bar(x: i32): i64 {}`
  * - `native fn external()`
  *
@@ -60,6 +61,7 @@ internal fun parseFunction(tokens: Tokens, attributes: List<AttributeNode>): Fun
             )
         )
     }
+    val typeParameters = parseTypeParameterDefinition(tokens, messages) ?: listOf()
     tokens.skipWhitespace()
     val parameters = parseParameters(tokens, messages, kw)
     tokens.skipWhitespace()
@@ -75,6 +77,7 @@ internal fun parseFunction(tokens: Tokens, attributes: List<AttributeNode>): Fun
     }
     return FunctionDeclarationNode(
         name = functionName,
+        typeParameters = typeParameters,
         parameters = parameters,
         returnType = returnType,
         body = native.let {

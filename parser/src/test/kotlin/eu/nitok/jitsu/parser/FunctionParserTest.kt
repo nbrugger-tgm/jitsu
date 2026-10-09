@@ -29,7 +29,12 @@ class FunctionParserTest : ParsingTest() {
             "fn qux(a: i32, b: i64): u8 {}",
             "native fn external()",
             "fn multiParam(a: i32, b: i64, c: f32) {}",
-            "fn withReturnAndBody(): boolean {}"
+            "fn withReturnAndBody(): boolean {}",
+            "fn foo<A>() {}",
+            "fn foo<>() {}",
+            "fn foo<A,B>() {}",
+            "fn foo<A\n, \n B \n >() {}",
+            "fn foo<A\n, \n B \n >(x: i32, b: u32): A | B {}",
         )
 
         override fun invalidInputs() = listOf(
@@ -50,6 +55,12 @@ class FunctionParserTest : ParsingTest() {
             Input("function foo() {}", 1),    // wrong keyword → 1 error
             Input("fn foo() }", 1),           // missing {
             Input("fn foo() {", 1),           // missing }
+            Input("fn foo<() {}", 1),         // missing >
+            Input("fn foo<T() {}", 1),        // missing >
+            Input("fn foo<A,B , C () {}", 1), // missing >
+            Input("fn foo<A,B , () {}", 1),   // missing > & generic after ,
+            Input("fn foo<A,B , >() {}", 1),  // missing generic after ,
+            Input("fn foo<A, , B>() {}", 1),  // missing generic after ,
         )
     }
 

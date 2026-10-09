@@ -25,7 +25,7 @@ fun JitsuFile.documentSymbols(): List<DocumentSymbol> {
     }.toList()
 }
 
-private fun TypeDefinition.documentSymbols(children: Iterable<DocumentSymbol>): List<DocumentSymbol> = listOf(
+private fun TypeDefinition<*>.documentSymbols(children: Iterable<DocumentSymbol>): List<DocumentSymbol> = listOf(
     DocumentSymbol(
         this.toString(),
         symbolKind(),
@@ -36,7 +36,7 @@ private fun TypeDefinition.documentSymbols(children: Iterable<DocumentSymbol>): 
     )
 )
 
-private fun TypeDefinition.additionalInfo(): String?{
+private fun TypeDefinition<*>.additionalInfo(): String?{
     if(this is Alias){
         return this.type.additionalInfo()
     }
@@ -44,14 +44,15 @@ private fun TypeDefinition.additionalInfo(): String?{
 }
 private fun Type.additionalInfo(): String?{
     return when(this) {
-        is Type.TypeReference -> if(rawType != this) rawType.additionalInfo() else target.toString()
+        is Type.TypeReference -> if (rawType != this) rawType.additionalInfo() else target.toString()
+        is Type.ParameterizedTypeReference -> if (rawType != this) rawType.additionalInfo() else target.toString()
         else -> toString()
     }
 }
-private fun TypeDefinition.symbolKind() = when (this) {
+private fun TypeDefinition<*>.symbolKind() = when (this) {
     is Enum -> SymbolKind.Enum
     is Interface -> SymbolKind.Interface
-    is Alias  -> type.resolveTypeKind()
+    is Alias -> type.resolveTypeKind()
     is Struct -> SymbolKind.Struct
     is Class -> SymbolKind.Class
     is TypeParameter -> SymbolKind.TypeParameter
@@ -67,7 +68,9 @@ private fun Type.resolveTypeKind(): SymbolKind {
         is Type.Boolean -> SymbolKind.Boolean
         is Type.FunctionTypeSignature -> SymbolKind.Function
         is Type.Null -> SymbolKind.Null
-        is Type.TypeReference -> target?.symbolKind()?: SymbolKind.Null
+        is Type.TypeReference -> target?.symbolKind() ?: SymbolKind.Null
+        is Type.ParameterizedTypeReference -> target?.symbolKind() ?: SymbolKind.Null
+        is Type.SpecializedType -> specializedFrom.symbolKind()
         is Type.Undefined -> SymbolKind.Null
         is Type.Union -> SymbolKind.Enum
         is Type.StructuralInterface -> SymbolKind.Interface
@@ -78,8 +81,8 @@ private fun Type.resolveTypeKind(): SymbolKind {
 
 private fun <T: Accessible<T>> Accessible<T>.documentSymbols(children: Iterable<DocumentSymbol>): Iterable<DocumentSymbol> {
     return when (this) {
-        is Function -> documentSymbols(children)?.let { listOf(it) } ?: children
-        is TypeDefinition -> documentSymbols(children)
+        is Function -> this.documentSymbols(children)?.let { listOf(it) } ?: children
+        is TypeDefinition<*> -> documentSymbols(children)
         is Variable -> when(this) {
             is VariableDeclaration -> listOf(
                 DocumentSymbol(
@@ -104,7 +107,7 @@ private fun <T: Accessible<T>> Accessible<T>.documentSymbols(children: Iterable<
             )
         )
 
-        is Struct.Field -> listOf(DocumentSymbol(
+        is StructStructure.Field -> listOf(DocumentSymbol(
             name.value,
             SymbolKind.Field,
             range(name.location),

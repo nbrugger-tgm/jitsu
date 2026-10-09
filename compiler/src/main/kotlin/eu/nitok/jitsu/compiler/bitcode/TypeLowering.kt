@@ -28,6 +28,8 @@ object TypeLowering {
             is GraphType.StructuralInterface -> lowerStruct(type)
 
             is GraphType.TypeReference -> lower(type.rawType)
+            is GraphType.ParameterizedTypeReference -> lower(type.rawType)
+            is GraphType.SpecializedType -> TODO("Lowering of specialized types is not implemented yet")
 
             is GraphType.Null -> TODO("null not yet supported") // null represented as null pointer
             is GraphType.Value -> lower(type.value.type)

@@ -3,6 +3,7 @@ package eu.nitok.jitsu.compiler.graph.elements.types
 import eu.nitok.jitsu.common.locating.Located
 import eu.nitok.jitsu.compiler.graph.api.Access
 import eu.nitok.jitsu.compiler.graph.api.Element
+import eu.nitok.jitsu.compiler.graph.api.StructStructure
 import eu.nitok.jitsu.compiler.graph.api.Type
 import eu.nitok.jitsu.compiler.graph.api.TypeDefinition.ParameterizedType
 import eu.nitok.jitsu.compiler.graph.elements.AccessibleElement
@@ -15,14 +16,14 @@ import kotlin.Int
 @Serializable
 internal data class Struct(
     override val name: Located<String>,
-    override val generics: List<TypeParameterElement>,
+    override val typeParameters: List<TypeParameterElement>,
     override val fields: Set<Field>,
     override val embedded: Set<Lazy<Struct>> = setOf()
 ) : ParameterizedTypeElement(), ParameterizedType.Struct {
 
     @Serializable
     internal data class Field(override val name: Located<String>, override var mutable: Boolean, val typeElement: TypeElement) :
-        ParameterizedType.Struct.Field, AccessibleElement<ParameterizedType.Struct.Field> {
+        StructStructure.Field, AccessibleElement<StructStructure.Field> {
         override val type: Type get() = typeElement.asType
         override val children: List<Element> get() = listOf(type)
 
@@ -33,11 +34,11 @@ internal data class Struct(
         }
 
         @Transient
-        override val accessToSelf: MutableList<Access<ParameterizedType.Struct.Field>> = mutableListOf()
+        override val accessToSelf: MutableList<Access<StructStructure.Field>> = mutableListOf()
     }
 
     override val allFields: Set<Field> get() = embedded.flatMap { it.value.allFields }.toSet() + fields
-    override val children: List<Element> get() = fields.toList() + embedded.map { it.value }
+    override val children: List<Element> get() = fields.toList() + embedded.map { it.value } + typeParameters
     override fun toType(
         typeParameters: Map<String, TypeElement>
     ): TypeElement {
