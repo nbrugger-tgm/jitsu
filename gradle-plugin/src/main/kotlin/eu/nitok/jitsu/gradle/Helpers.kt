@@ -14,3 +14,7 @@ internal fun Project.featureCapability(feature: String): Provider<String> = prov
     val group = group.toString().ifEmpty { path.removePrefix(":").replace(":", ".") }.ifEmpty { "default" }
     "$group:$name-$feature:$version"
 }
+
+internal fun stringProvider(provider: Provider<String>) = object {
+    override fun toString(): String = provider.get()
+}

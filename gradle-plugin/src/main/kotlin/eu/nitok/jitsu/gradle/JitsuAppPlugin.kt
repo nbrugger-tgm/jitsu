@@ -5,6 +5,7 @@ package eu.nitok.jitsu.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.tasks.Exec
 import org.gradle.language.cpp.CppApplication
 import org.gradle.language.cpp.plugins.CppApplicationPlugin
 
@@ -20,5 +21,12 @@ class JitsuAppPlugin : Plugin<Project> {
 
         val cppApp = project.extensions.getByType(CppApplication::class.java)
         extension.sourceSets.main.get().setupNativeCompilation(cppApp, project)
+
+
+        project.tasks.register("run", Exec::class.java) {
+            it.group = "application"
+            it.description = "Runs the Jitsu application."
+            it.executable(stringProvider(cppApp.developmentBinary.flatMap{ it.executableFile }.map { it.asFile.absolutePath }))
+        }
     }
 }
