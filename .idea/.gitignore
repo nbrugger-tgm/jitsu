@@ -22,6 +22,11 @@
 **/dynamic.xml
 **/uiDesigner.xml
 **/dbnavigator.xml
+**/misc.xml
+**/kotlin-statistics.xml
+**/vcs.xml
+**/jarRepositories.xml
+**/remote-targets.xml
 
 # Gradle
 **/gradle.xml
@@ -63,3 +68,4 @@ httpRequests
 caches/build_file_checksums.ser
 # GitHub Copilot persisted chat sessions
 /copilot/chatSessions
+
